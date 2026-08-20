@@ -68,6 +68,12 @@ The 5.0" MIPI-DSI IPS screen (800×480) and FT5426 capacitive touch controller c
 | **Touch Interrupt** | GPIO23 | Active-low interrupt |
 | **Backlight PWM** | GPIO26 | LCD Backlight control |
 
+## Networking Policy: Wi-Fi Only (Ethernet Omitted)
+
+- **Onboard RJ45 Ethernet Port**: The physical RJ45 Ethernet port is deliberately **disabled and unused** in firmware.
+- **Pin Multiplexing Benefit**: Disabling the Ethernet EMAC peripheral frees up the shared RMII pins (`GPIO50`, `GPIO51`, `GPIO52`), allowing them to be dedicated exclusively to the high-performance **PCM5102A I2S Master DAC**.
+- **Sole Network Interface**: Wireless connectivity is provided exclusively via the integrated **ESP32-C6 (Wi-Fi 6)** over the high-speed SDIO bus (ESP-Hosted), hosting the `Pajoniiir` SoftAP for web remote control and OTA updates.
+
 The XIAO ESP32S3 migration set GPIO7/GPIO8/GPIO9 avoids the control UART
 GPIO5/GPIO6 and UART0 GPIO43/GPIO44. The retired CDJ panel firmware no longer
 claims these pins; the product S3 firmware always owns USB OTG as the FLX4 host.
