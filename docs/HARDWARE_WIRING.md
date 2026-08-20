@@ -2,40 +2,41 @@
 
 Status: current single-chip ESP32-P4 architecture with **JC-ESP32P4-M3-DEV** board.
 
-## Single-Chip Architecture Overview
+## Single-Chip 3-Port USB Architecture Overview
+
+The **JC-ESP32P4-M3-DEV** board features **3 dedicated USB Type-C ports**, eliminating the need for an external USB hub:
 
 ```text
-                        +----------------------------+
-                        |  JC-ESP32P4-M3-DEV Board   |
-                        |                            |
-                        |   [5.0" MIPI-DSI (800x480)]|
-                        |   [FT5426 Touchscreen]     |
-                        |                            |
-                        |   [ESP32-P4 Single Chip]   |
-                        +--------------+-------------+
-                                       |
-                   USB OTG Host Port   |
-                                       v
-                             +-------------------+
-                             |  USB 2.0 Hub      |
-                             +----+---------+----+
-                                  |         |
-              +-------------------+         +--------------------+
-              |                                                  |
-              v                                                  v
-     +-----------------+                                +-----------------+
-     | USB Flash Drive |                                | Pioneer DDJ-FLX4|
-     | (Rekordbox Lib) |                                | (MIDI In/Out +  |
-     +-----------------+                                |  Headphone UAC) |
-                                                        +-----------------+
+                        +-----------------------------------------------+
+                        |            JC-ESP32P4-M3-DEV Board            |
+                        |                                               |
+                        |     [5.0" MIPI-DSI (800x480) IPS Screen]      |
+                        |     [FT5426 Capacitive Touchscreen]           |
+                        |                                               |
+                        |            [ESP32-P4 Single Chip]             |
+                        |                                               |
+                        |   [USB1 (TTL)]    [USB2 (FS)]   [USB3 (HS)]   |
+                        +--------+---------------+-------------+--------+
+                                 |               |             |
+                                 v               v             v
+                          +------------+   +-----------+  +-----------+
+                          |  5V Power  |   |  Pioneer  |  | Rekordbox |
+                          |  Adapter   |   |  DDJ-FLX4 |  | USB Flash |
+                          |  & Flashing|   | (MIDI+UAC)|  |   Drive   |
+                          +------------+   +-----------+  +-----------+
 ```
 
-## USB Topology & Power
+## USB Port Assignments & Topology
 
-- **USB Host Connection**: The ESP32-P4 USB Host port connects to an external USB 2.0 Hub.
-- **Pioneer DDJ-FLX4**: Plugs into one Hub port. Handles MIDI control surface input/LED feedback and UAC1 headphone audio.
-- **Rekordbox Media**: Plugs into a second Hub port (FAT32/exFAT USB Flash Drive).
-- **Power Supply**: Ensure a clean, dedicated 5V power supply to the JC-ESP32P4-M3-DEV board and powered USB Hub to prevent VBUS voltage drops.
+| Port on Board | Hardware Chip / PHY | Speed / Mode | Assigned Function |
+| :--- | :--- | :--- | :--- |
+| **USB1 (USB-TTL)** | CH340C UART (`GPIO37/38`) | 5V Power / Serial | **Board Power Supply (5V IN), Firmware Flashing & Serial Logs** |
+| **USB2 (Full-Speed)** | P4 FS USB PHY (`USB1P1_P/N`) | Full-Speed (12 Mbps) | **Pioneer DDJ-FLX4 (USB-MIDI In/Out + UAC1 Headphone Audio)** |
+| **USB3 (High-Speed)** | P4 HS USB PHY (`ESP_USB_P/N`) | High-Speed (480 Mbps)| **Rekordbox USB Media Drive (High-Speed MSC Track Loading)** |
+
+### Power Supply & VBUS Stability
+- **No external USB Hub required**: The DDJ-FLX4 and the USB flash drive plug directly into `USB2` and `USB3`.
+- **Power Isolation & Stability**: `USB1` receives clean 5V power from a dedicated USB power supply, powering the internal buck converter (`TLV62569` for `3.3V`) and feeding the common `USB5V_IN` rail, preventing brownouts.
 
 ## Master Audio Output (PCM5102A I2S DAC)
 

@@ -13,7 +13,9 @@ je to prirodnije za firmware projekt.
 
 Cilj je standalone dual-deck DJ sustav:
 
-- Pioneer DDJ-FLX4 je operator surface spojen izravno na USB Host od ESP32-P4 preko USB Hub-a.
+- Pioneer DDJ-FLX4 je operator surface spojen izravno na USB2 (FS USB Host).
+- Rekordbox USB Flash disk spojen je na USB3 (HS USB Host).
+- USB1 (USB-TTL / CH340C) služi za 5V napajanje, programiranje i dijagnostiku.
 - ESP32-P4 (JC-ESP32P4-M3-DEV) je autoritativni single-chip host: USB MIDI i Audio host, playback engine, Rekordbox library, 800×480 DSI UI i DSP mixer.
 - 5.0" MIPI-DSI IPS zaslon (800×480) s FocalTech FT5426 kapacitivnim dodirom pruža brzo i pregledno sučelje u nativnom landscape formatu.
 - Master audio izlaz ide preko PCM5102A I2S DAC modula.

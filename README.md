@@ -13,11 +13,14 @@ Canonical repository: `https://github.com/dvucinozd/Pajoniiir-M3.git`.
 | **5.0" MIPI-DSI IPS + FT5426** | 800×480 WVGA landscape touchscreen interface |
 | **PCM5102A DAC** | Master audio output (I2S) |
 
-The ESP32-P4 natively hosts both the USB Flash drive and the Pioneer DDJ-FLX4 over an external USB 2.0 Hub, eliminating the need for a secondary co-processor.
+The ESP32-P4 natively utilizes the board's 3 dedicated USB Type-C ports:
+- **USB1 (TTL)**: 5V power input, flashing, and serial monitor.
+- **USB2 (FS)**: Pioneer DDJ-FLX4 (USB MIDI + UAC1 Headphone audio).
+- **USB3 (HS)**: Rekordbox USB Flash Media (@ 480 Mbps High Speed).
 
 ## Current Capabilities
 
-- **Single-chip ESP32-P4 Architecture**: Direct on-chip USB Host handles both Rekordbox storage (MSC) and Pioneer DDJ-FLX4 (USB MIDI + Audio) simultaneously through an external USB Hub.
+- **Single-chip ESP32-P4 Architecture**: 3 onboard USB-C ports eliminate external USB hubs while providing isolated 5V power and dedicated high-speed media and low-latency controller connectivity.
 - **5.0" MIPI-DSI Touch Display**: Native 800×480 WVGA display @ 30 MHz DPI video mode with FocalTech FT5426 capacitive touch and 0° PPA hardware blitting.
 - **Two independent decks**: Rekordbox library browsing, MP3, WAV and FLAC playback with bounded LRU page cache.
 - **FLX4 Control**: Transport, jog/vinyl scratch, tempo, Master Tempo, mixer/EQ, headphone cue, hot cues, loops, beat jump/sync, Pad FX and Beat FX control.
