@@ -1,82 +1,71 @@
-# Hardware Wiring
+# Hardware Wiring (Pajoniiir-M3)
 
-Status: current bench wiring, audited 2026-07-16. Revalidate cable routing,
-power budget, cooling and RF behavior after final enclosure installation.
+Status: current single-chip ESP32-P4 architecture with **JC-ESP32P4-M3-DEV** board.
 
-## Inter-Board UART
+## Single-Chip Architecture Overview
 
-| Signal | ESP32-S3 | ESP32-P4 JC4880 JP1 | Direction |
-| --- | --- | --- | --- |
-| GND | GND | JP1 pin 3 or 4 | shared |
-| 3.3 V | 3V3 | JP1 pin 1 or 16 | power, only if current budget is verified |
-| UART TX | GPIO5 | GPIO28 / JP1 pin 19 | S3 -> P4 |
-| UART RX | GPIO6 | GPIO29 / JP1 pin 12 | P4 -> S3 |
+```text
+                        +----------------------------+
+                        |  JC-ESP32P4-M3-DEV Board   |
+                        |                            |
+                        |   [5.0" MIPI-DSI (800x480)]|
+                        |   [FT5426 Touchscreen]     |
+                        |                            |
+                        |   [ESP32-P4 Single Chip]   |
+                        +--------------+-------------+
+                                       |
+                   USB OTG Host Port   |
+                                       v
+                             +-------------------+
+                             |  USB 2.0 Hub      |
+                             +----+---------+----+
+                                  |         |
+              +-------------------+         +--------------------+
+              |                                                  |
+              v                                                  v
+     +-----------------+                                +-----------------+
+     | USB Flash Drive |                                | Pioneer DDJ-FLX4|
+     | (Rekordbox Lib) |                                | (MIDI In/Out +  |
+     +-----------------+                                |  Headphone UAC) |
+                                                        +-----------------+
+```
 
-Leave the JC4880 UART0 connector free for flashing and diagnostics.
+## USB Topology & Power
 
-## DDJ-FLX4 To S3
+- **USB Host Connection**: The ESP32-P4 USB Host port connects to an external USB 2.0 Hub.
+- **Pioneer DDJ-FLX4**: Plugs into one Hub port. Handles MIDI control surface input/LED feedback and UAC1 headphone audio.
+- **Rekordbox Media**: Plugs into a second Hub port (FAT32/exFAT USB Flash Drive).
+- **Power Supply**: Ensure a clean, dedicated 5V power supply to the JC-ESP32P4-M3-DEV board and powered USB Hub to prevent VBUS voltage drops.
 
-The DDJ-FLX4 connects to the S3 through USB. The S3 must run USB host mode and
-enumerate the FLX4 as a USB MIDI device.
+## Master Audio Output (PCM5102A I2S DAC)
 
-For the Seeed Studio XIAO ESP32S3 / XIAO ESP32S3 Sense replacement board, use
-the dedicated wiring note in `firmware/control-board-s3/PINOUT_XIAO_ESP32S3.md`.
-The current product wiring maps the S3-P4 UART to XIAO header pins GPIO5/GPIO6
-instead of the previous DevKitC GPIO40/GPIO41 pair or the abandoned SuperMini
-GPIO12/GPIO13 candidate.
+Master audio output uses an external PCM5102A I2S DAC breakout connected to the P4 header:
 
-Open wiring questions:
+| Signal | ESP32-P4 Pin | PCM5102A Pin | Notes |
+| :--- | :--- | :--- | :--- |
+| **I2S BCLK** | GPIO50 | BCK | Bit Clock |
+| **I2S WS / LRCK** | GPIO52 | LCK | Word Select / Frame Clock |
+| **I2S DOUT** | GPIO51 | DIN | Serial Audio Data |
+| **Power (VCC)** | 3.3V / 5V | VCC | Dependent on DAC module |
+| **Ground (GND)**| GND | GND | Common ground |
 
-- the FLX4 is externally powered for the current XIAO bench setup; do not use
-  the XIAO as the FLX4 operating-current supply;
-- keep a valid host/OTG VBUS arrangement for enumeration without tying
-  independent 5 V sources together;
-- ensure common ground between S3, P4, audio boards, and any external supply;
-- document actual VBUS/current behavior during bench testing.
+## Headphone / Cue Audio Output
 
-## P4 Audio Outputs
+- Headphone/cue audio is streamed directly from ESP32-P4 to the DDJ-FLX4 via USB Audio Class 1 (UAC1 Isochronous endpoint) over the USB connection.
+- Headphones plug directly into the 3.5 mm jack on the front of the Pioneer DDJ-FLX4.
 
-The current Pajoniiir product topology uses two output paths:
+## Display & Touchscreen (JC-ESP32P4-M3-DEV)
 
-- master output for speakers/PA/recording;
-- cue/PFL output for headphones.
+The 5.0" MIPI-DSI IPS screen (800×480) and FT5426 capacitive touch controller connect directly via the onboard MIPI-DSI / I2C FPC connector:
 
-Implemented hardware plan:
-
-| Output | Hardware | Notes |
-| --- | --- | --- |
-| Master | external PCM5102A I2S DAC | verified on GPIO50/GPIO52/GPIO51 through RCA and onboard 3.5 mm output |
-| Cue/PFL | FLX4 USB headphones | P4 sends monitor PCM to S3 over the inter-board I2S link; S3 streams it to the FLX4 USB Audio endpoint |
-
-Headphones Mix DSP is implemented in the P4 monitor path: FLX4 Headphones Mix
-raw `0` is cue/PFL, raw `16383` is master, and intermediate values blend cue
-with stereo master. The monitor buffer is sent over the P4-to-S3 I2S link and
-plays from the physical DDJ-FLX4 headphone jack through USB Audio Class. The
-old onboard ES8311/speaker path is disabled in the product profile to free the
-needed P4 I2S unit.
-
-Important: do not short a BTL speaker amplifier output to ground. If the old
-ES8311/speaker path is ever revived, inspect the schematic and bench-measure it
-again before wiring headphones or line outputs.
-
-## P4 Pins Mentioned In Current Plan
-
-Inherited confirmed UART:
-
-- P4 GPIO28: UART RX from S3 TX.
-- P4 GPIO29: UART TX to S3 RX.
-
-P4-to-S3 monitor PCM link for the FLX4 USB Audio headphones path
-(DevKitC candidate hardware-validated 2026-07-02; XIAO ESP32S3/Sense wiring
-validated 2026-07-06; see `docs/validation/FLX4_USB_AUDIO_E2E_SMOKE.md`):
-
-| Signal | ESP32-P4 (JP1 pin) | ESP32-S3 side | Direction | Notes |
-| --- | --- | --- | --- | --- |
-| I2S BCLK | GPIO32 (JP1 pin 17) | GPIO7 | P4 -> S3 | clock for monitor PCM stream |
-| I2S WS/LRCK | GPIO34 (JP1 pin 15) | GPIO8 | P4 -> S3 | stereo frame sync |
-| I2S DOUT | GPIO35 (JP1 pin 13) | GPIO9 | P4 -> S3 | P4 `hp_out` monitor PCM data |
-| GND | GND (JP1 pin 14) | GND | shared | required; use JP1 pin 14 next to the signal pins |
-| READY/FLOW/debug | GPIO49 (JP1 pin 11) | not assigned | optional | not needed; leave disconnected |
+| Signal / Peripheral | Hardware / Pin | Description |
+| :--- | :--- | :--- |
+| **Display Panel** | MIPI-DSI 2-lane | 800×480 @ 30 MHz DPI video mode, 0° PPA |
+| **Touch I2C SDA** | GPIO7 | FT5426 I2C Data (`0x38`) |
+| **Touch I2C SCL** | GPIO8 | FT5426 I2C Clock |
+| **Touch Reset** | GPIO22 | Active-low reset |
+| **Touch Interrupt** | GPIO23 | Active-low interrupt |
+| **Backlight PWM** | GPIO26 | LCD Backlight control |
 
 The XIAO ESP32S3 migration set GPIO7/GPIO8/GPIO9 avoids the control UART
 GPIO5/GPIO6 and UART0 GPIO43/GPIO44. The retired CDJ panel firmware no longer

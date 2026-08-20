@@ -1,61 +1,59 @@
-# Architecture
+# Architecture (Pajoniiir-M3)
 
-Status: current architecture, audited 2026-07-30. P4 remains authoritative;
-S3 remains a transport/translation and USB-audio bridge. The ESP-IDF 6.0.2
-migration is merged into `master` (release line `RC2`); it added the bounded
-compressed audio cache, paginated Library UI and recorder safety hardening
-without changing the P4/S3 ownership split.
+Status: current single-chip ESP32-P4 architecture on **JC-ESP32P4-M3-DEV** with 5.0" MIPI-DSI (800×480) IPS display and native USB Host.
 
-## High-Level Flow
+## High-Level Architecture
 
 ```text
-Pioneer DDJ-FLX4
-    |
-    | USB MIDI
-    v
-ESP32-S3 control-board-s3
-    |
-    | 0xA5 UART semantic events
-    v
-ESP32-P4 main-deck-p4
-    |
-    | dual decode + mixer
-    v
-Master output + cue/PFL output
++-----------------------------------------------------------------------------------+
+|                            ESP32-P4 (Single-Chip Host)                            |
+|                                                                                   |
+|  +---------------------+      +---------------------+      +--------------------+ |
+|  |  p4_flx4_host       |      |  deck_core          |      |  audio_engine      | |
+|  |  - USB MIDI In/Out  | ---> |  - Dual Deck Logic  | ---> |  - MP3/WAV/FLAC Dec| |
+|  |  - LED Feedback     | <--- |  - Beat Sync / Loop |      |  - Resampler       | |
+|  |  - UAC1 Audio Ring  | <--- |  - Hot Cues / Pos   |      |  - 3-Band EQ / DSP | |
+|  +----------+----------+      +----------+----------+      +---------+----------+ |
+|             |                            |                           |            |
+|             |                            v                           v            |
+|             |                 +---------------------+      +--------------------+ |
+|             |                 |  UI (LVGL 800x480)  |      |  PCM5102A I2S DAC  | |
+|             |                 |  - Overview D1/D2   |      |  - Master Stereo   | |
+|             |                 |  - Library / Cues   |      |    RCA Output      | |
+|             |                 +---------------------+      +--------------------+ |
+|             v                                                                     |
+|  +---------------------+                                                          |
+|  |  FLX4 Headphone UAC |                                                          |
+|  |  - 3.5mm Stereo Out |                                                          |
+|  +---------------------+                                                          |
++-----------------------------------------------------------------------------------+
 ```
 
-## ESP32-S3 Responsibilities
+## ESP32-P4 Architecture Modules
 
-The S3 firmware should be renamed conceptually from panel controller to FLX4
-controller, but the directory can stay `control-board-s3` until code movement
-is justified.
+The ESP32-P4 is the authoritative single-chip controller handling all duties:
 
-Responsibilities:
+1. **`p4_flx4_host` (USB Host Driver)**:
+   - Registers USB Host client for Pioneer DDJ-FLX4 (`VID: 0x2B73`, `PID: 0x0045`).
+   - Receives raw USB MIDI In packets and maps them to semantic control events (`ctrl_event_t`).
+   - Dispatches LED updates via non-blocking MIDI Out gate (`p4_flx4_midi_gate`).
+   - Streams Isochronous USB Audio Class 1 (UAC1) headphone mix (`p4_flx4_uac`) to the FLX4 3.5mm headphone jack.
 
-- enumerate the DDJ-FLX4 through ESP-IDF USB host;
-- parse class-compliant USB MIDI packets;
-- translate MIDI status/midino/value triples into semantic events;
-- combine MSB/LSB pairs for 14-bit controls before forwarding when practical;
-- coalesce high-rate jog and analog values locally so stale motion does not
-  flood the UART queue;
-- publish durable DDJ-FLX4 USB connection/disconnection desired state to the
-  P4, including periodic replay of both levels after a lost UART frame;
-- send heartbeat frames to the P4;
-- receive P4 LED/state frames;
-- emit FLX4 MIDI LED feedback using XML/official-list output addresses; non-VU
-  LED state is retained until enqueue/USB completion can converge, while VU is
-  intentionally best-effort;
-- host the runtime-only S3 service AP and S3 OTA endpoint when requested by P4;
-- stage the service-AP netif locally through DHCP/IP configuration before
-  publication, and bound each OTA request by absolute and progress deadlines;
-- stream P4 monitor PCM to the FLX4 USB Audio headphone endpoint.
+2. **`usb_storage` (MSC Host)**:
+   - Hosts FAT32/exFAT USB flash drives with Rekordbox databases on the shared USB Host stack.
 
-The S3 must not:
+3. **`bsp_p4_m3` (Board Support Package)**:
+   - Drives the 5.0" MIPI-DSI 800×480 IPS panel @ 30 MHz DPI video mode with 0° PPA hardware blitting.
+   - Interfaces the FocalTech FT5426 capacitive touch controller over I2C (`0x38`).
 
-- decide whether a deck is playing;
-- calculate audio position;
-- apply mixer gains itself;
-- invent current/next track state.
+4. **`deck_core` (Playback & Mixer Core)**:
+   - Controls transport (Play/Cue), Jog scratch/pitch bend, Tempo / Master Tempo, Beat Sync, Loops, Hot Cues, Beat Jump.
+   - Manages mixer state (Volume, 3-band EQ, Trim, Crossfader, Smart CFX, Smart Fader).
+
+5. **`audio_engine` (Audio DSP & Output Mixer)**:
+   - Decodes MP3, WAV, and FLAC using bounded LRU page caches (8 × 32 KiB per deck).
+   - Stereo 3-band EQ, ZDF channel filter, and limiter.
+   - Outputs Master audio via I2S to PCM5102A DAC and Headphone audio via UAC1 ring buffer.
 
 ## ESP32-P4 Responsibilities
 

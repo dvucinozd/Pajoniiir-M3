@@ -1,49 +1,27 @@
-# Pajoniiir Project Overview
+# Pajoniiir-M3 Project Overview
 
-Status: current product overview, reconciled 2026-08-02. The ESP-IDF 6.0.2
-migration is **merged into `master`**; the release prefix moved from `RC1` to
-**`RC2`** to mark the new build baseline, and the latest clean dual-target
-release build is `RC2` (`56905c89`, ESP-IDF 6.0.2). It carries the bounded
-compressed audio cache, paginated Library UI, immutable track sort, recorder
-safety hardening and the full `fix/release-blockers-and-concurrency`
-stabilisation set.
-
-The current bench runs the ESP-IDF v6.0.2 RC2 line: P4 is
-`RC2-3-g136aad7` on factory and S3 is exact `RC2` on valid `ota_0`. Both RC2
-applications were first installed successfully through OTA. Complete wired
-boot-chain flashes then passed, the P4 SDMMC ownership regression was fixed,
-and a focused smoke passed display/touch/Library, FLX4 MIDI/LED,
-PCM5102A MAIN, FLX4 CUE/MONITOR and real-MP3 playback. Real WAV/FLAC cache
-testing did not run because the audited Rekordbox USB contained stale catalog
-rows but no physical WAV/FLAC files. The latest fully functionally accepted
-complete-system baseline therefore remains `RC1-123-g587cd7a1`; targeted
-Phase 20/E1A, remaining IDF6 recovery/sustained-load rows, remote-profile
-update, enclosure endurance and production hardening remain open.
+Status: current product overview for the **Pajoniiir-M3** single-chip ESP32-P4 standalone dual-deck DJ system on the **JC-ESP32P4-M3-DEV** board with 5.0" MIPI-DSI (800×480) IPS display and native USB Host.
 
 ## Goal
 
-Pajoniiir is a standalone two-deck DJ player using the Pioneer DDJ-FLX4 as the
-operator surface. It does not run Mixxx and it does not require a PC during
-performance. The DDJ-FLX4 supplies controls and LEDs; the ESP32 boards provide
-media browsing, playback, audio output, and display.
+Pajoniiir-M3 is a standalone two-deck DJ player using the Pioneer DDJ-FLX4 as the operator surface. It does not run Mixxx and it does not require a PC during performance. The DDJ-FLX4 supplies controls and LEDs; the ESP32-P4 provides native USB hosting, media browsing, playback, DSP mixing, audio output, and display.
 
-## Product Shape
+## Product Architecture
 
-The system is split into two firmware targets:
+The system is a unified single-chip firmware target:
 
-- `firmware/control-board-s3`: USB MIDI host and protocol translator, FLX4
-  USB-headphone output bridge, runtime diagnostics and S3 OTA service.
-- `firmware/main-deck-p4`: media library, dual deck engine, UI, audio mixer.
+- `firmware/main-deck-p4`: Native USB Host (DDJ-FLX4 MIDI & UAC1 headphone audio + Rekordbox USB storage via external USB Hub), Rekordbox media library, dual deck engine, 800×480 LVGL UI, audio DSP mixer, PCM5102A Master I2S DAC.
 
-The S3 stays non-authoritative. It reads raw FLX4 MIDI input, maps it to
-semantic events, forwards those events over UART, mirrors P4 LED feedback back
-to the FLX4 and streams P4 monitor PCM to the controller headphones. Its
-service AP exposes logs and S3 OTA only when P4 requests it. It must not own
-playback state.
+The ESP32-P4 handles all authoritative deck state, USB host transactions, MIDI translations, LED feedback, audio decoding, and touchscreen rendering.
 
-The P4 owns all authoritative deck state. It loads Rekordbox media from USB,
-tracks current position, controls audio decode, drives the local display, and
-decides which LEDs should be on.
+## Hardware Platform (JC-ESP32P4-M3-DEV)
+
+- **Processor**: ESP32-P4 (Dual-core RISC-V @ up to 400 MHz).
+- **Display**: 5.0" MIPI-DSI IPS (800×480 WVGA @ 30 MHz DPI video mode, 0° PPA hardware blitting).
+- **Touch**: FocalTech FT5426 capacitive touch controller over I2C (`0x38`).
+- **Master Audio**: External PCM5102A I2S DAC stereo output (GPIO50/52/51).
+- **Headphone Audio**: Direct UAC1 Isochronous USB Audio streaming to the Pioneer DDJ-FLX4 3.5mm headphone jack.
+- **USB Topology**: Single USB Host controller with multi-device support via external USB 2.0 Hub.
 
 ## Inherited Firmware Baseline
 
