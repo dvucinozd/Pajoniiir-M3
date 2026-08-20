@@ -1,10 +1,23 @@
 # Startup Checklist
 
-Status: reconciled 2026-08-02. Checked items below are historical bring-up
-evidence, not instructions to repeat old commit-specific flashes. RC2
-application OTA succeeded on both boards, and both have since received full
-wired ESP-IDF 6.0.2 boot-chain flashes. The P4 runs the microSD-fix candidate;
-the S3 runs the exact clean RC2 application.
+Status: updated for **Pajoniiir-M3** single-chip ESP32-P4 architecture on the **JC-ESP32P4-M3-DEV** development board.
+
+## Pajoniiir-M3 Single-Chip Baseline
+
+- [x] **Single-Chip Architecture**: ESP32-P4 is the sole host controller handling Rekordbox library, audio decoding/DSP, 800×480 LVGL UI, and direct USB Host for the Pioneer DDJ-FLX4. The ESP32-S3 co-processor has been completely retired.
+- [x] **3-Port USB Topology**:
+  - `USB1 (TTL / CH340C)`: 5V power supply, programming, serial logging.
+  - `USB2 (FS Host)`: Pioneer DDJ-FLX4 (USB MIDI In/Out + UAC1 Headphone audio).
+  - `USB3 (HS Host)`: Rekordbox USB Flash Media (@ 480 Mbps High Speed).
+- [x] **Audio Subsystem**:
+  - Master Output: Dedicated **PCM5102A I2S DAC** (`BCLK=GPIO50`, `WS=GPIO52`, `DOUT=GPIO51`).
+  - Headphone / Cue: Direct **UAC1 USB Audio streaming** to the Pioneer DDJ-FLX4 3.5mm headphone jack.
+  - Inactive Peripherals: Onboard microphone and speaker amplifier (NS4150) are held disabled to prevent noise and power drain.
+- [x] **Display & Touch**:
+  - 5.0" MIPI-DSI IPS display (800×480 @ 30 MHz DPI video mode) with native 0° PPA hardware blitting.
+  - FocalTech FT5426 capacitive touch controller over I2C (`0x38`) with graceful unattached detection.
+- [x] **Networking**: Wi-Fi 6 provided exclusively via onboard **ESP32-C6** over SDIO (ESP-Hosted). Ethernet EMAC is disabled in software to keep RMII pins dedicated to the I2S DAC.
+- [x] **Live Hardware Smoke (COM17)**: Firmware successfully built, flashed, and verified live on COM17. App boots cleanly into ready state without panics or reset loops.
 
 ## Current installed and accepted baselines
 
