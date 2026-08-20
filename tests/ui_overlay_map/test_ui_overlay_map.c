@@ -64,12 +64,33 @@ static void test_converts_i8_canvas_to_rgb565_with_stride(void)
     assert(rgb565[5] == 0x0000);
 }
 
+static void test_ppa0_preserves_coordinates_1to1(void)
+{
+    ui_overlay_rect_t physical = {0};
+    bool ok = ui_overlay_map_ppa0((ui_overlay_rect_t){10, 20, 300, 200},
+                                  800, 480,
+                                  &physical);
+
+    assert(ok);
+    assert(physical.x == 10);
+    assert(physical.y == 20);
+    assert(physical.w == 300);
+    assert(physical.h == 200);
+
+    // Rejection of out-of-bounds rect
+    bool rejected = ui_overlay_map_ppa0((ui_overlay_rect_t){700, 10, 150, 50},
+                                        800, 480,
+                                        &physical);
+    assert(!rejected);
+}
+
 int main(void)
 {
     test_full_landscape_frame_maps_to_full_portrait_panel();
     test_waveform_rect_rotates_into_panel_coordinates();
     test_rejects_rect_outside_logical_canvas();
     test_converts_i8_canvas_to_rgb565_with_stride();
+    test_ppa0_preserves_coordinates_1to1();
 
     puts("ui_overlay_map tests passed");
     return 0;

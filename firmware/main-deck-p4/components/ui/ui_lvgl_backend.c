@@ -168,6 +168,14 @@ _Static_assert(UI_DSI_FB_COUNT == 1u,
 #define UI_LVGL_NOTIFY_REFRESH     (1u << 0)
 #define ALIGN_UP_BY(n, a)          (((n) + ((a) - 1)) & ~((a) - 1))
 
+#if (BSP_LCD_H_RES == 800 && BSP_LCD_V_RES == 480)
+#define UI_PPA_ROTATION_ANGLE      PPA_SRM_ROTATION_ANGLE_0
+#define ui_overlay_map_backend     ui_overlay_map_ppa0
+#else
+#define UI_PPA_ROTATION_ANGLE      PPA_SRM_ROTATION_ANGLE_270
+#define ui_overlay_map_backend     ui_overlay_map_ppa270
+#endif
+
 static _lock_t s_lvgl_lock;
 static lv_display_t *s_disp = NULL;
 static ppa_client_handle_t s_ppa = NULL;
@@ -413,7 +421,7 @@ static esp_err_t ui_lvgl_backend_blit_rgb565_ppa270_mapped(const ui_overlay_rect
         .out.block_offset_y = (uint32_t)physical->y,
         .out.srm_cm         = PPA_SRM_COLOR_MODE_RGB565,
 
-        .rotation_angle     = PPA_SRM_ROTATION_ANGLE_270,
+        .rotation_angle     = UI_PPA_ROTATION_ANGLE,
         .scale_x            = 1.0,
         .scale_y            = 1.0,
         .rgb_swap           = 0,
@@ -433,7 +441,7 @@ static esp_err_t ui_lvgl_backend_blit_rgb565_ppa270_mapped(const ui_overlay_rect
     }
     if (err != ESP_OK) {
         ESP_LOGW(TAG,
-                 "RGB565 PPA270 blit failed: %s logical=(%d,%d %dx%d) physical=(%d,%d %dx%d)",
+                 "RGB565 PPA blit failed: %s logical=(%d,%d %dx%d) physical=(%d,%d %dx%d)",
                  esp_err_to_name(err),
                  logical->x, logical->y, logical->w, logical->h,
                  physical->x, physical->y, physical->w, physical->h);
@@ -462,7 +470,7 @@ static void ui_lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t 
         .h = area_h,
     };
     ui_overlay_rect_t physical;
-    if (!ui_overlay_map_ppa270(logical, s_hor_res, s_ver_res, &physical)) {
+    if (!ui_overlay_map_backend(logical, s_hor_res, s_ver_res, &physical)) {
         ESP_LOGW(TAG,
                  "LVGL flush area outside canvas: x=%d y=%d w=%d h=%d",
                  logical.x, logical.y, logical.w, logical.h);
@@ -790,7 +798,7 @@ esp_err_t ui_lvgl_backend_blit_rgb565_ppa270_region(const ui_overlay_rect_t *log
     }
 
     ui_overlay_rect_t physical;
-    if (!ui_overlay_map_ppa270(*logical, s_hor_res, s_ver_res, &physical)) {
+    if (!ui_overlay_map_backend(*logical, s_hor_res, s_ver_res, &physical)) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -819,7 +827,7 @@ esp_err_t ui_lvgl_backend_draw_rect_rgb565(const ui_overlay_rect_t *logical, uin
     }
 
     ui_overlay_rect_t physical;
-    if (!ui_overlay_map_ppa270(*logical, s_hor_res, s_ver_res, &physical)) {
+    if (!ui_overlay_map_backend(*logical, s_hor_res, s_ver_res, &physical)) {
         return ESP_ERR_INVALID_ARG;
     }
 
