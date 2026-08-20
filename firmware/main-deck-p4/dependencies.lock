@@ -218,4 +218,4 @@ direct_dependencies:
 - lvgl/lvgl
 manifest_hash: 175bd9cecd1c612a49c93c4595d18d32495c5e198f3cdd815a6e589579c47cf3
 target: esp32p4
-version: 2.0.0
+version: 3.0.0

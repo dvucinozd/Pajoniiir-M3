@@ -1,5 +1,7 @@
 #include "p4_flx4_host.h"
 #include "p4_flx4_map.h"
+#include "p4_flx4_uac.h"
+#include "p4_flx4_midi_gate.h"
 #include "control_link.h"
 
 #include "freertos/FreeRTOS.h"
@@ -12,8 +14,9 @@
 
 static const char *TAG = "p4_flx4";
 
-#define FLX4_MIDI_TASK_STACK 4096
-#define FLX4_MIDI_TASK_PRIO  5
+#define FLX4_MIDI_TASK_STACK  4096
+#define FLX4_MIDI_TASK_PRIO   5
+#define FLX4_AUDIO_RING_FRAMES 2048
 
 static usb_host_client_handle_t s_client_handle = NULL;
 static usb_device_handle_t      s_dev_handle    = NULL;
@@ -30,6 +33,11 @@ static uint8_t                  s_in_ep_addr    = 0x81;
 static uint8_t                  s_out_ep_addr   = 0x01;
 static uint16_t                 s_in_mps        = 64;
 static uint16_t                 s_out_mps       = 64;
+
+static p4_flx4_midi_gate_t      s_midi_gate;
+static p4_flx4_audio_ring_t     s_audio_ring;
+static int16_t                  s_audio_storage[FLX4_AUDIO_RING_FRAMES * FLX4_UAC_CHANNELS];
+static p4_flx4_uac_packetizer_t s_packetizer;
 
 static portMUX_TYPE             s_flx4_mux      = portMUX_INITIALIZER_UNLOCKED;
 
@@ -84,6 +92,11 @@ esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
         return ESP_ERR_INVALID_STATE;
     }
 
+    uint32_t gen = 0;
+    if (!p4_flx4_midi_gate_begin(&s_midi_gate, &gen)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
     memcpy(s_out_xfer->data_buffer, packet, 4);
     s_out_xfer->num_bytes = 4;
     s_out_xfer->device_handle = s_dev_handle;
@@ -91,7 +104,9 @@ esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
     s_out_xfer->callback = out_transfer_cb;
     s_out_xfer->context = NULL;
 
-    return usb_host_transfer_submit(s_out_xfer);
+    esp_err_t err = usb_host_transfer_submit(s_out_xfer);
+    p4_flx4_midi_gate_end(&s_midi_gate);
+    return err;
 }
 
 esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
@@ -105,9 +120,13 @@ esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
 
 esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples, size_t frame_count)
 {
-    (void)samples;
-    (void)frame_count;
-    // Isochronous audio streaming buffer hook
+    if (!samples || frame_count == 0) return ESP_ERR_INVALID_ARG;
+    if (!p4_flx4_host_is_connected()) return ESP_ERR_INVALID_STATE;
+
+    portENTER_CRITICAL(&s_flx4_mux);
+    (void)p4_flx4_audio_ring_write(&s_audio_ring, samples, (uint32_t)frame_count);
+    portEXIT_CRITICAL(&s_flx4_mux);
+
     return ESP_OK;
 }
 
@@ -130,7 +149,10 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                     portENTER_CRITICAL(&s_flx4_mux);
                     s_connected = true;
                     flx4_map_init(&s_map_state);
+                    p4_flx4_audio_ring_reset(&s_audio_ring, FLX4_UAC_SAMPLE_RATE);
                     portEXIT_CRITICAL(&s_flx4_mux);
+
+                    p4_flx4_midi_gate_start(&s_midi_gate);
 
                     // Allocate transfers if needed
                     if (!s_in_xfer) {
@@ -159,6 +181,8 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
     } else if (event_msg->event == USB_HOST_CLIENT_EVENT_DEV_GONE) {
         if (s_dev_handle && event_msg->dev_gone.dev_hdl == s_dev_handle) {
             ESP_LOGI(TAG, "Pioneer DDJ-FLX4 disconnected");
+            p4_flx4_midi_gate_stop(&s_midi_gate);
+
             portENTER_CRITICAL(&s_flx4_mux);
             s_connected = false;
             portEXIT_CRITICAL(&s_flx4_mux);
@@ -190,6 +214,10 @@ esp_err_t p4_flx4_host_init(void)
 {
     if (s_client_handle) return ESP_OK;
 
+    p4_flx4_midi_gate_init(&s_midi_gate);
+    p4_flx4_uac_packetizer_init(&s_packetizer, FLX4_UAC_SAMPLE_RATE, FLX4_UAC_CHANNELS, FLX4_UAC_BYTES_PER_SAMPLE);
+    p4_flx4_audio_ring_init(&s_audio_ring, s_audio_storage, FLX4_AUDIO_RING_FRAMES, FLX4_UAC_CHANNELS, FLX4_UAC_SAMPLE_RATE);
+
     const usb_host_client_config_t client_cfg = {
         .is_synchronous = false,
         .max_num_event_msg = 10,
@@ -211,6 +239,6 @@ esp_err_t p4_flx4_host_init(void)
         return ESP_ERR_NO_MEM;
     }
 
-    ESP_LOGI(TAG, "P4 FLX4 USB Host client registered");
+    ESP_LOGI(TAG, "P4 FLX4 USB Host client (MIDI + UAC Audio) registered");
     return ESP_OK;
 }
