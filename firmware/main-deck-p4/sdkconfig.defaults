@@ -14,6 +14,7 @@ CONFIG_ESP32P4_REV_MIN_FULL=100
 # (LVGL + display + touch + USB-MSC + codec + minimp3). 16 MB flash, 4 MB app.
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+CONFIG_SPI_FLASH_SUPPORT_BOYA_CHIP=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
@@ -57,6 +58,7 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
 # ── USB host (Rekordbox media drive on the HS USB-C port) ────────────────────
 # Allow drives presented behind an internal hub (matches the IDF P4 MSC example).
 CONFIG_USB_HOST_HUBS_SUPPORTED=y
+CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=2048
 
 # ── FATFS ─────────────────────────────────────────────────────────────────────
 # Long filename support is OFF by default (8.3 only) → Rekordbox paths like

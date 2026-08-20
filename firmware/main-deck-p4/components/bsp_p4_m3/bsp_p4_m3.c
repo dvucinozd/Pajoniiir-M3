@@ -229,8 +229,12 @@ esp_err_t bsp_touch_init(void)
             .mirror_y = 0,
         },
     };
-    ESP_RETURN_ON_ERROR(esp_lcd_touch_new_i2c_ft5x06(tp_io, &tp_cfg, &s_touch),
-                        TAG, "FT5426 init failed");
+    esp_err_t err = esp_lcd_touch_new_i2c_ft5x06(tp_io, &tp_cfg, &s_touch);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "FT5426 touch controller not detected (no screen attached?): %s", esp_err_to_name(err));
+        s_touch = NULL;
+        return ESP_OK;
+    }
 
     ESP_LOGI(TAG, "FT5426 touch ready (I2C SDA=%d SCL=%d, addr=0x38, 800x480 landscape)",
              BSP_I2C_SDA_GPIO, BSP_I2C_SCL_GPIO);

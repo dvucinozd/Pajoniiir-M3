@@ -227,7 +227,12 @@ esp_err_t p4_flx4_host_init(void)
         },
     };
 
-    esp_err_t err = usb_host_client_register(&client_cfg, &s_client_handle);
+    esp_err_t err = ESP_FAIL;
+    for (int retry = 0; retry < 20; ++retry) {
+        err = usb_host_client_register(&client_cfg, &s_client_handle);
+        if (err == ESP_OK) break;
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "usb_host_client_register failed: %s", esp_err_to_name(err));
         return err;
