@@ -1,99 +1,35 @@
-# Pajoniiir BL-A1800
+# Pajoniiir-M3
 
-Standalone dual-deck DJ system built around a Pioneer DDJ-FLX4, a Seeed
-Studio XIAO ESP32S3 control board and a JC4880P443C_I_W ESP32-P4 multimedia
-board. It reads Rekordbox media directly and does not require a PC during
-performance.
+Standalone dual-deck DJ system built around a Pioneer DDJ-FLX4 and the **JC-ESP32P4-M3-DEV** board with a **5.0" MIPI-DSI (800×480) IPS touchscreen**. It reads Rekordbox media directly and does not require a PC during performance.
 
-Canonical repository: `https://github.com/dvucinozd/Pajoniiir.git`. The former
-`dvucinozd/ESP32-DDJ-FLX4` URL is deprecated and retained only as a GitHub
-redirect. The branch inventory was audited on 2026-07-26; only `master`
-remains locally and on `origin`.
-
-![Pajoniiir](docs/images/122.jpg)
-
-> [!IMPORTANT]
-> The ESP-IDF 6.0.2 migration is **merged into `master`**; both targets now
-> build only under **ESP-IDF v6.0.2** (the component manifests pin
-> `idf: "==6.0.2"`). The release prefix therefore moved from `RC1` to **`RC2`**,
-> and the latest clean dual-target release build is **`RC2`** (`56905c89`) from
-> 2026-07-30 — see
-> [CLEAN_RELEASE_RC2_BUILD.md](docs/validation/CLEAN_RELEASE_RC2_BUILD.md). It
-> was signed, packaged and installed successfully through OTA on both boards
-> on 2026-08-02. It carries the full
-> `fix/release-blockers-and-concurrency` stabilisation set (bounded compressed
-> audio cache, paginated Library UI, immutable track sort, recorder safety
-> hardening, lossless control queue, ANLZ ownership fixes and more).
->
-> RC2 hardware acceptance is now **in progress**. Both targets have complete
-> ESP-IDF v6.0.2 boot chains; the P4 microSD regression is fixed, and a focused
-> 2026-08-02 smoke passed display/touch/Library, FLX4 MIDI/LED, MAIN/headphone
-> audio and real-MP3 playback. Real WAV/FLAC cache testing was not performed:
-> the Rekordbox database referenced files that were absent from the USB drive.
-> Long-duration, USB recovery and fault-injection rows remain open in
-> [ESP_IDF_6_0_2_MIGRATION.md](docs/migration/ESP_IDF_6_0_2_MIGRATION.md), so
-> the latest **complete** functional hardware baseline remains
-> **`RC1-123-g587cd7a1`** of 2026-07-14. See
-> [Documentation Status](docs/DOCUMENTATION_STATUS.md) for the precise boundary.
+Canonical repository: `https://github.com/dvucinozd/Pajoniiir-M3.git`.
 
 ## System at a Glance
 
-| Device | Responsibility |
+| Device / Module | Responsibility |
 | --- | --- |
 | **Pioneer DDJ-FLX4** | Operator surface: transport, jogs, tempo, mixer, pads, cue and LEDs |
-| **XIAO ESP32S3** | USB MIDI host, semantic event translator, LED bridge, FLX4 USB-headphone streamer and service OTA AP |
-| **ESP32-P4 board** | Authoritative playback/deck state, Rekordbox library, LVGL UI, audio DSP/mixer and MAIN/cue routing |
+| **ESP32-P4 (JC-ESP32P4-M3-DEV)** | Single-chip host: native USB MIDI & Audio host, authoritative playback/deck state, Rekordbox library, 800×480 LVGL UI, audio DSP/mixer and MAIN/cue routing |
+| **5.0" MIPI-DSI IPS + FT5426** | 800×480 WVGA landscape touchscreen interface |
+| **PCM5102A DAC** | Master audio output (I2S) |
 
-The S3 normalizes FLX4 input but does not own playback state. The P4 makes all
-authoritative deck, mixer, audio-position and LED decisions. Both boards use
-the existing `0xA5` UART control link, extended with the `0xA6` bulk/status
-layer. The detailed ownership and data flow are documented in
-[Architecture](docs/ARCHITECTURE.md).
+The ESP32-P4 natively hosts both the USB Flash drive and the Pioneer DDJ-FLX4 over an external USB 2.0 Hub, eliminating the need for a secondary co-processor.
 
 ## Current Capabilities
 
-- Two independent decks with Rekordbox library browsing and MP3, WAV and FLAC
-  playback. Compressed audio uses a bounded LRU page cache (8 × 32 KiB per
-  deck) instead of whole-file PSRAM allocation. The current WAV subset is
-  classic RIFF/WAVE PCM16 mono/stereo.
-- FLX4 transport, jog/vinyl scratch, tempo and Master Tempo, mixer/EQ,
-  headphone cue, hot cues, loops, beat jump/sync, Pad FX and Beat FX control.
-  Beat FX Filter and Echo have recorded hardware acceptance; Flanger and the
-  new one-shot Delay are software-tested and deployed, with focused physical
-  audio/routing smoke still pending.
-- Simultaneous PCM5102A RCA MAIN output and FLX4 USB headphone cue.
-- P4-owned FLX4 LED feedback with reconnect and board-reboot resynchronization.
-- LVGL Overview, Library (paginated 8-row table with PREV/NEXT), Hot Cues and
-  Settings tabs, plus the optional P4 Wi-Fi remote.
-- Data-driven controller profiles loaded from SD or installed through the web
-  UI; the built-in DDJ-FLX4 map remains the fallback. The web overwrite path is
-  software-complete and still has pending hardware-acceptance rows.
-- Signed dual-slot OTA, validation and rollback on both processors.
-
-Detailed implementation and acceptance status belongs in
-[Project Overview](docs/PROJECT_OVERVIEW.md),
-[Development Plan](docs/DEVELOPMENT_PLAN.md) and
-[Documentation Status](docs/DOCUMENTATION_STATUS.md), rather than in this
-repository entry page.
-
-## Interface
-
-The captures are representative; small UI details may be newer in firmware.
-
-| Overview | Library | Settings |
-| --- | --- | --- |
-| ![Overview screen](docs/images/overview.jpg) | ![Library screen](docs/images/library.jpg) | ![Settings screen](docs/images/settings.jpg) |
-
-The Hot Cues tab is implemented but does not yet have an archived screenshot.
+- **Single-chip ESP32-P4 Architecture**: Direct on-chip USB Host handles both Rekordbox storage (MSC) and Pioneer DDJ-FLX4 (USB MIDI + Audio) simultaneously through an external USB Hub.
+- **5.0" MIPI-DSI Touch Display**: Native 800×480 WVGA display @ 30 MHz DPI video mode with FocalTech FT5426 capacitive touch and 0° PPA hardware blitting.
+- **Two independent decks**: Rekordbox library browsing, MP3, WAV and FLAC playback with bounded LRU page cache.
+- **FLX4 Control**: Transport, jog/vinyl scratch, tempo, Master Tempo, mixer/EQ, headphone cue, hot cues, loops, beat jump/sync, Pad FX and Beat FX control.
+- **Master Audio Output**: High-quality PCM5102A I2S DAC stereo output.
+- **LVGL UI**: Overview, Library (paginated 8-row table), Hot Cues and Settings tabs.
 
 ## Repository Layout
 
 ```text
 controllers/                 Compiled and source controller profiles
 firmware/
-  control-board-s3/          ESP32-S3 host/translator/audio-bridge firmware
-  main-deck-p4/              ESP32-P4 playback/audio/UI firmware
-  common/                    Shared firmware components
+  main-deck-p4/              ESP32-P4 playback/audio/UI/USB Host firmware
 docs/                        Product, protocol, validation and design records
 tests/                       PC-side regression tests
 tools/                       Profile compiler, OTA packager and support tools

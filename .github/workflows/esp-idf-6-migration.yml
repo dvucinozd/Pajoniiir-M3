@@ -60,15 +60,6 @@ jobs:
       - name: Run host regression suites
         shell: pwsh
         run: |
-          & ./tests/run_s3_host_tests.ps1 *> s3-host-tests.log
-          $s3 = $LASTEXITCODE
-          $s3Lines = @(Get-Content s3-host-tests.log)
-          if ($s3 -ne 0) {
-              $s3Lines | Select-Object -Last 40
-              exit $s3
-          }
-          Write-Host "S3 host tests passed ($(($s3Lines | Select-String -Pattern '^==> run ').Count) suites)."
-
           & ./tests/run_p4_host_tests.ps1 *> p4-host-tests.log
           $p4 = $LASTEXITCODE
           $p4Lines = @(Get-Content p4-host-tests.log)
@@ -81,11 +72,6 @@ jobs:
                   $p4Lines | Select-Object -Last 60
               }
           } else {
-              # A passing run used to print only the last 20 lines, which are
-              # whichever static gates happen to sit at the end of the file. The
-              # numbers worth reading -- how much actually executed, and that the
-              # API contracts ran -- were invisible, so a suite silently losing
-              # coverage looked identical to a healthy one.
               Write-Host "::group::P4 host suite summary"
               $suites = ($p4Lines | Select-String -Pattern '^==> run ').Count
               $gates  = ($p4Lines | Select-String -Pattern '^==> static ').Count
@@ -112,16 +98,7 @@ jobs:
               $p4Lines | Select-Object -Last 20
           }
 
-          # The runner deliberately skips a suite whose tooling is missing rather
-          # than failing the whole gate, which is right for a workstation and
-          # wrong here: on CI the tooling is installed above, so a skip means the
-          # install broke and a check stopped running without anyone noticing.
-          # That is exactly how the dead-code audit and the OTA signing tests
-          # went unnoticed before they were installed.
-          # Case-sensitive and anchored on the runner's own wording. A plain
-          # case-insensitive 'skipping' also matches a suite's ordinary output,
-          # such as the ANLZ test noting it has no real PDB fixture to read.
-          $skipped = @($s3Lines) + @($p4Lines) |
+          $skipped = @($p4Lines) |
               Select-String -CaseSensitive -Pattern 'SKIPPING the'
           if ($skipped) {
               Write-Host "::error::a host-suite check was skipped on CI; its tooling is expected to be installed"
@@ -145,91 +122,8 @@ jobs:
           name: host-test-logs
           if-no-files-found: ignore
           path: |
-            s3-host-tests.log
             p4-host-tests.log
             ui-simulator.log
-
-  build-s3:
-    name: ESP32-S3 firmware
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out tested revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-
-      - name: Build control board
-        run: |
-          docker pull --quiet "$IDF_IMAGE" >/dev/null
-          set +e
-          docker run --rm \
-            -e HOME=/tmp \
-            -e IDF_GIT_SAFE_DIR='*' \
-            -v "$PWD:/project" \
-            -w /project/firmware/control-board-s3 \
-            "$IDF_IMAGE" bash -lc '
-              idf.py --version
-              rm -rf build sdkconfig sdkconfig.old managed_components
-              idf.py set-target esp32s3
-              idf.py build
-            ' > s3-idf-build.log 2>&1
-          code=$?
-          # The IDF container runs as root and creates build/ through the bind
-          # mount. Return ownership before runner-native provenance generation.
-          if [ -d firmware/control-board-s3/build ]; then
-            sudo chown -R "$(id -u):$(id -g)" firmware/control-board-s3/build
-          fi
-          if [ "$code" -ne 0 ]; then
-            grep -nE '(^|[[:space:]])(CMake Error|ERROR:|error:|fatal error:|undefined reference|ninja: build stopped)' s3-idf-build.log | tail -n 75 || true
-            tail -n 20 s3-idf-build.log
-          else
-            tail -n 25 s3-idf-build.log
-          fi
-          exit $code
-
-      # The lock file is committed so a clean build resolves the same component
-      # versions every time. idf.py rewrites it in place on drift, so without this
-      # check a dependency could move silently and CI would still be green.
-      - name: Verify committed dependency lock is unchanged
-        run: |
-          if ! git diff --exit-code -- firmware/control-board-s3/dependencies.lock; then
-            echo "::error::dependencies.lock changed during the build; commit the new resolution or pin the drifting component"
-            exit 1
-          fi
-
-      - name: Generate S3 build provenance
-        run: |
-          build_dir=firmware/control-board-s3/build
-          lock=firmware/control-board-s3/dependencies.lock
-          find "$build_dir" -maxdepth 1 -type f \
-            \( -name '*.bin' -o -name '*.elf' -o -name '*.map' \) \
-            -print0 | sort -z | xargs -0 sha256sum > "$build_dir/SHA256SUMS.txt"
-          {
-            echo "git_commit=$GITHUB_SHA"
-            echo "repository=$GITHUB_REPOSITORY"
-            echo "idf_version=ESP-IDF v6.0.2"
-            echo "idf_image=$IDF_IMAGE"
-            echo "dependencies_lock_sha256=$(sha256sum "$lock" | awk '{print $1}')"
-            echo "firmware_sha256_manifest=SHA256SUMS.txt"
-          } > "$build_dir/BUILD_PROVENANCE.txt"
-
-      - name: Upload S3 build log
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: s3-build-log
-          path: s3-idf-build.log
-
-      - name: Upload S3 binaries
-        if: success()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: control-board-s3-idf-6.0.2
-          path: |
-            firmware/control-board-s3/build/*.bin
-            firmware/control-board-s3/build/*.elf
-            firmware/control-board-s3/build/*.map
-            firmware/control-board-s3/build/BUILD_PROVENANCE.txt
-            firmware/control-board-s3/build/SHA256SUMS.txt
-            firmware/control-board-s3/dependencies.lock
 
   build-p4:
     name: ESP32-P4 firmware

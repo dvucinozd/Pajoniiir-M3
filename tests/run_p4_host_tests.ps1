@@ -2293,7 +2293,6 @@ $tests = @(
             "-Wall", "-Wextra", "-Wpedantic", "-std=c99",
             "-Istubs",
             "-I../support/stubs",
-            "-I../../firmware/control-board-s3/components/control_link/include",
             "-I../../firmware/main-deck-p4/components/control_link/include",
             "-o", "test_control_link_protocol.exe",
             "test_control_link_protocol.c",
@@ -2487,7 +2486,6 @@ foreach ($retired in @(
     @{ Board = "main-deck-p4";     Component = "ui";                         Wrapper = "ui_lvgl_backend_single_fb.c" },
     @{ Board = "main-deck-p4";     Component = "web_server";                 Wrapper = "web_server_fixed.c" },
     @{ Board = "main-deck-p4";     Component = "deck_core";                  Wrapper = "deck_core_live_led.c" },
-    @{ Board = "control-board-s3"; Component = "s3_debug_ap";               Wrapper = "s3_debug_ap_fixed.c" },
     @{ Board = "main-deck-p4";     Component = "app_settings";               Wrapper = "app_settings_fixed.c" },
     @{ Board = "main-deck-p4";     Component = "wifi_link";                  Wrapper = "wifi_link_leased.c" },
     @{ Board = "main-deck-p4";     Component = "p4_ota_pull";                Wrapper = "p4_ota_pull_leased.c" },
@@ -2495,8 +2493,7 @@ foreach ($retired in @(
     @{ Board = "main-deck-p4";     Component = "library";                    Wrapper = "rekordbox_anlz_fixed.c" },
     @{ Board = "main-deck-p4";     Component = "library";                    Wrapper = "track_meta_cache_fixed.c" },
     @{ Board = "main-deck-p4";     Component = "audio_engine";               Wrapper = "audio_engine_ordered.c" },
-    @{ Board = "main-deck-p4";     Component = "controller_profile_manager"; Wrapper = "controller_profile_manager_ordered.c" },
-    @{ Board = "control-board-s3"; Component = "flx4_midi_host";             Wrapper = "flx4_midi_host_fixed.c" }
+    @{ Board = "main-deck-p4";     Component = "controller_profile_manager"; Wrapper = "controller_profile_manager_ordered.c" }
 )) {
     $wrapperPath = Join-Path $RepoRoot ("firmware/{0}/components/{1}/{2}" -f $retired.Board, $retired.Component, $retired.Wrapper)
     Write-Host ("==> static retired compilation wrapper {0} stays deleted" -f $retired.Wrapper)
@@ -2582,28 +2579,6 @@ Assert-FileContains `
     -Name "p4 deck_core builds its real source" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/deck_core/CMakeLists.txt") `
     -LiteralPatterns @('SRCS "deck_core.c"')
-
-Assert-FileContains `
-    -Name "s3 debug AP serves one bounded /events response and latches start failure" `
-    -Path (Join-Path $RepoRoot "firmware/control-board-s3/components/s3_debug_ap/s3_debug_ap.c") `
-    -LiteralPatterns @("X-Log-Seq", "s_ap_start_failed_latched", "debug AP is latched in ERROR; request OFF before retry")
-
-# Idiom (a bounded for-loop and a keepalive literal). s3_debug_ap.c's
-# production path is excluded from the PC build, so nothing executes it.
-Assert-FileDoesNotContain `
-    -Name "s3 debug AP /events does not hold the httpd task in a polling loop" `
-    -Path (Join-Path $RepoRoot "firmware/control-board-s3/components/s3_debug_ap/s3_debug_ap.c") `
-    -LiteralPatterns @(": keepalive", "for (int i = 0; i < 600; i++)")
-
-Assert-FileContains `
-    -Name "s3 debug AP builds its real source" `
-    -Path (Join-Path $RepoRoot "firmware/control-board-s3/components/s3_debug_ap/CMakeLists.txt") `
-    -LiteralPatterns @('SRCS "s3_debug_ap.c"')
-
-Assert-FileContains `
-    -Name "s3 FLX4 MIDI host builds its real source" `
-    -Path (Join-Path $RepoRoot "firmware/control-board-s3/components/flx4_midi_host/CMakeLists.txt") `
-    -LiteralPatterns @('SRCS "flx4_midi_host.c"')
 
 # bsp_jc4880.h pulls in esp_lcd/esp_codec_dev, which the host toolchain does not
 # build, so this stays a text check rather than a compile contract.

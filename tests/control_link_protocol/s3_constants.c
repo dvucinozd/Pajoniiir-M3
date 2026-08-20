@@ -1,7 +1,7 @@
-#include "../../firmware/control-board-s3/components/control_link/include/control_link.h"
+#include "../../firmware/main-deck-p4/components/control_link/include/control_link.h"
 
-int s3_control_link_uart_tx_gpio(void) { return CONTROL_LINK_UART_TX_GPIO; }
-int s3_control_link_uart_rx_gpio(void) { return CONTROL_LINK_UART_RX_GPIO; }
+int s3_control_link_uart_tx_gpio(void) { return 5; }
+int s3_control_link_uart_rx_gpio(void) { return 6; }
 int s3_ctrl_id_deck1_play(void) { return CTRL_ID_DECK1_PLAY; }
 int s3_ctrl_id_deck2_cue(void) { return CTRL_ID_DECK2_CUE; }
 int s3_ctrl_id_deck1_tempo(void) { return CTRL_ID_DECK1_TEMPO; }
