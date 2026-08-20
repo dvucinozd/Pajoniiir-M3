@@ -55,6 +55,11 @@ Master audio output uses an external PCM5102A I2S DAC breakout connected to the 
 - Headphone/cue audio is streamed directly from ESP32-P4 to the DDJ-FLX4 via USB Audio Class 1 (UAC1 Isochronous endpoint) over the USB connection.
 - Headphones plug directly into the 3.5 mm jack on the front of the Pioneer DDJ-FLX4.
 
+## Audio Peripherals Policy: Microphone & Onboard Speaker Disabled
+
+- **Onboard Microphone**: The analog microphone input on the ES8311 codec (`ADC_MIC1_P/N`) is **disabled and unused** in firmware. There is no voice input or recording pipeline active, eliminating analog noise and DMA bandwidth consumption.
+- **Onboard Speaker & NS4150 PA**: The onboard mono speaker amplifier is kept powered down (`PA_CTRL` held low) to avoid power draw, noise floor, and interference with the primary line-level outputs.
+
 ## Display & Touchscreen (JC-ESP32P4-M3-DEV)
 
 The 5.0" MIPI-DSI IPS screen (800×480) and FT5426 capacitive touch controller connect directly via the onboard MIPI-DSI / I2C FPC connector:
