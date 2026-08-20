@@ -2,8 +2,8 @@
 
 ## Uloga
 
-Djeluj kao senior embedded C / ESP-IDF / real-time audio inzenjer za projekt
-Pajoniiir. Ovo nije NovaPlayout/Avalonia projekt.
+Djeluj kao senior embedded C / ESP-IDF / real-time audio inženjer za projekt
+Pajoniiir-M3. Ovo nije NovaPlayout/Avalonia projekt.
 
 Komunikacija s korisnikom neka bude na hrvatskom jeziku. Kod, nazivi datoteka,
 commit poruke, C simboli i tehnička dokumentacija mogu ostati na engleskom ako
@@ -11,24 +11,26 @@ je to prirodnije za firmware projekt.
 
 ## Projekt
 
-Cilj je standalone dual-deck DJ sustav:
+Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 
-- Pioneer DDJ-FLX4 je operator surface spojen izravno na USB2 (FS USB Host).
-- Rekordbox USB Flash disk spojen je na USB3 (HS USB Host).
-- USB1 (USB-TTL / CH340C) služi za 5V napajanje, programiranje i dijagnostiku.
-- ESP32-P4 (JC-ESP32P4-M3-DEV) je autoritativni single-chip host: USB MIDI i Audio host, playback engine, Rekordbox library, 800×480 DSI UI i DSP mixer.
-- 5.0" MIPI-DSI IPS zaslon (800×480) s FocalTech FT5426 kapacitivnim dodirom pruža brzo i pregledno sučelje u nativnom landscape formatu.
-- Master audio izlaz ide preko PCM5102A I2S DAC modula.
+- **Pioneer DDJ-FLX4** je operator surface spojen izravno na **USB2** (FS USB Host @ 12 Mbps) za MIDI In/Out i UAC1 streaming zvuka u slušalice.
+- **Rekordbox USB Flash disk** spojen je izravno na **USB3** (HS USB Host @ 480 Mbps) za brzo čitanje baze i waveform analiza.
+- **USB1 (USB-TTL / CH340C)** služi za 5V napajanje cijele ploče, programiranje (flashing) i serijsku dijagnostiku.
+- **ESP32-P4 (JC-ESP32P4-M3-DEV)** je autoritativni single-chip host: USB MIDI i Audio host, playback engine, Rekordbox library, 800×480 DSI UI i DSP mixer.
+- **5.0" MIPI-DSI IPS zaslon (800×480)** s FocalTech FT5426 kapacitivnim dodirom pruža brzo i pregledno sučelje u nativnom landscape formatu (0° PPA hardware blit).
+- **Master audio izlaz** ide preko PCM5102A I2S DAC modula (`GPIO50/51/52`).
+- **Wi-Fi 6** je osiguran preko integriranog **ESP32-C6** modula (ESP-Hosted preko SDIO).
+- **Neaktivne periferije**: Ugrađeni mikrofon, NS4150 mono zvučničko pojačalo i RJ45 Ethernet su namjerno isključeni u softveru radi nultog šuma i oslobađanja GPIO pinova.
 
-## Najvaznije putanje
+## Najvažnije putanje
 
 ```text
 <repo-root>
   README.md
+  AGENTS.md
   docs\PROJECT_OVERVIEW.md
   docs\ARCHITECTURE.md
   docs\DDJ_FLX4_MIDI_MAP.md
-  docs\CONTROL_LINK_PROTOCOL.md
   docs\HARDWARE_WIRING.md
   docs\DEVELOPMENT_PLAN.md
   docs\STARTUP_CHECKLIST.md
@@ -41,13 +43,13 @@ Cilj je standalone dual-deck DJ sustav:
   tests
 ```
 
-Prije vecih promjena procitaj relevantne dokumente iz `docs\` i postojece
-komponente koje diras. Mixxx XML se smatra provjerenim i autoritativnim izvorom
+Prije većih promjena pročitaj relevantne dokumente iz `docs\` i postojeće
+komponente koje diraš. Mixxx XML se smatra provjerenim i autoritativnim izvorom
 MIDI adresa za DDJ-FLX4 kontrole (sva dosadašnja mapiranja su se pokazala 100%
 točnima). Fizički raw MIDI capture više nije preduvjet za razvoj, te se
 preostale kontrole mogu implementirati izravno iz XML reference.
 
-## ESP-IDF okruzenje
+## ESP-IDF okruženje
 
 Obavezna verzija je **ESP-IDF v6.0.2** — ista koju koristi
 `.github/workflows/esp-idf-6-migration.yml` (`espressif/idf:v6.0.2`).
@@ -66,96 +68,68 @@ idf.py --version
 Napomena o putanjama: 6.0.2 je na `C:\Espressif\v6.0.2\esp-idf` — **nije** pod
 `.espressif\` ni pod `frameworks\` kao stariji instalati, pa listanje tih
 direktorija krivo sugerira da 6.0.2 nije instaliran. Provjeri popis
-`*.PowerShell_profile.ps1` u `C:\Espressif\tools`. Stari v5.5.4 profil je i dalje
-prisutan, ali vise ne builda ovo stablo.
-
-Mora javiti `ESP-IDF v6.0.2`. Pri prvom buildu nakon prelaska s 5.5.4 obriši
-generiranu konfiguraciju i managed komponente (`build`, `sdkconfig`,
-`sdkconfig.old`, `managed_components`) prije `idf.py set-target`.
+`*.PowerShell_profile.ps1` u `C:\Espressif\tools`.
 
 Ostali alati:
 
 - Git iz Espressif toolchaina: `C:\Espressif\tools\idf-git\2.44.0\cmd`
 - Host-test GCC: `C:\msys64\ucrt64\bin`
 
-Napomena: `idf.py` nije nužno dostupan prije pokretanja inicijalizacijske
-skripte.
-
-Za host testove koji traze `gcc`, ako nije vec u `PATH`, **dodaj msys2 na kraj**
+Za host testove koji traže `gcc`, ako nije već u `PATH`, **dodaj msys2 na kraj**
 putanje, ne na početak:
 
 ```powershell
 $env:Path = "$env:Path;C:\msys64\ucrt64\bin"
 ```
 
-Prepending `C:\msys64\ucrt64\bin` zasjenjuje sistemski `python.exe` msys2
-verzijom koja nema modul `cryptography`, pa OTA signing suite pada iz razloga
-koji nema veze s kodom. Runner sada sam bira interpreter koji stvarno ima
-`cryptography`, ali appendanje ostaje preporučeni redoslijed.
-
 Host suite se pokreće i na Windows PowerShellu 5.1 i na PowerShellu 7.
 
 ## Build naredbe
 
-S3 firmware:
-
-```powershell
-# Najprije inicijaliziraj jedno od podržanih ESP-IDF okruženja.
-$repoRoot = git rev-parse --show-toplevel
-Set-Location "$repoRoot\firmware\control-board-s3"
-idf.py build
-```
-
 P4 firmware:
 
 ```powershell
-# ESP-IDF 6.0.2 je obavezan - manifesti pinaju idf: "==6.0.2", pa stariji
-# environment pada na resolveu ovisnosti, ne na warningu.
+# ESP-IDF 6.0.2 je obavezan - manifesti pinaju idf: "==6.0.2"
 . C:\Espressif\tools\Microsoft.v6.0.2.PowerShell_profile.ps1
 $repoRoot = git rev-parse --show-toplevel
 Set-Location "$repoRoot\firmware\main-deck-p4"
 idf.py build
 ```
 
-Zadnja clean release provjera je **`RC2`** (`56905c89`), 2026-07-30, na ESP-IDF
-6.0.2 - oba izolirana `build_signed` targeta prolaze; velicine i SHA-256 su u
-`docs\validation\CLEAN_RELEASE_RC2_BUILD.md`. Prethodna linija je zatvorena na
-`RC1-259-gdaf4639` (ESP-IDF 5.5.4, 2026-07-26).
+Flešanje na razvojnu ploču (COM port npr. COM17):
 
-Verzija dolazi iz `git describe`, pa build tocno na tagiranom commitu prijavljuje
-goli `RC2`, a svaki kasniji commit `RC2-<n>-g<hash>`. Preostali fizicki gateovi
-vode se u `docs\fixevi-remediation-audit.md` i
-`docs\migration\ESP_IDF_6_0_2_MIGRATION.md`.
+```powershell
+idf.py -p COM17 flash monitor
+```
 
 P4 host regresije pokreni preko:
 
 ```powershell
+$env:Path = "$env:Path;C:\msys64\ucrt64\bin"
 .\tests\run_p4_host_tests.ps1
 ```
 
-To je isti runner koji koristi CI. S3 strana je `.\tests\run_s3_host_tests.ps1`.
+To je isti runner koji koristi CI.
 
-Za dugi deterministicki dual-deck Master Tempo PC regression koristi:
+Za dugi deterministički dual-deck Master Tempo PC regression koristi:
 
 ```powershell
 .\tests\audio_keylock_soak\run_audio_keylock_soak.ps1
 ```
 
 Zadani run simulira pet minuta oba decka i provjerava drift, pitch, DSP
-finite-state, velike sample skokove i clipping. To nije zamjena za P4 CPU/I2S
-deadline mjerenje ili slusni hardware acceptance.
+finite-state, velike sample skokove i clipping.
 
-Za headless LVGL navigaciju i tocnu screenshot regresiju koristi:
+Za headless LVGL navigaciju i točnu screenshot regresiju koristi:
 
 ```powershell
 .\tests\ui_simulator\run_ui_simulator_e2e.ps1
 ```
 
 Gate automatski koristi pinani LVGL commit i pokriva Overview D1/D2, Library,
-Hot Cues, Settings, screensaver i tocnu obnovu Settings ekrana. Baseline
+Hot Cues, Settings, screensaver i točnu obnovu Settings ekrana. Baseline
 mijenjaj samo nakon vizualnog pregleda snimki uz
-`-UpdateBaselines -KeepArtifacts`. Ovaj PC gate ne zamjenjuje P4 DSI/PPA,
-touch, panel-timing ili fluidity hardware acceptance.
+`-UpdateBaselines -KeepArtifacts`.
 
 ## Git i build artefakti
 
@@ -165,64 +139,35 @@ Repo koristi `.gitignore` za ESP-IDF artefakte:
 - `managed_components/`
 - `sdkconfig`
 - `sdkconfig.old`
+- `JC-ESP32P4-M3-DEV/` (dokumentacija i sheme dev ploče)
 
-Iznimka: `firmware/control-board-s3/dependencies.lock` i
-`firmware/main-deck-p4/dependencies.lock` **jesu** commitani (`.gitignore` ima
-`!` iznimke za oba) da bi clean build bio reproducibilan. CI provjerava da se
-lock nije promijenio tijekom builda; ako se promijeni, ili commitaj novu
-rezoluciju ili pinaj komponentu koja je odlutala.
+Iznimka: `firmware/main-deck-p4/dependencies.lock` **jest** commitan (`.gitignore` ima
+`!` iznimku) da bi clean build bio reproducibilan. CI provjerava da se
+lock nije promijenio tijekom builda.
 
 Ne commitaj generirane build direktorije ili lokalni `sdkconfig` osim ako
-korisnik eksplicitno trazi drugacije.
+korisnik eksplicitno traži drugačije.
 
 Branch prefix za agent promjene je `codex/`.
 
-Canonical repo je `https://github.com/dvucinozd/Pajoniiir.git`, preimenovan sa
-starog `ESP32-DDJ-FLX4`. Stari URL jos redirecta, ali novi cloneovi i lokalni
-`origin` trebaju koristiti canonical URL. Audit i ciscenje od 2026-07-26
-potvrdili su da postoji samo `master` grana — lokalno i na `origin`; sve tada
-prisutne pomocne grane bile su potpuno mergane, imale su 0 jedinstvenih
-commitova i obrisane su. Jedinstveni odbaceni rad se ne brise nego arhivira pod
-anotiranim tagom `attic/*` (npr. `attic/phase-8-status-led-policy` = GPIO48
-WS2812 RGB status-LED policy engine, superseded XIAO GPIO21 jednobojnim LED-om).
-Prije brisanja bilo koje grane pokreni `git branch --no-merged master`, provjeri
-`git rev-list --count master..<branch>` i po potrebi tagiraj u `attic/*`.
+Canonical repo je **`https://github.com/dvucinozd/Pajoniiir-M3.git`**.
 
 ## Arhitektonska pravila
 
-- P4 je autoritativan za playback state, deck state, audio position, mixer
-  state i LED odluke.
-- S3 smije citati FLX4 MIDI, normalizirati input i slati semanticke evente.
-- S3 ne smije odlucivati je li deck stvarno playing, current/next, cue state
-  ili audio position.
-- MIDI je transport/input mapping, ne state model.
-- Zadrzi `0xA5` frame za MVP osim ako stvarno blokira implementaciju.
-- Prva firmware faza je `flx4_midi_host` raw MIDI capture na S3, prije
-  promjene P4 dual-deck logike.
+- **Single-Chip ESP32-P4**: ESP32-P4 je autoritativan za playback state, deck state, audio position, mixer state, LED odluke, LVGL UI i USB Host klijente.
+- **3-Port USB Topologija**: USB1 za 5V napajanje/debug, USB2 za DDJ-FLX4 (FS), USB3 za Rekordbox MSC (HS). Nema potrebe za vanjskim USB hubom.
+- **Master Audio**: Vanjski PCM5102A I2S DAC (`GPIO50/51/52`) pruža primarni master audio izlaz.
+- **Headphones / Cue**: Izravni UAC1 Isochronous USB audio streaming prema DDJ-FLX4 3.5mm priključku.
+- **Mreža**: Isključivo Wi-Fi 6 preko ESP32-C6 modula (ESP-Hosted preko SDIO). Ethernet EMAC je isključen u softveru kako bi se oslobodili RMII pinovi za I2S DAC.
+- **MIDI**: Koristi se provjereni Mixxx XML mapping iz `docs/reference/Pioneer-DDJ-FLX4.midi.xml`.
 
-## DDJ-FLX4 MVP kontrole
-
-MVP kontrole su u potpunosti potvrđene raw MIDI captureom i implementirane u firmwareu. Preostale kontrole iz proširenog inventara u `docs/DDJ_FLX4_MIDI_MAP.md` uvode se izravno iz Mixxx XML-a. Fizički smoke capture radi se kao naknadni test prihvaćanja, a ne kao preduvjet za kodiranje.
-
-Primarni mapping dokument je:
-
-```text
-docs\DDJ_FLX4_MIDI_MAP.md
-```
-
-Izvorni XML je:
-
-```text
-docs\reference\Pioneer-DDJ-FLX4.midi.xml
-```
-
-## Verifikacija prije zavrsetka
+## Verifikacija prije završetka
 
 Prije tvrdnje da je posao gotov:
 
-1. Pokreni relevantnu provjeru.
-2. Procitaj exit code i bitan output.
-3. Navedi sto je proslo, a sto nije pokrenuto.
+1. Pokreni relevantnu provjeru (P4 build i/ili host testove).
+2. Pročitaj exit code i bitan output.
+3. Navedi što je prošlo, a što nije pokrenuto.
 
 Za dokumentacijske promjene minimalno:
 
@@ -231,15 +176,12 @@ git diff --check
 git status --short
 ```
 
-Za firmware promjene pokreni barem build target koji je diran. Ako promjena
-dotice shared protokol ili oba targeta, pokreni oba builda.
+Za firmware promjene pokreni `idf.py build` i `.\tests\run_p4_host_tests.ps1`.
 
 ## Stil rada
 
 - Koristi `rg` / `rg --files` za pretragu.
-- Koristi `apply_patch` za rucne izmjene datoteka.
-- Ne revertaj korisnicke promjene bez izricitog zahtjeva.
-- Ne cisti masovno upstream whitespace samo radi estetike; uvezeni baseline
-  treba ostati lako usporediv s izvorom.
-- Ako mijenjas dokumentaciju o fazama, uskladi `README.md`,
+- Koristi `apply_patch` ili alate za uređivanje datoteka.
+- Ne revertaj korisničke promjene bez izričitog zahtjeva.
+- Ako mijenjaš dokumentaciju o fazama, uskladi `README.md`,
   `docs\DEVELOPMENT_PLAN.md` i `docs\STARTUP_CHECKLIST.md` kad je relevantno.
