@@ -13,22 +13,10 @@ je to prirodnije za firmware projekt.
 
 Cilj je standalone dual-deck DJ sustav:
 
-- Pioneer DDJ-FLX4 je operator surface.
-- ESP32-S3 je USB MIDI host i MIDI-to-control-link prevoditelj.
-- ESP32-P4 JC4880P443C_I_W je autoritativni playback/UI/audio engine.
-- Postojeci `0xA5` UART `control_link` ostaje interna komunikacija izmedu S3 i
-  P4.
-
-Trenutni `master` ima funkcionalan dual-deck FLX4 put, vinyl/scratch, Master
-Tempo, dualni MAIN/cue audio, Beat FX Filter/Echo/Flanger/Delay i P4/S3 OTA.
-Pull OTA koristi newer-only politiku, desetominutni offer TTL, provjeru
-channel size/SHA-256, `pajoniiir.local` i dinamički Host allow-list; lokalni
-potpisani push OTA ostaje servisni rollback put. Controller browse/load UI
-naredbe izvršavaju se isključivo iz `ui_update()` u LVGL tasku. Uz FLX4
-fixture postoji i `controllers/generic_midi_ci` za host provjeru generičkog
-profile puta, ali ne predstavlja hardware prihvat stvarnog non-FLX4 uređaja.
-I dalje ga ne tretiraj kao production-ready bez provjere aktualnih rizika,
-buildova i relevantnog hardware smoke testa.
+- Pioneer DDJ-FLX4 je operator surface spojen izravno na USB Host od ESP32-P4 preko USB Hub-a.
+- ESP32-P4 (JC-ESP32P4-M3-DEV) je autoritativni single-chip host: USB MIDI i Audio host, playback engine, Rekordbox library, 800×480 DSI UI i DSP mixer.
+- 5.0" MIPI-DSI IPS zaslon (800×480) s FocalTech FT5426 kapacitivnim dodirom pruža brzo i pregledno sučelje u nativnom landscape formatu.
+- Master audio izlaz ide preko PCM5102A I2S DAC modula.
 
 ## Najvaznije putanje
 
@@ -46,7 +34,6 @@ buildova i relevantnog hardware smoke testa.
   docs\DOCUMENTATION_STATUS.md
   docs\OTA-UPDATE.md
   docs\reference\Pioneer-DDJ-FLX4.midi.xml
-  firmware\control-board-s3
   firmware\main-deck-p4
   controllers\generic_midi_ci
   tests
