@@ -23,6 +23,9 @@
 #if CONFIG_MONITOR_PCM_LINK_ENABLED
 #include "monitor_pcm_link.h"
 #endif
+#if __has_include("p4_flx4_host.h")
+#include "p4_flx4_host.h"
+#endif
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -441,11 +444,15 @@ void app_main(void)
         wifi_link_request_enable(true);
     }
 
-    // ── USB host (Rekordbox media drive) ─────────────────────────────────────
+    // ── USB host (Rekordbox media drive & DDJ-FLX4) ─────────────────────────
     // Starts the host + MSC stack; when a drive is plugged into the HS USB-C
     // port it mounts at /usb and on_usb_storage_event() loads the library.
     ESP_ERROR_CHECK(usb_storage_init(on_usb_storage_event));
+#if __has_include("p4_flx4_host.h")
+    ESP_LOGI(TAG, "Starting Pioneer DDJ-FLX4 USB Host client on P4");
+    p4_flx4_host_init();
+#endif
 
-    ESP_LOGI(TAG, "all subsystems ready — deck active, waiting for S3 events");
+    ESP_LOGI(TAG, "all subsystems ready — deck active, waiting for controller events");
     ESP_ERROR_CHECK(firmware_health_mark_ready());
 }

@@ -598,6 +598,9 @@ void control_link_send_led_deck(led_id_t led, uint8_t state, uint8_t deck);
 // Send a deck-less state/control command to S3. Thread-safe.
 void control_link_send_state(uint8_t id, int16_t value);
 
+// Inject a semantic control event directly into the local control queue (from P4 FLX4 host or simulator). Thread-safe.
+esp_err_t control_link_inject_semantic(uint8_t type, uint8_t id, int16_t value);
+
 // Register a callback invoked (from the RX task) whenever the S3 reports a
 // connected controller descriptor over the 0xA6 bulk layer.
 typedef void (*control_link_descriptor_cb_t)(const ctrl_descriptor_report_t *rep);

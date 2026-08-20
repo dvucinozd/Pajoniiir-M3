@@ -1,0 +1,10 @@
+menu "Pajoniiir P4 FLX4 USB Host"
+
+config P4_FLX4_USB_HOST_ENABLED
+    bool "Enable direct Pioneer DDJ-FLX4 USB Host on ESP32-P4"
+    default y
+    help
+        Enables native USB MIDI and Audio Host driver for Pioneer DDJ-FLX4
+        directly on ESP32-P4 USB OTG port.
+
+endmenu

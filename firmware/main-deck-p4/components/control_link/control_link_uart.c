@@ -123,10 +123,17 @@ static void send_frame(uint8_t type, uint8_t id, int16_t value)
     }
 }
 
+#if __has_include("p4_flx4_host.h")
+#include "p4_flx4_host.h"
+#endif
+
 void control_link_send_led_deck(led_id_t led, uint8_t state, uint8_t deck)
 {
     int16_t val = (int16_t)(state | (deck << 8));
     send_frame(CTRL_TYPE_LED, (uint8_t)led, val);
+#if __has_include("p4_flx4_host.h")
+    (void)p4_flx4_host_send_led((uint8_t)led, state, deck);
+#endif
 }
 
 void control_link_send_led(led_id_t led, uint8_t state)
@@ -137,6 +144,51 @@ void control_link_send_led(led_id_t led, uint8_t state)
 void control_link_send_state(uint8_t id, int16_t value)
 {
     send_frame(CTRL_TYPE_STATE, id, value);
+}
+
+static bool enqueue_control_event(const ctrl_event_t *ev);
+
+esp_err_t control_link_inject_semantic(uint8_t type, uint8_t id, int16_t value)
+{
+    if (!s_event_queue) return ESP_ERR_INVALID_STATE;
+
+    ctrl_event_t ev = {
+        .id    = id,
+        .value = value,
+        .seq   = next_seq(),
+        .deck  = control_link_id_deck(id),
+        .control = control_link_id_control(id),
+    };
+
+    switch (type) {
+    case CTRL_TYPE_BUTTON:
+        ev.type = CTRL_EV_BUTTON;
+        break;
+    case CTRL_TYPE_ENCODER:
+        if (id == 0 || control_link_id_is_deck_jog(id)) {
+            ev.type = CTRL_EV_JOG;
+        } else if (id == 1 ||
+                   id == CTRL_ID_BROWSE_DELTA ||
+                   id == CTRL_ID_BROWSE_SHIFT_DELTA) {
+            ev.type = CTRL_EV_BROWSE;
+        } else {
+            return ESP_ERR_INVALID_ARG;
+        }
+        break;
+    case CTRL_TYPE_PITCH:
+        ev.type = CTRL_EV_PITCH;
+        break;
+    case CTRL_TYPE_HEARTBEAT:
+        ev.type = CTRL_EV_HEARTBEAT;
+        break;
+    case CTRL_TYPE_STATE:
+        ev.type = CTRL_EV_STATE;
+        break;
+    default:
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    return enqueue_control_event(&ev) ? ESP_OK : ESP_ERR_NO_MEM;
 }
 
 void control_link_set_descriptor_report_cb(control_link_descriptor_cb_t cb)
