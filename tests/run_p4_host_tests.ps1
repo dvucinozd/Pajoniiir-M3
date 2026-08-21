@@ -911,6 +911,15 @@ Assert-FileContains `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
     -LiteralPatterns @("wifi_link_retry_note_failure(&retry)", "giving up, radio stays off")
 
+Assert-FileContains `
+    -Name "p4 Wi-Fi stop owns the transition lease while destroying netifs" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
+    -LiteralPatterns @(
+        "wifi_link_control_next(desired, active, transition_busy)",
+        "wifi_transition_lease_acquire(WIFI_TRANSITION_OWNER_CONTROL)",
+        "wifi_transition_lease_release(WIFI_TRANSITION_OWNER_CONTROL)"
+    )
+
 # Every exit from the STA visit must end back on the AP; the AP is the only way
 # the deck is reachable at all, so a path that leaves it down is unrecoverable
 # without a wired flash.
@@ -1934,6 +1943,7 @@ $tests = @(
             "-I../../firmware/main-deck-p4/components/wifi_link/include",
             "-o", "test_wifi_link_retry.exe",
             "test_wifi_link_retry.c",
+            "../../firmware/main-deck-p4/components/wifi_link/wifi_link_control.c",
             "../../firmware/main-deck-p4/components/wifi_link/wifi_link_retry.c"
         )
     },

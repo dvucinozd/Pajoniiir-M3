@@ -33,7 +33,9 @@ ESP32-P4 jedini posjeduje:
 - `audio_engine`: dual-deck decode, PCM timeline, mixer, DSP i izlazni tapovi.
 - `usb_storage` + `library`: MSC lifecycle, Rekordbox PDB/ANLZ i metadata cache.
 - `ui`: LVGL ekrani, touch i PPA waveform render.
-- `wifi_link` + `web_server`: C6 mreža, remote kontrola i dijagnostika.
+- `wifi_link` + `web_server`: C6 mreža, operatorski SoftAP, privremeni servisni
+  STA, remote kontrola i dijagnostika. Probe i pull OTA dijele ekskluzivni
+  AP→STA→AP transition lease; Settings gašenje čeka završetak tog prijelaza.
 - `p4_ota` + `p4_ota_pull`: potpisani P4-only OTA.
 
 ## Kontrolni put

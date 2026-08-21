@@ -5,6 +5,7 @@
 
 typedef enum {
     WIFI_TRANSITION_OWNER_NONE = 0,
+    WIFI_TRANSITION_OWNER_CONTROL,
     WIFI_TRANSITION_OWNER_PROBE,
     WIFI_TRANSITION_OWNER_OTA,
 } wifi_transition_owner_t;

@@ -76,6 +76,47 @@ bool ui_settings_is_active_tab(int active_tab, int settings_tab_index)
     return settings_tab_index >= 0 && active_tab == settings_tab_index;
 }
 
+void ui_settings_format_wifi_status(const ui_settings_wifi_status_t *status,
+                                    char *out,
+                                    size_t out_size)
+{
+    if (!out || out_size == 0u) return;
+    if (!status) {
+        snprintf(out, out_size, "WI-FI: UNAVAILABLE");
+        return;
+    }
+    switch (status->mode) {
+    case UI_SETTINGS_WIFI_OFF:
+        snprintf(out, out_size, "RADIO: OFF");
+        break;
+    case UI_SETTINGS_WIFI_STARTING:
+        snprintf(out, out_size, "C6/SDIO: STARTING");
+        break;
+    case UI_SETTINGS_WIFI_AP:
+        snprintf(out, out_size, "AP: %s  %s  C:%u",
+                 status->ssid[0] ? status->ssid : "--",
+                 status->address[0] ? status->address : "--",
+                 (unsigned)status->ap_clients);
+        break;
+    case UI_SETTINGS_WIFI_STA:
+        snprintf(out, out_size, "STA: %s",
+                 status->address[0] ? status->address : "CONNECTING");
+        break;
+    case UI_SETTINGS_WIFI_RESTORING_AP:
+        snprintf(out, out_size, "RESTORING AP...");
+        break;
+    case UI_SETTINGS_WIFI_STOPPING:
+        snprintf(out, out_size, "RADIO: STOPPING");
+        break;
+    case UI_SETTINGS_WIFI_ERROR:
+        snprintf(out, out_size, "WI-FI ERROR: %d", status->last_error);
+        break;
+    default:
+        snprintf(out, out_size, "WI-FI: UNKNOWN");
+        break;
+    }
+}
+
 #ifndef UI_SETTINGS_HOST_TEST
 
 #include "esp_log.h"
@@ -108,8 +149,10 @@ static lv_obj_t *s_label_brightness_val = NULL;
 static lv_obj_t *s_label_cue_mode = NULL;
 static lv_obj_t *s_label_master_trim = NULL;
 static lv_obj_t *s_label_wifi_remote = NULL;
+static lv_obj_t *s_label_wifi_status = NULL;
 static uint8_t s_master_trim_preset = 0;
 static ui_settings_wifi_toggle_cb_t s_wifi_toggle_cb = NULL;
+static ui_settings_wifi_status_cb_t s_wifi_status_cb = NULL;
 static ui_settings_recording_toggle_cb_t s_recording_toggle_cb = NULL;
 #if CONFIG_AUDIO_RECORDER_ENABLED
 static lv_obj_t *s_btn_rec = NULL;
@@ -125,6 +168,9 @@ static uint32_t s_cache_sd_free_mib = UINT32_MAX;
 static uint32_t s_cache_sd_total_mib = UINT32_MAX;
 static uint32_t s_cache_sd_last_poll_ms = 0;
 static ui_settings_text_cache_t s_cache_sd_text;
+static ui_settings_text_cache_t s_cache_wifi_text;
+static ui_settings_color_cache_t s_cache_wifi_color;
+static uint32_t s_cache_wifi_last_poll_ms = 0;
 
 static void ui_settings_copy_str(char *dst, size_t dst_len, const char *src)
 {
@@ -440,6 +486,11 @@ void ui_settings_set_wifi_toggle_cb(ui_settings_wifi_toggle_cb_t cb)
     s_wifi_toggle_cb = cb;
 }
 
+void ui_settings_set_wifi_status_cb(ui_settings_wifi_status_cb_t cb)
+{
+    s_wifi_status_cb = cb;
+}
+
 void ui_settings_configure(const ui_settings_config_t *config)
 {
     s_config = (ui_settings_config_t){0};
@@ -639,6 +690,13 @@ lv_obj_t *ui_settings_create(lv_obj_t *parent)
                                                   wifi_remote_init ? COL_GREEN : COL_TEXT_DIM,
                                                   &lv_font_montserrat_14,
                                                   96, 41);
+    s_label_wifi_status = ui_settings_value_label(wifi_section,
+                                                  "RADIO: OFF",
+                                                  COL_TEXT_DIM,
+                                                  &lv_font_montserrat_12,
+                                                  16, 72);
+    lv_obj_set_width(s_label_wifi_status, 328);
+    lv_label_set_long_mode(s_label_wifi_status, LV_LABEL_LONG_CLIP);
 
     lv_obj_t *mixer_section = ui_settings_section(screen, 30, 356, 740, 64, "MIXER STATUS");
     ui_settings_static_tile(mixer_section, 18, 34, 110, 22,
@@ -703,6 +761,9 @@ void ui_settings_invalidate(void)
     s_cache_sd_total_mib = UINT32_MAX;
     s_cache_sd_last_poll_ms = 0;
     s_cache_sd_text.valid = false;
+    s_cache_wifi_last_poll_ms = 0;
+    s_cache_wifi_text.valid = false;
+    s_cache_wifi_color.valid = false;
 }
 
 static void ui_settings_format_storage_size(uint64_t bytes, char *out, size_t out_size)
@@ -787,6 +848,31 @@ static void ui_settings_update_sd_status_label(bool force)
     ui_settings_obj_set_text_color_cached(s_widgets.sd_status, &s_cache_sd_color, COL_GREEN);
 }
 
+static void ui_settings_update_wifi_status_label(bool force)
+{
+    if (!s_label_wifi_status || !s_wifi_status_cb) return;
+
+    uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000ull);
+    if (!ui_settings_should_poll(now_ms, s_cache_wifi_last_poll_ms, force, 500u)) {
+        return;
+    }
+    s_cache_wifi_last_poll_ms = now_ms;
+
+    ui_settings_wifi_status_t status = {0};
+    s_wifi_status_cb(&status);
+    char text[80];
+    ui_settings_format_wifi_status(&status, text, sizeof(text));
+    ui_settings_label_set_text_cached(s_label_wifi_status, &s_cache_wifi_text, text);
+
+    lv_color_t color = COL_TEXT_DIM;
+    if (status.mode == UI_SETTINGS_WIFI_AP) color = COL_GREEN;
+    else if (status.mode == UI_SETTINGS_WIFI_STA ||
+             status.mode == UI_SETTINGS_WIFI_RESTORING_AP) color = COL_AMBER;
+    else if (status.mode == UI_SETTINGS_WIFI_ERROR) color = COL_RED;
+    ui_settings_obj_set_text_color_cached(s_label_wifi_status,
+                                          &s_cache_wifi_color, color);
+}
+
 #endif
 
 void ui_settings_update(const ui_frame_context_t *ctx)
@@ -797,6 +883,7 @@ void ui_settings_update(const ui_frame_context_t *ctx)
 #ifndef WIN32
     ui_settings_update_controller_status_label(&ctx->deck_state[CTRL_DECK_1]);
     ui_settings_update_sd_status_label(false);
+    ui_settings_update_wifi_status_label(false);
 #if CONFIG_AUDIO_RECORDER_ENABLED
     ui_settings_update_recording_label();
 #endif

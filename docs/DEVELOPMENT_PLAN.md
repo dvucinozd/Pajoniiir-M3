@@ -37,15 +37,20 @@ Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
 
 ### 2. Dovršiti Wi-Fi 6 implementaciju
 
-- potvrditi ESP32-C6 firmware, ESP-Hosted i SDIO link na završnoj P4 slici;
-- dovršiti trajnu Wi-Fi konfiguraciju za normalni SoftAP rad i servisne STA
+- [ ] potvrditi ESP32-C6 firmware, ESP-Hosted i SDIO link na završnoj P4 slici;
+- [x] dovršiti trajnu Wi-Fi konfiguraciju za normalni SoftAP rad i servisne STA
   vjerodajnice, bez ispisa tajni u statusu ili logovima;
-- dovršiti Settings tok za enable/disable, AP/STA stanje, IP adresu, pogreške i
+- [x] dovršiti Settings tok za enable/disable, AP/STA stanje, IP adresu, pogreške i
   siguran povratak iz privremenog STA načina u SoftAP;
-- hardverski provjeriti web UI/API, reconnect, više klijenata i paralelni rad
+- [ ] hardverski provjeriti web UI/API, reconnect, više klijenata i paralelni rad
   Wi-Fi prometa s USB2, USB3 i audio putanjama;
-- potvrditi potpisani P4 OTA preko STA veze, uključujući neuspjeli download,
+- [ ] potvrditi potpisani P4 OTA preko STA veze, uključujući neuspjeli download,
   rollback i obnovu SoftAP-a.
+
+Programsko učvršćivanje sada objavljuje stvarno OFF/STARTING/AP/STA/RESTORING/
+ERROR stanje, AP/STA adresu i broj AP klijenata na Settings ekranu. Asinkrono
+gašenje čeka aktivni probe/OTA transition lease umjesto rušenja C6 transporta
+ispod prijelaznog taska; odluka START/STOP/WAIT pokrivena je host testom.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni

@@ -31,6 +31,27 @@ static const char *TAG = "main";
 
 void p4_tcm_heap_guard_keep(void);
 
+static void app_wifi_status(ui_settings_wifi_status_t *out)
+{
+    if (!out) return;
+    wifi_link_status_t status = wifi_link_get_status();
+    memset(out, 0, sizeof(*out));
+    switch (status.mode) {
+    case WIFI_LINK_MODE_STARTING:     out->mode = UI_SETTINGS_WIFI_STARTING; break;
+    case WIFI_LINK_MODE_AP:           out->mode = UI_SETTINGS_WIFI_AP; break;
+    case WIFI_LINK_MODE_STA:          out->mode = UI_SETTINGS_WIFI_STA; break;
+    case WIFI_LINK_MODE_RESTORING_AP: out->mode = UI_SETTINGS_WIFI_RESTORING_AP; break;
+    case WIFI_LINK_MODE_STOPPING:     out->mode = UI_SETTINGS_WIFI_STOPPING; break;
+    case WIFI_LINK_MODE_ERROR:        out->mode = UI_SETTINGS_WIFI_ERROR; break;
+    case WIFI_LINK_MODE_OFF:
+    default:                          out->mode = UI_SETTINGS_WIFI_OFF; break;
+    }
+    out->ap_clients = status.ap_clients;
+    out->last_error = (int)status.last_error;
+    snprintf(out->ssid, sizeof(out->ssid), "%s", status.ssid);
+    snprintf(out->address, sizeof(out->address), "%s", status.address);
+}
+
 // Periodic health monitor (esp_timer task, not the audio path): reads the
 // counters the audio engine already maintains and emits rate-limited service-log
 // summaries for anomalies and low-memory edges. No hot-path work.
@@ -338,6 +359,7 @@ void app_main(void)
 
     deck_core_set_activity_cb(ui_activity_notice);
     ui_settings_set_wifi_toggle_cb(wifi_link_request_enable);
+    ui_settings_set_wifi_status_cb(app_wifi_status);
 #if CONFIG_AUDIO_RECORDER_ENABLED
     ui_settings_set_recording_toggle_cb(on_recording_toggle);
 #endif

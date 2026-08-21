@@ -49,12 +49,40 @@ static void test_settings_active_tab_uses_configured_index(void)
     assert(!ui_settings_is_active_tab(5, -1));
 }
 
+static void test_wifi_status_formats_actual_transport_state(void)
+{
+    char text[80];
+    ui_settings_wifi_status_t status = {
+        .mode = UI_SETTINGS_WIFI_AP,
+        .ap_clients = 2,
+    };
+    snprintf(status.ssid, sizeof(status.ssid), "%s", "Pajoniiir");
+    snprintf(status.address, sizeof(status.address), "%s", "192.168.4.1");
+    ui_settings_format_wifi_status(&status, text, sizeof(text));
+    assert(strcmp(text, "AP: Pajoniiir  192.168.4.1  C:2") == 0);
+
+    status.mode = UI_SETTINGS_WIFI_STA;
+    snprintf(status.address, sizeof(status.address), "%s", "192.168.1.42");
+    ui_settings_format_wifi_status(&status, text, sizeof(text));
+    assert(strcmp(text, "STA: 192.168.1.42") == 0);
+
+    status.address[0] = '\0';
+    ui_settings_format_wifi_status(&status, text, sizeof(text));
+    assert(strcmp(text, "STA: CONNECTING") == 0);
+
+    status.mode = UI_SETTINGS_WIFI_ERROR;
+    status.last_error = 257;
+    ui_settings_format_wifi_status(&status, text, sizeof(text));
+    assert(strcmp(text, "WI-FI ERROR: 257") == 0);
+}
+
 int main(void)
 {
     test_force_poll_always_allows_refresh();
     test_first_poll_and_interval_gate();
     test_master_trim_presets_are_non_boosting_and_cycle();
     test_settings_active_tab_uses_configured_index();
+    test_wifi_status_formats_actual_transport_state();
 
     puts("ui_settings tests passed");
     return 0;
