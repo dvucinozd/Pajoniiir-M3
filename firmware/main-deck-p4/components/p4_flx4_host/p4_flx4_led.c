@@ -113,6 +113,11 @@ static bool note_for_led(uint8_t led, uint8_t *note)
     }
 }
 
+static inline bool is_deck_2(uint8_t deck)
+{
+    return (deck == 1 || deck == CTRL_DECK_2);
+}
+
 static uint8_t note_status_for_deck(uint8_t deck, uint8_t led)
 {
     if (led == LED_TRACK_LOAD_DECK1 || led == LED_TRACK_LOAD_DECK2) {
@@ -128,9 +133,9 @@ static uint8_t note_status_for_deck(uint8_t deck, uint8_t led)
         (led >= LED_BEAT_JUMP_PAD_1 && led <= LED_BEAT_JUMP_PAD_8) ||
         (led >= LED_BEAT_LOOP_PAD_1 && led <= LED_BEAT_LOOP_PAD_8) ||
         (led >= LED_BEAT_JUMP_SHIFT_HELPER_7 && led <= LED_BEAT_JUMP_SHIFT_HELPER_8)) {
-        return deck == CTRL_DECK_1 ? 0x97 : 0x99;
+        return is_deck_2(deck) ? 0x99 : 0x97;
     }
-    return deck == CTRL_DECK_1 ? 0x90 : 0x91;
+    return is_deck_2(deck) ? 0x91 : 0x90;
 }
 
 bool flx4_led_midi_build_packet(uint8_t led, uint8_t state, uint8_t deck, uint8_t packet[4])
@@ -138,9 +143,8 @@ bool flx4_led_midi_build_packet(uint8_t led, uint8_t state, uint8_t deck, uint8_
     if (!packet) return false;
 
     if (led == LED_VU_METER) {
-        if (deck != CTRL_DECK_1 && deck != CTRL_DECK_2) return false;
         packet[0] = 0x0B;  // Control Change
-        packet[1] = (deck == CTRL_DECK_1) ? 0xB0 : 0xB1;
+        packet[1] = is_deck_2(deck) ? 0xB1 : 0xB0;
         packet[2] = 0x02;  // VU meter CC
         packet[3] = state & 0x7F;
         return true;
@@ -148,12 +152,6 @@ bool flx4_led_midi_build_packet(uint8_t led, uint8_t state, uint8_t deck, uint8_
 
     uint8_t note = 0;
     if (!note_for_led(led, &note)) return false;
-
-    if (led != LED_TRACK_LOAD_DECK1 && led != LED_TRACK_LOAD_DECK2 &&
-        led != LED_SMART_CFX && led != LED_SMART_FADER &&
-        led != LED_BEAT_FX_ON && led != LED_MASTER_CUE) {
-        if (deck != CTRL_DECK_1 && deck != CTRL_DECK_2) return false;
-    }
 
     packet[0] = 0x09;  // Note On
     packet[1] = note_status_for_deck(deck, led);

@@ -133,6 +133,9 @@ esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
         return ESP_ERR_NO_MEM;
     }
 
+    if (s_client_handle) {
+        (void)usb_host_client_unblock(s_client_handle);
+    }
     try_submit_next_out();
     return ESP_OK;
 }
@@ -153,6 +156,8 @@ esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
 static usb_transfer_t          *s_isoc_xfers[FLX4_ISOC_XFERS_NUM] = { NULL };
 static bool                     s_audio_claimed = false;
 static uint8_t                  s_audio_ep_addr = 0x01;
+static uint32_t                 s_isoc_total_transfers = 0;
+static uint32_t                 s_audio_total_frames = 0;
 
 static void isoc_transfer_cb(usb_transfer_t *transfer);
 
@@ -179,6 +184,12 @@ static void prepare_and_submit_isoc_transfer(usb_transfer_t *transfer)
     esp_err_t err = usb_host_transfer_submit(transfer);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "Isochronous transfer submit failed: %s", esp_err_to_name(err));
+    } else {
+        s_isoc_total_transfers++;
+        if ((s_isoc_total_transfers % 1000) == 0) {
+            ESP_LOGI(TAG, "FLX4 ISOC audio alive: %" PRIu32 " transfers, %" PRIu32 " frames pushed to ring",
+                     s_isoc_total_transfers, s_audio_total_frames);
+        }
     }
 }
 
@@ -198,15 +209,21 @@ esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t 
     while (frame_count > 0) {
         size_t chunk = frame_count > 128 ? 128 : frame_count;
         for (size_t i = 0; i < chunk; ++i) {
-            temp[i * 4 + 0] = master_samples ? master_samples[i * 2 + 0] : 0;
-            temp[i * 4 + 1] = master_samples ? master_samples[i * 2 + 1] : 0;
-            temp[i * 4 + 2] = hp_samples ? hp_samples[i * 2 + 0] : 0;
-            temp[i * 4 + 3] = hp_samples ? hp_samples[i * 2 + 1] : 0;
+            int16_t m_l = master_samples ? master_samples[i * 2 + 0] : 0;
+            int16_t m_r = master_samples ? master_samples[i * 2 + 1] : 0;
+            int16_t h_l = hp_samples ? hp_samples[i * 2 + 0] : m_l;
+            int16_t h_r = hp_samples ? hp_samples[i * 2 + 1] : m_r;
+
+            temp[i * 4 + 0] = m_l; // Ch 1: Master L
+            temp[i * 4 + 1] = m_r; // Ch 2: Master R
+            temp[i * 4 + 2] = h_l; // Ch 3: Headphones L
+            temp[i * 4 + 3] = h_r; // Ch 4: Headphones R
         }
         portENTER_CRITICAL(&s_flx4_mux);
         (void)p4_flx4_audio_ring_write(&s_audio_ring, temp, (uint32_t)chunk);
         portEXIT_CRITICAL(&s_flx4_mux);
 
+        s_audio_total_frames += (uint32_t)chunk;
         if (master_samples) master_samples += chunk * 2;
         if (hp_samples) hp_samples += chunk * 2;
         frame_count -= chunk;
@@ -406,7 +423,8 @@ static void flx4_midi_task(void *arg)
     (void)arg;
     while (1) {
         if (s_client_handle) {
-            (void)usb_host_client_handle_events(s_client_handle, portMAX_DELAY);
+            (void)usb_host_client_handle_events(s_client_handle, pdMS_TO_TICKS(10));
+            try_submit_next_out();
         } else {
             vTaskDelay(pdMS_TO_TICKS(100));
         }
