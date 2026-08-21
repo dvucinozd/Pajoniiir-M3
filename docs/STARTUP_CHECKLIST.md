@@ -30,12 +30,16 @@ Status: updated for **Pajoniiir-M3** single-chip ESP32-P4 architecture on the **
     - **BROWSE knob** scrolled library (`id=96`).
     - **LOAD 1 / LOAD 2 buttons** loaded tracks to Deck 1 (`id=97`) and Deck 2 (`id=98`).
     - **PLAY buttons** started dual-deck audio engine (`id=16` and `id=48`), streaming 2290+ PCM audio buffers over I2S with **0 drops**.
-- [x] **Pioneer DDJ-FLX4 UAC1 Isochronous Audio Streaming to Headphones (2026-08-21)**:
+- [x] **Pioneer DDJ-FLX4 UAC1 Isochronous Audio Streaming to Headphones & Complete LED Feedback (2026-08-21)**:
   - Claimed **Interface 1 (Alt 2)**: 4-kanalni 16-bit 44.1 kHz PCM Audio Streaming (`Ch 1/2`: Master RCA, `Ch 3/4`: Headphones 3.5mm jack).
   - Claimed **Interface 4 (Alt 0)**: USB MIDI Streaming (Bulk IN `0x82`, Bulk OUT `0x03`).
   - Tuned hardware FIFO allocations: High-Speed controller allocated 512+ byte Bulk buffers (`nptx=256`, `rx=640`) and Full-Speed controller allocated 384+ byte Isochronous buffers (`ptx=100`, `nptx=20`, `rx=136`).
-  - Continuous triple-buffered isochronous pipeline (`EP 0x01`, `mps=384`) streaming real-time master and headphone cue mixes from `audio_engine.c`.
-  - LED commands (Play, Cue, Sync, Hot Cues) actively updating controller buttons via FreeRTOS queue worker.
+  - Continuous triple-buffered isochronous pipeline (`EP 0x01`, `mps=384`) streaming real-time master and headphone cue mixes from `audio_engine.c` with -12 dB digital headroom (`>> 2`) eliminating clipping/distortion.
+  - **Complete LED Feedback Verified on Hardware**: Direct LED Sink callback registration (`control_link_set_led_sink`) connects `deck_core` directly to `p4_flx4_host_send_led`. Real-time illumination verified on hardware for:
+    - Transport buttons: `Play / Pause` and `Cue`
+    - Channel & Master Cue: `PFL Cue 1 / Cue 2` and `Master Cue`
+    - Performance Pads: `Hot Cues 1-8`, `Beat Loop 1-8`, `Pad FX1 / FX2 1-8`, `Beat Jump 1-8`
+    - Mixer & Status: `Sync`, `Loop In / Out`, `Smart CFX`, `Smart Fader`, `Beat FX`, and 7-bit dynamic `VU Meters` for Deck 1 & Deck 2.
 
 ## Current installed and accepted baselines
 

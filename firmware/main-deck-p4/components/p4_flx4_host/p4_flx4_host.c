@@ -95,9 +95,18 @@ static void out_transfer_cb(usb_transfer_t *transfer);
 
 static void try_submit_next_out(void)
 {
-    if (s_out_inflight || !s_out_xfer || !s_dev_handle || !s_connected || !s_out_queue) {
+    if (!s_connected || !s_out_xfer || !s_dev_handle || !s_out_queue) {
         return;
     }
+
+    portENTER_CRITICAL(&s_flx4_mux);
+    if (s_out_inflight) {
+        portEXIT_CRITICAL(&s_flx4_mux);
+        return;
+    }
+    s_out_inflight = true;
+    portEXIT_CRITICAL(&s_flx4_mux);
+
     uint8_t packet[4];
     if (xQueueReceive(s_out_queue, packet, 0) == pdTRUE) {
         memcpy(s_out_xfer->data_buffer, packet, 4);
@@ -105,21 +114,26 @@ static void try_submit_next_out(void)
         s_out_xfer->bEndpointAddress = s_out_ep_addr;
         s_out_xfer->num_bytes = 4;
         s_out_xfer->callback = out_transfer_cb;
-        s_out_inflight = true;
         esp_err_t err = usb_host_transfer_submit(s_out_xfer);
         if (err != ESP_OK) {
+            portENTER_CRITICAL(&s_flx4_mux);
             s_out_inflight = false;
-            ESP_LOGW(TAG, "Failed to submit OUT transfer: %s", esp_err_to_name(err));
-        } else {
-            ESP_LOGW(TAG, "FLX4 LED TX: %02x %02x %02x %02x", packet[0], packet[1], packet[2], packet[3]);
+            portEXIT_CRITICAL(&s_flx4_mux);
+            ESP_LOGW(TAG, "OUT submit failed (EP 0x%02x): %s", s_out_ep_addr, esp_err_to_name(err));
         }
+    } else {
+        portENTER_CRITICAL(&s_flx4_mux);
+        s_out_inflight = false;
+        portEXIT_CRITICAL(&s_flx4_mux);
     }
 }
 
 static void out_transfer_cb(usb_transfer_t *transfer)
 {
     (void)transfer;
+    portENTER_CRITICAL(&s_flx4_mux);
     s_out_inflight = false;
+    portEXIT_CRITICAL(&s_flx4_mux);
     try_submit_next_out();
 }
 
@@ -149,17 +163,26 @@ esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
     return p4_flx4_host_send_packet(packet);
 }
 
+static esp_err_t flx4_control_link_led_sink(uint8_t led, uint8_t state, uint8_t deck, void *user_ctx)
+{
+    (void)user_ctx;
+    return p4_flx4_host_send_led(led, state, deck);
+}
+
 #define FLX4_ISOC_XFERS_NUM        3
 #define FLX4_ISOC_PACKETS_PER_XFER 4
 #define FLX4_ISOC_MAX_PACKET_BYTES 384
 
 static usb_transfer_t          *s_isoc_xfers[FLX4_ISOC_XFERS_NUM] = { NULL };
+static usb_transfer_t          *s_ctrl_xfer = NULL;
+static uint8_t                  s_ctrl_step = 0;
 static bool                     s_audio_claimed = false;
 static uint8_t                  s_audio_ep_addr = 0x01;
 static uint32_t                 s_isoc_total_transfers = 0;
 static uint32_t                 s_audio_total_frames = 0;
 
 static void isoc_transfer_cb(usb_transfer_t *transfer);
+static void ctrl_transfer_cb(usb_transfer_t *transfer);
 
 static void prepare_and_submit_isoc_transfer(usb_transfer_t *transfer)
 {
@@ -187,7 +210,7 @@ static void prepare_and_submit_isoc_transfer(usb_transfer_t *transfer)
     } else {
         s_isoc_total_transfers++;
         if ((s_isoc_total_transfers % 1000) == 0) {
-            ESP_LOGI(TAG, "FLX4 ISOC audio alive: %" PRIu32 " transfers, %" PRIu32 " frames pushed to ring",
+            ESP_LOGW(TAG, "FLX4 ISOC audio alive: %" PRIu32 " transfers, %" PRIu32 " frames pushed to ring",
                      s_isoc_total_transfers, s_audio_total_frames);
         }
     }
@@ -200,6 +223,81 @@ static void isoc_transfer_cb(usb_transfer_t *transfer)
     }
 }
 
+static void start_audio_config_sequence(void)
+{
+    if (!s_dev_handle || !s_client_handle || !s_audio_claimed) return;
+    if (!s_ctrl_xfer) {
+        esp_err_t err = usb_host_transfer_alloc(64, 0, &s_ctrl_xfer);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Alloc ctrl xfer failed: %s", esp_err_to_name(err));
+            return;
+        }
+    }
+
+    s_ctrl_step = 1;
+    usb_setup_packet_t *setup = (usb_setup_packet_t *)s_ctrl_xfer->data_buffer;
+    setup->bmRequestType = USB_BM_REQUEST_TYPE_DIR_OUT | USB_BM_REQUEST_TYPE_TYPE_STANDARD | USB_BM_REQUEST_TYPE_RECIP_INTERFACE; // 0x01
+    setup->bRequest = USB_B_REQUEST_SET_INTERFACE; // 0x0B
+    setup->wValue = 2; // Alt setting 2 (4-channel 16-bit PCM)
+    setup->wIndex = 1; // Interface 1
+    setup->wLength = 0;
+
+    s_ctrl_xfer->device_handle = s_dev_handle;
+    s_ctrl_xfer->bEndpointAddress = 0;
+    s_ctrl_xfer->num_bytes = sizeof(usb_setup_packet_t);
+    s_ctrl_xfer->callback = ctrl_transfer_cb;
+
+    esp_err_t err = usb_host_transfer_submit_control(s_client_handle, s_ctrl_xfer);
+    ESP_LOGW(TAG, "Submitted SET_INTERFACE (intf 1, alt 2): %s", esp_err_to_name(err));
+}
+
+static void ctrl_transfer_cb(usb_transfer_t *transfer)
+{
+    if (transfer->status != USB_TRANSFER_STATUS_COMPLETED) {
+        ESP_LOGW(TAG, "Control transfer step %d failed with status %d", s_ctrl_step, transfer->status);
+        return;
+    }
+
+    if (s_ctrl_step == 1) {
+        s_ctrl_step = 2;
+        usb_setup_packet_t *setup = (usb_setup_packet_t *)transfer->data_buffer;
+        setup->bmRequestType = USB_BM_REQUEST_TYPE_DIR_OUT | USB_BM_REQUEST_TYPE_TYPE_CLASS | USB_BM_REQUEST_TYPE_RECIP_ENDPOINT; // 0x22
+        setup->bRequest = 0x01; // UAC_SET_CUR
+        setup->wValue = 0x0100; // SAMPLING_FREQ_CONTROL
+        setup->wIndex = s_audio_ep_addr; // EP 0x01
+        setup->wLength = 3;
+
+        uint8_t *data = &transfer->data_buffer[sizeof(usb_setup_packet_t)];
+        data[0] = 0x44; // 44100 Hz = 0x0000AC44
+        data[1] = 0xAC;
+        data[2] = 0x00;
+
+        transfer->num_bytes = sizeof(usb_setup_packet_t) + 3;
+        transfer->device_handle = s_dev_handle;
+        transfer->bEndpointAddress = 0;
+        transfer->callback = ctrl_transfer_cb;
+
+        esp_err_t err = usb_host_transfer_submit_control(s_client_handle, transfer);
+        ESP_LOGW(TAG, "Submitted SET_CUR (EP 0x%02x, 44100 Hz): %s", s_audio_ep_addr, esp_err_to_name(err));
+    } else if (s_ctrl_step == 2) {
+        s_ctrl_step = 0;
+        ESP_LOGW(TAG, ">>> Pioneer DDJ-FLX4 Audio DAC INITIALIZED & READY! <<<");
+
+        // Start Isochronous streaming!
+        for (int k = 0; k < FLX4_ISOC_XFERS_NUM; ++k) {
+            if (!s_isoc_xfers[k]) {
+                (void)usb_host_transfer_alloc(FLX4_ISOC_MAX_PACKET_BYTES * FLX4_ISOC_PACKETS_PER_XFER,
+                                              FLX4_ISOC_PACKETS_PER_XFER,
+                                              &s_isoc_xfers[k]);
+            }
+            if (s_isoc_xfers[k]) {
+                prepare_and_submit_isoc_transfer(s_isoc_xfers[k]);
+            }
+        }
+        ESP_LOGW(TAG, "FLX4 Isochronous Audio streaming started on EP 0x%02x", s_audio_ep_addr);
+    }
+}
+
 esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t *hp_samples, size_t frame_count)
 {
     if ((!master_samples && !hp_samples) || frame_count == 0) return ESP_ERR_INVALID_ARG;
@@ -209,15 +307,15 @@ esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t 
     while (frame_count > 0) {
         size_t chunk = frame_count > 128 ? 128 : frame_count;
         for (size_t i = 0; i < chunk; ++i) {
-            int16_t m_l = master_samples ? master_samples[i * 2 + 0] : 0;
-            int16_t m_r = master_samples ? master_samples[i * 2 + 1] : 0;
-            int16_t h_l = hp_samples ? hp_samples[i * 2 + 0] : m_l;
-            int16_t h_r = hp_samples ? hp_samples[i * 2 + 1] : m_r;
+            int16_t m_l = master_samples ? (master_samples[i * 2 + 0] >> 2) : 0;
+            int16_t m_r = master_samples ? (master_samples[i * 2 + 1] >> 2) : 0;
+            int16_t h_l = hp_samples ? (hp_samples[i * 2 + 0] >> 2) : m_l;
+            int16_t h_r = hp_samples ? (hp_samples[i * 2 + 1] >> 2) : m_r;
 
-            temp[i * 4 + 0] = m_l; // Ch 1: Master L
-            temp[i * 4 + 1] = m_r; // Ch 2: Master R
-            temp[i * 4 + 2] = h_l; // Ch 3: Headphones L
-            temp[i * 4 + 3] = h_r; // Ch 4: Headphones R
+            temp[i * 4 + 0] = m_l; // Ch 1: Master L (-12dB)
+            temp[i * 4 + 1] = m_r; // Ch 2: Master R (-12dB)
+            temp[i * 4 + 2] = h_l; // Ch 3: Headphones L (-12dB)
+            temp[i * 4 + 3] = h_r; // Ch 4: Headphones R (-12dB)
         }
         portENTER_CRITICAL(&s_flx4_mux);
         (void)p4_flx4_audio_ring_write(&s_audio_ring, temp, (uint32_t)chunk);
@@ -343,6 +441,7 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                     p4_flx4_audio_ring_reset(&s_audio_ring, FLX4_UAC_SAMPLE_RATE);
                     portEXIT_CRITICAL(&s_flx4_mux);
 
+                    s_out_inflight = false;
                     p4_flx4_midi_gate_start(&s_midi_gate);
 
                     // Allocate transfers if needed
@@ -363,26 +462,14 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                                  s_in_ep_addr, s_in_mps, esp_err_to_name(sub_err));
                     }
 
-                    // Start Isochronous Audio Streaming
+                    // Configure FLX4 USB Audio DAC hardware and start streaming
                     if (s_audio_claimed) {
-                        for (int k = 0; k < FLX4_ISOC_XFERS_NUM; ++k) {
-                            if (!s_isoc_xfers[k]) {
-                                (void)usb_host_transfer_alloc(FLX4_ISOC_MAX_PACKET_BYTES * FLX4_ISOC_PACKETS_PER_XFER,
-                                                              FLX4_ISOC_PACKETS_PER_XFER,
-                                                              &s_isoc_xfers[k]);
-                            }
-                            if (s_isoc_xfers[k]) {
-                                prepare_and_submit_isoc_transfer(s_isoc_xfers[k]);
-                            }
-                        }
-                        ESP_LOGW(TAG, "FLX4 Isochronous Audio streaming started on EP 0x%02x (4-channel 44.1 kHz 16-bit)", s_audio_ep_addr);
+                        start_audio_config_sequence();
                     }
 
-                    // Send test LEDs: Turn ON Play and Cue on Deck 1 and Deck 2!
-                    (void)p4_flx4_host_send_led(LED_PLAY, 1, CTRL_DECK_1);
-                    (void)p4_flx4_host_send_led(LED_CUE, 1, CTRL_DECK_1);
-                    (void)p4_flx4_host_send_led(LED_PLAY, 1, CTRL_DECK_2);
-                    (void)p4_flx4_host_send_led(LED_CUE, 1, CTRL_DECK_2);
+                    // Inform deck_core and UI that FLX4 is connected so it forces a complete LED snapshot!
+                    esp_err_t inject_rc = control_link_inject_semantic(CTRL_TYPE_STATE, CTRL_ID_FLX4_CONNECTION, CTRL_FLX4_CONNECTED);
+                    ESP_LOGW(TAG, "FLX4 inject CONNECTED: %s (queue=%p)", esp_err_to_name(inject_rc), (void*)s_out_queue);
 
                     if (s_conn_cb) {
                         s_conn_cb(true, s_conn_cb_ctx);
@@ -402,6 +489,8 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
             s_audio_claimed = false;
             portEXIT_CRITICAL(&s_flx4_mux);
 
+            s_out_inflight = false;
+
             for (int i = 0; i < s_num_claimed_ifaces; ++i) {
                 (void)usb_host_interface_release(s_client_handle, s_dev_handle, s_claimed_ifaces[i]);
             }
@@ -410,6 +499,8 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
             (void)usb_host_device_close(s_client_handle, s_dev_handle);
             s_dev_handle = NULL;
             s_dev_addr = 0;
+
+            (void)control_link_inject_semantic(CTRL_TYPE_STATE, CTRL_ID_FLX4_CONNECTION, CTRL_FLX4_DISCONNECTED);
 
             if (s_conn_cb) {
                 s_conn_cb(false, s_conn_cb_ctx);
@@ -438,6 +529,7 @@ esp_err_t p4_flx4_host_init(void)
     if (!s_out_queue) {
         s_out_queue = xQueueCreate(128, 4);
     }
+    control_link_set_led_sink(flx4_control_link_led_sink, NULL);
     p4_flx4_midi_gate_init(&s_midi_gate);
     p4_flx4_uac_packetizer_init(&s_packetizer, FLX4_UAC_SAMPLE_RATE, FLX4_UAC_CHANNELS, FLX4_UAC_BYTES_PER_SAMPLE);
     p4_flx4_audio_ring_init(&s_audio_ring, s_audio_storage, FLX4_AUDIO_RING_FRAMES, FLX4_UAC_CHANNELS, FLX4_UAC_SAMPLE_RATE);

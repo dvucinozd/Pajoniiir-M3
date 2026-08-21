@@ -1294,10 +1294,10 @@ static void deck_send_led(led_id_t led, uint8_t state, uint8_t deck)
 
 static void sync_legacy_compat_leds(uint8_t deck)
 {
-    if (deck != DECK_CORE_COMPAT_DECK) return;
+    if (deck >= DECK_CORE_DECK_COUNT) return;
     deck_state_t *state = &s_decks[deck];
-    control_link_send_led(LED_PLAY, state->playing ? 1 : 0);
-    control_link_send_led(LED_CUE,  (state->position_ms == state->cue_point_ms) ? 1 : 0);
+    deck_send_led(LED_PLAY, state->playing ? 1 : 0, deck);
+    deck_send_led(LED_CUE,  (state->position_ms == state->cue_point_ms) ? 1 : 0, deck);
 }
 
 static esp_err_t send_snapshot_led(led_id_t led, uint8_t state, uint8_t deck, void *ctx)
@@ -2612,11 +2612,13 @@ static void on_mixer_control(uint8_t id, int16_t raw)
     case CTRL_ID_DECK1_PFL:
         if (raw != 0) {
             audio_engine_toggle_pfl(CTRL_DECK_1);
+            deck_send_led(LED_PFL, audio_engine_get_pfl_enabled(CTRL_DECK_1) ? 1u : 0u, CTRL_DECK_1);
         }
         break;
     case CTRL_ID_DECK2_PFL:
         if (raw != 0) {
             audio_engine_toggle_pfl(CTRL_DECK_2);
+            deck_send_led(LED_PFL, audio_engine_get_pfl_enabled(CTRL_DECK_2) ? 1u : 0u, CTRL_DECK_2);
         }
         break;
     case CTRL_ID_CH1_EQ_HIGH:

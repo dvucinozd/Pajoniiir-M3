@@ -3,12 +3,16 @@
 
 bool flx4_led_midi_builtin_authoritative(uint8_t led)
 {
+    /* Pre-v2 numeric profiles can alias the newer Track Load IDs to pad LEDs.
+     * Keep these official global 0x9F addresses authoritative in firmware. */
     return led == LED_TRACK_LOAD_DECK1 || led == LED_TRACK_LOAD_DECK2;
 }
 
 static bool note_for_led(uint8_t led, uint8_t *note)
 {
-    if (!note) return false;
+    if (!note) {
+        return false;
+    }
 
     if (led >= LED_BEAT_LOOP_PAD_1 && led <= LED_BEAT_LOOP_PAD_8) {
         *note = (uint8_t)(0x60u + (led - LED_BEAT_LOOP_PAD_1));
@@ -113,49 +117,51 @@ static bool note_for_led(uint8_t led, uint8_t *note)
     }
 }
 
-static inline bool is_deck_2(uint8_t deck)
+bool flx4_led_midi_build_packet(uint8_t led,
+                                uint8_t state,
+                                uint8_t deck,
+                                uint8_t packet[4])
 {
-    return (deck == 1 || deck == CTRL_DECK_2);
-}
-
-static uint8_t note_status_for_deck(uint8_t deck, uint8_t led)
-{
-    if (led == LED_TRACK_LOAD_DECK1 || led == LED_TRACK_LOAD_DECK2) {
-        return 0x9F;
+    if (!packet) {
+        return false;
     }
-    if (led == LED_SMART_CFX || led == LED_SMART_FADER ||
-        led == LED_BEAT_FX_ON || led == LED_MASTER_CUE) {
-        return 0x96;
+    if (deck > 1 && deck != CTRL_DECK_2) {
+        deck = CTRL_DECK_1;
     }
-    if ((led >= LED_HOT_CUE_PAD_1 && led <= LED_HOT_CUE_PAD_8) ||
-        (led >= LED_PAD_FX1_PAD_1 && led <= LED_PAD_FX1_PAD_8) ||
-        (led >= LED_PAD_FX2_PAD_1 && led <= LED_PAD_FX2_PAD_8) ||
-        (led >= LED_BEAT_JUMP_PAD_1 && led <= LED_BEAT_JUMP_PAD_8) ||
-        (led >= LED_BEAT_LOOP_PAD_1 && led <= LED_BEAT_LOOP_PAD_8) ||
-        (led >= LED_BEAT_JUMP_SHIFT_HELPER_7 && led <= LED_BEAT_JUMP_SHIFT_HELPER_8)) {
-        return is_deck_2(deck) ? 0x99 : 0x97;
-    }
-    return is_deck_2(deck) ? 0x91 : 0x90;
-}
-
-bool flx4_led_midi_build_packet(uint8_t led, uint8_t state, uint8_t deck, uint8_t packet[4])
-{
-    if (!packet) return false;
+    const bool is_d2 = (deck == 1 || deck == CTRL_DECK_2);
 
     if (led == LED_VU_METER) {
-        packet[0] = 0x0B;  // Control Change
-        packet[1] = is_deck_2(deck) ? 0xB1 : 0xB0;
-        packet[2] = 0x02;  // VU meter CC
-        packet[3] = state & 0x7F;
+        packet[0] = 0x0B;
+        packet[1] = is_d2 ? 0xB1 : 0xB0;
+        packet[2] = 0x02;
+        packet[3] = (uint8_t)(state & 0x7F);
         return true;
     }
 
     uint8_t note = 0;
-    if (!note_for_led(led, &note)) return false;
+    if (!note_for_led(led, &note)) {
+        return false;
+    }
 
-    packet[0] = 0x09;  // Note On
-    packet[1] = note_status_for_deck(deck, led);
+    packet[0] = 0x09;
+    if ((led >= LED_BEAT_LOOP_PAD_1 && led <= LED_BEAT_LOOP_PAD_8) ||
+        (led >= LED_BEAT_JUMP_PAD_1 && led <= LED_BEAT_JUMP_PAD_8) ||
+        (led >= LED_HOT_CUE_PAD_1 && led <= LED_HOT_CUE_PAD_8) ||
+        (led >= LED_PAD_FX1_PAD_1 && led <= LED_PAD_FX1_PAD_8) ||
+        (led >= LED_PAD_FX2_PAD_1 && led <= LED_PAD_FX2_PAD_8)) {
+        packet[1] = is_d2 ? 0x99 : 0x97;
+    } else if (led >= LED_BEAT_JUMP_SHIFT_HELPER_7 && led <= LED_BEAT_JUMP_SHIFT_HELPER_8) {
+        packet[1] = is_d2 ? 0x9A : 0x98;
+    } else if (led == LED_BEAT_FX_ON) {
+        packet[1] = is_d2 ? 0x95 : 0x94;
+    } else if (led == LED_TRACK_LOAD_DECK1 || led == LED_TRACK_LOAD_DECK2) {
+        packet[1] = 0x9F;
+    } else if (led == LED_SMART_CFX || led == LED_SMART_FADER || led == LED_MASTER_CUE) {
+        packet[1] = 0x96;
+    } else {
+        packet[1] = is_d2 ? 0x91 : 0x90;
+    }
     packet[2] = note;
-    packet[3] = (state == 0) ? 0x00 : 0x7F;
+    packet[3] = (state != 0) ? 0x7F : 0x00;
     return true;
 }

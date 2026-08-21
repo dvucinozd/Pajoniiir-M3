@@ -595,6 +595,10 @@ esp_err_t control_link_init(QueueHandle_t ctrl_event_queue);
 void control_link_send_led(led_id_t led, uint8_t state);  // state: 0 off / 1 on / 2 blink
 void control_link_send_led_deck(led_id_t led, uint8_t state, uint8_t deck);
 
+// Register a direct local LED sink callback (e.g. p4_flx4_host_send_led). Thread-safe.
+typedef esp_err_t (*control_link_led_sink_fn_t)(uint8_t led, uint8_t state, uint8_t deck, void *user_ctx);
+void control_link_set_led_sink(control_link_led_sink_fn_t sink, void *user_ctx);
+
 // Send a deck-less state/control command to S3. Thread-safe.
 void control_link_send_state(uint8_t id, int16_t value);
 
