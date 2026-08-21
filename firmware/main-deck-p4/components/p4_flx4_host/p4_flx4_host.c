@@ -89,31 +89,53 @@ static void in_transfer_cb(usb_transfer_t *transfer)
     }
 }
 
+static QueueHandle_t            s_out_queue     = NULL;
+static volatile bool            s_out_inflight  = false;
+
+static void out_transfer_cb(usb_transfer_t *transfer);
+
+static void try_submit_next_out(void)
+{
+    if (s_out_inflight || !s_out_xfer || !s_dev_handle || !s_connected || !s_out_queue) {
+        return;
+    }
+    uint8_t packet[4];
+    if (xQueueReceive(s_out_queue, packet, 0) == pdTRUE) {
+        memcpy(s_out_xfer->data_buffer, packet, 4);
+        s_out_xfer->device_handle = s_dev_handle;
+        s_out_xfer->bEndpointAddress = s_out_ep_addr;
+        s_out_xfer->num_bytes = 4;
+        s_out_xfer->callback = out_transfer_cb;
+        s_out_inflight = true;
+        esp_err_t err = usb_host_transfer_submit(s_out_xfer);
+        if (err != ESP_OK) {
+            s_out_inflight = false;
+            ESP_LOGW(TAG, "Failed to submit OUT transfer: %s", esp_err_to_name(err));
+        } else {
+            ESP_LOGW(TAG, "FLX4 LED TX: %02x %02x %02x %02x", packet[0], packet[1], packet[2], packet[3]);
+        }
+    }
+}
+
 static void out_transfer_cb(usb_transfer_t *transfer)
 {
     (void)transfer;
+    s_out_inflight = false;
+    try_submit_next_out();
 }
 
 esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
 {
-    if (!packet || !s_dev_handle || !s_connected || !s_out_xfer) {
+    if (!packet || !s_connected || !s_out_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
-    uint32_t gen = 0;
-    if (!p4_flx4_midi_gate_begin(&s_midi_gate, &gen)) {
-        return ESP_ERR_INVALID_STATE;
+    if (xQueueSend(s_out_queue, packet, 0) != pdTRUE) {
+        return ESP_ERR_NO_MEM;
     }
 
-    memcpy(s_out_xfer->data_buffer, packet, 4);
-    s_out_xfer->device_handle = s_dev_handle;
-    s_out_xfer->bEndpointAddress = s_out_ep_addr;
-    s_out_xfer->num_bytes = 4;
-    s_out_xfer->callback = out_transfer_cb;
-
-    esp_err_t err = usb_host_transfer_submit(s_out_xfer);
-    p4_flx4_midi_gate_end(&s_midi_gate);
-    return err;
+    try_submit_next_out();
+    return ESP_OK;
 }
 
 esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
@@ -280,6 +302,9 @@ esp_err_t p4_flx4_host_init(void)
 {
     if (s_client_handle) return ESP_OK;
 
+    if (!s_out_queue) {
+        s_out_queue = xQueueCreate(128, 4);
+    }
     p4_flx4_midi_gate_init(&s_midi_gate);
     p4_flx4_uac_packetizer_init(&s_packetizer, FLX4_UAC_SAMPLE_RATE, FLX4_UAC_CHANNELS, FLX4_UAC_BYTES_PER_SAMPLE);
     p4_flx4_audio_ring_init(&s_audio_ring, s_audio_storage, FLX4_AUDIO_RING_FRAMES, FLX4_UAC_CHANNELS, FLX4_UAC_SAMPLE_RATE);
