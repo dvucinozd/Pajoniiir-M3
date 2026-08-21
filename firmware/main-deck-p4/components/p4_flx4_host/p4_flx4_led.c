@@ -1,13 +1,6 @@
 #include "p4_flx4_map.h"
 #include "control_link.h"
 
-bool flx4_led_midi_builtin_authoritative(uint8_t led)
-{
-    /* Pre-v2 numeric profiles can alias the newer Track Load IDs to pad LEDs.
-     * Keep these official global 0x9F addresses authoritative in firmware. */
-    return led == LED_TRACK_LOAD_DECK1 || led == LED_TRACK_LOAD_DECK2;
-}
-
 static bool note_for_led(uint8_t led, uint8_t *note)
 {
     if (!note) {
@@ -125,10 +118,10 @@ bool flx4_led_midi_build_packet(uint8_t led,
     if (!packet) {
         return false;
     }
-    if (deck > 1 && deck != CTRL_DECK_2) {
-        deck = CTRL_DECK_1;
+    if (deck != CTRL_DECK_1 && deck != CTRL_DECK_2) {
+        return false;
     }
-    const bool is_d2 = (deck == 1 || deck == CTRL_DECK_2);
+    const bool is_d2 = (deck == CTRL_DECK_2);
 
     if (led == LED_VU_METER) {
         packet[0] = 0x0B;

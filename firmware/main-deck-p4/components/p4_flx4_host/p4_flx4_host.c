@@ -92,6 +92,11 @@ static void in_transfer_cb(usb_transfer_t *transfer)
     }
 }
 
+typedef struct {
+    uint32_t generation;
+    uint8_t packet[4];
+} p4_flx4_out_item_t;
+
 static QueueHandle_t            s_out_queue     = NULL;
 static volatile bool            s_out_inflight  = false;
 
@@ -111,12 +116,16 @@ static void try_submit_next_out(void)
     s_out_inflight = true;
     portEXIT_CRITICAL(&s_flx4_mux);
 
-    uint8_t packet[4];
-    if (xQueueReceive(s_out_queue, packet, 0) == pdTRUE) {
-        memcpy(s_out_xfer->data_buffer, packet, 4);
+    p4_flx4_out_item_t item;
+    while (xQueueReceive(s_out_queue, &item, 0) == pdTRUE) {
+        if (!p4_flx4_midi_gate_accepts_generation(&s_midi_gate,
+                                                   item.generation)) {
+            continue;
+        }
+        memcpy(s_out_xfer->data_buffer, item.packet, sizeof(item.packet));
         s_out_xfer->device_handle = s_dev_handle;
         s_out_xfer->bEndpointAddress = s_out_ep_addr;
-        s_out_xfer->num_bytes = 4;
+        s_out_xfer->num_bytes = sizeof(item.packet);
         s_out_xfer->callback = out_transfer_cb;
         esp_err_t err = usb_host_transfer_submit(s_out_xfer);
         if (err != ESP_OK) {
@@ -125,11 +134,11 @@ static void try_submit_next_out(void)
             portEXIT_CRITICAL(&s_flx4_mux);
             ESP_LOGW(TAG, "OUT submit failed (EP 0x%02x): %s", s_out_ep_addr, esp_err_to_name(err));
         }
-    } else {
-        portENTER_CRITICAL(&s_flx4_mux);
-        s_out_inflight = false;
-        portEXIT_CRITICAL(&s_flx4_mux);
+        return;
     }
+    portENTER_CRITICAL(&s_flx4_mux);
+    s_out_inflight = false;
+    portEXIT_CRITICAL(&s_flx4_mux);
 }
 
 static void out_transfer_cb(usb_transfer_t *transfer)
@@ -143,19 +152,30 @@ static void out_transfer_cb(usb_transfer_t *transfer)
 
 esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
 {
-    if (!packet || !s_connected || !s_out_queue) {
+    if (!packet) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    p4_flx4_out_item_t item = { 0 };
+    if (!p4_flx4_midi_gate_begin(&s_midi_gate, &item.generation)) {
         return ESP_ERR_INVALID_STATE;
     }
+    memcpy(item.packet, packet, sizeof(item.packet));
 
-    if (xQueueSend(s_out_queue, packet, 0) != pdTRUE) {
-        return ESP_ERR_NO_MEM;
+    esp_err_t result = ESP_OK;
+    if (!s_connected || !s_out_queue) {
+        result = ESP_ERR_INVALID_STATE;
+    } else if (xQueueSend(s_out_queue, &item, 0) != pdTRUE) {
+        result = ESP_ERR_NO_MEM;
     }
+    p4_flx4_midi_gate_end(&s_midi_gate);
 
-    if (s_client_handle) {
+    if (result == ESP_OK && s_client_handle) {
         (void)usb_host_client_unblock(s_client_handle);
     }
-    try_submit_next_out();
-    return ESP_OK;
+    if (result == ESP_OK) {
+        try_submit_next_out();
+    }
+    return result;
 }
 
 esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
@@ -503,6 +523,9 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
         if (s_dev_handle && event_msg->dev_gone.dev_hdl == s_dev_handle) {
             ESP_LOGW(TAG, "Pioneer DDJ-FLX4 disconnected");
             p4_flx4_midi_gate_stop(&s_midi_gate);
+            if (s_out_queue) {
+                xQueueReset(s_out_queue);
+            }
 
             portENTER_CRITICAL(&s_flx4_mux);
             s_connected = false;
@@ -547,7 +570,7 @@ esp_err_t p4_flx4_host_init(void)
     if (s_client_handle) return ESP_OK;
 
     if (!s_out_queue) {
-        s_out_queue = xQueueCreate(128, 4);
+        s_out_queue = xQueueCreate(128, sizeof(p4_flx4_out_item_t));
     }
     control_link_set_led_sink(flx4_control_link_led_sink, NULL);
     p4_flx4_midi_gate_init(&s_midi_gate);

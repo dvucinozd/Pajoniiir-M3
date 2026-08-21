@@ -1783,6 +1783,62 @@ $tests = @(
         )
     },
     @{
+        Name = "p4_flx4_map"
+        MinTestsRun = 100
+        Dir = "tests/p4_flx4_host"
+        Target = "test_p4_flx4_map.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c11",
+            "-I../support/stubs",
+            "-I../../firmware/main-deck-p4/components/control_link/include",
+            "-I../../firmware/main-deck-p4/components/p4_flx4_host/include",
+            "-o", "test_p4_flx4_map.exe",
+            "test_p4_flx4_map.c",
+            "../../firmware/main-deck-p4/components/p4_flx4_host/p4_flx4_map.c"
+        )
+    },
+    @{
+        Name = "p4_flx4_led"
+        MinTestsRun = 150
+        Dir = "tests/p4_flx4_host"
+        Target = "test_p4_flx4_led.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c11",
+            "-I../support/stubs",
+            "-I../../firmware/main-deck-p4/components/control_link/include",
+            "-I../../firmware/main-deck-p4/components/p4_flx4_host/include",
+            "-o", "test_p4_flx4_led.exe",
+            "test_p4_flx4_led.c",
+            "../../firmware/main-deck-p4/components/p4_flx4_host/p4_flx4_led.c"
+        )
+    },
+    @{
+        Name = "p4_flx4_uac"
+        MinTestsRun = 1050
+        Dir = "tests/p4_flx4_host"
+        Target = "test_p4_flx4_uac.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c11",
+            "-I../../firmware/main-deck-p4/components/p4_flx4_host/include",
+            "-o", "test_p4_flx4_uac.exe",
+            "test_p4_flx4_uac.c",
+            "../../firmware/main-deck-p4/components/p4_flx4_host/p4_flx4_uac.c"
+        )
+    },
+    @{
+        Name = "p4_flx4_midi_gate"
+        MinTestsRun = 35
+        Dir = "tests/p4_flx4_host"
+        Target = "test_p4_flx4_midi_gate.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c11", "-pthread",
+            "-I../../firmware/main-deck-p4/components/p4_flx4_host/include",
+            "-o", "test_p4_flx4_midi_gate.exe",
+            "test_p4_flx4_midi_gate.c",
+            "../../firmware/main-deck-p4/components/p4_flx4_host/p4_flx4_midi_gate.c"
+        )
+    },
+    @{
         Name = "flx4_led_snapshot"
         Dir = "tests/flx4_led_snapshot"
         Target = "test_flx4_led_snapshot.exe"

@@ -323,7 +323,6 @@ static bool map_beat_fx_button(flx4_map_state_t *state,
                                flx4_control_event_t *out)
 {
     (void)status;
-    (void)state;
     uint8_t pressed = data2 > 0 ? 1 : 0;
 
     switch (data1) {
@@ -344,9 +343,25 @@ static bool map_beat_fx_button(flx4_map_state_t *state,
     case FLX4_BTN_BEAT_FX_CLEAR:
         return emit_button(out, CTRL_ID_BEAT_FX_CLEAR, pressed);
     case FLX4_BTN_BEAT_FX_TARGET_CH1:
-        return emit_button_value(out, CTRL_ID_BEAT_FX_TARGET, CTRL_BEAT_FX_TARGET_CH1);
-    case FLX4_BTN_BEAT_FX_TARGET_CH2:
-        return emit_button_value(out, CTRL_ID_BEAT_FX_TARGET, CTRL_BEAT_FX_TARGET_CH2);
+    case FLX4_BTN_BEAT_FX_TARGET_CH2: {
+        const uint8_t bit = data1 == FLX4_BTN_BEAT_FX_TARGET_CH1 ? 0x01u : 0x02u;
+        const uint8_t previous = state->beat_fx_channel;
+        if (pressed) {
+            state->beat_fx_channel |= bit;
+        } else {
+            state->beat_fx_channel &= (uint8_t)~bit;
+        }
+        state->beat_fx_channel_valid = state->beat_fx_channel != 0u;
+        if (state->beat_fx_channel == previous || state->beat_fx_channel == 0u) {
+            return false;
+        }
+        const uint8_t target = state->beat_fx_channel == 0x01u
+                                   ? CTRL_BEAT_FX_TARGET_CH1
+                                   : state->beat_fx_channel == 0x02u
+                                         ? CTRL_BEAT_FX_TARGET_CH2
+                                         : CTRL_BEAT_FX_TARGET_BOTH;
+        return emit_button_value(out, CTRL_ID_BEAT_FX_TARGET, target);
+    }
     default:
         return false;
     }

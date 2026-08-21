@@ -48,3 +48,11 @@ bool p4_flx4_midi_gate_is_accepting(const p4_flx4_midi_gate_t *gate)
 {
     return gate && __atomic_load_n(&gate->accepting, __ATOMIC_ACQUIRE);
 }
+
+bool p4_flx4_midi_gate_accepts_generation(const p4_flx4_midi_gate_t *gate,
+                                          uint32_t generation)
+{
+    return gate &&
+           __atomic_load_n(&gate->accepting, __ATOMIC_ACQUIRE) &&
+           __atomic_load_n(&gate->generation, __ATOMIC_ACQUIRE) == generation;
+}

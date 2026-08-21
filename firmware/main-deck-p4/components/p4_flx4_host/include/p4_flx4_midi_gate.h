@@ -16,3 +16,5 @@ void p4_flx4_midi_gate_stop(p4_flx4_midi_gate_t *gate);
 bool p4_flx4_midi_gate_begin(p4_flx4_midi_gate_t *gate, uint32_t *generation_out);
 void p4_flx4_midi_gate_end(p4_flx4_midi_gate_t *gate);
 bool p4_flx4_midi_gate_is_accepting(const p4_flx4_midi_gate_t *gate);
+bool p4_flx4_midi_gate_accepts_generation(const p4_flx4_midi_gate_t *gate,
+                                           uint32_t generation);
