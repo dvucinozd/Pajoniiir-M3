@@ -16,7 +16,6 @@ static const char *TAG = "p4_flx4";
 
 #define FLX4_MIDI_TASK_STACK  4096
 #define FLX4_MIDI_TASK_PRIO   5
-#define FLX4_AUDIO_RING_FRAMES 2048
 
 static usb_host_client_handle_t s_client_handle = NULL;
 static usb_device_handle_t      s_dev_handle    = NULL;
@@ -147,16 +146,77 @@ esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
     return p4_flx4_host_send_packet(packet);
 }
 
-esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples, size_t frame_count)
+#define FLX4_ISOC_XFERS_NUM        3
+#define FLX4_ISOC_PACKETS_PER_XFER 4
+#define FLX4_ISOC_MAX_PACKET_BYTES 384
+
+static usb_transfer_t          *s_isoc_xfers[FLX4_ISOC_XFERS_NUM] = { NULL };
+static bool                     s_audio_claimed = false;
+static uint8_t                  s_audio_ep_addr = 0x01;
+
+static void isoc_transfer_cb(usb_transfer_t *transfer);
+
+static void prepare_and_submit_isoc_transfer(usb_transfer_t *transfer)
 {
-    if (!samples || frame_count == 0) return ESP_ERR_INVALID_ARG;
+    if (!transfer || !s_dev_handle || !s_connected || !s_audio_claimed) {
+        return;
+    }
+    size_t buffer_offset = 0;
+    for (int i = 0; i < transfer->num_isoc_packets; ++i) {
+        uint16_t frames = p4_flx4_uac_packetizer_next_frames(&s_packetizer);
+        size_t bytes = (size_t)frames * FLX4_UAC_CHANNELS * FLX4_UAC_BYTES_PER_SAMPLE;
+        int16_t *dst = (int16_t *)(transfer->data_buffer + buffer_offset);
+        portENTER_CRITICAL(&s_flx4_mux);
+        (void)p4_flx4_audio_ring_read(&s_audio_ring, dst, frames, true);
+        portEXIT_CRITICAL(&s_flx4_mux);
+        transfer->isoc_packet_desc[i].num_bytes = (int)bytes;
+        buffer_offset += bytes;
+    }
+    transfer->num_bytes = (int)buffer_offset;
+    transfer->device_handle = s_dev_handle;
+    transfer->bEndpointAddress = s_audio_ep_addr;
+    transfer->callback = isoc_transfer_cb;
+    esp_err_t err = usb_host_transfer_submit(transfer);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Isochronous transfer submit failed: %s", esp_err_to_name(err));
+    }
+}
+
+static void isoc_transfer_cb(usb_transfer_t *transfer)
+{
+    if (s_connected && s_dev_handle && s_audio_claimed) {
+        prepare_and_submit_isoc_transfer(transfer);
+    }
+}
+
+esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t *hp_samples, size_t frame_count)
+{
+    if ((!master_samples && !hp_samples) || frame_count == 0) return ESP_ERR_INVALID_ARG;
     if (!p4_flx4_host_is_connected()) return ESP_ERR_INVALID_STATE;
 
-    portENTER_CRITICAL(&s_flx4_mux);
-    (void)p4_flx4_audio_ring_write(&s_audio_ring, samples, (uint32_t)frame_count);
-    portEXIT_CRITICAL(&s_flx4_mux);
+    int16_t temp[128 * 4];
+    while (frame_count > 0) {
+        size_t chunk = frame_count > 128 ? 128 : frame_count;
+        for (size_t i = 0; i < chunk; ++i) {
+            temp[i * 4 + 0] = master_samples ? master_samples[i * 2 + 0] : 0;
+            temp[i * 4 + 1] = master_samples ? master_samples[i * 2 + 1] : 0;
+            temp[i * 4 + 2] = hp_samples ? hp_samples[i * 2 + 0] : 0;
+            temp[i * 4 + 3] = hp_samples ? hp_samples[i * 2 + 1] : 0;
+        }
+        portENTER_CRITICAL(&s_flx4_mux);
+        (void)p4_flx4_audio_ring_write(&s_audio_ring, temp, (uint32_t)chunk);
+        portEXIT_CRITICAL(&s_flx4_mux);
 
+        if (master_samples) master_samples += chunk * 2;
+        if (hp_samples) hp_samples += chunk * 2;
+        frame_count -= chunk;
+    }
     return ESP_OK;
+}
+
+esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples, size_t frame_count)
+{
+    return p4_flx4_host_write_audio(NULL, samples, frame_count);
 }
 
 static uint8_t                  s_claimed_ifaces[8];
@@ -185,36 +245,75 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                     if (usb_host_get_active_config_descriptor(dev, &config_desc) == ESP_OK && config_desc) {
                         ESP_LOGW(TAG, "FLX4 Config Desc: total_len=%d, num_intf=%d", config_desc->wTotalLength, config_desc->bNumInterfaces);
                         for (int i = 0; i < config_desc->bNumInterfaces; ++i) {
-                            int offset = 0;
-                            const usb_intf_desc_t *intf = usb_parse_interface_descriptor(config_desc, i, 0, &offset);
-                            if (!intf) continue;
-                            ESP_LOGW(TAG, "FLX4 Intf %d: class=0x%02x subclass=0x%02x eps=%d",
-                                     intf->bInterfaceNumber, intf->bInterfaceClass, intf->bInterfaceSubClass, intf->bNumEndpoints);
+                            for (int alt = 0; alt < 4; ++alt) {
+                                int offset = 0;
+                                const usb_intf_desc_t *intf = usb_parse_interface_descriptor(config_desc, i, alt, &offset);
+                                if (!intf) break;
+                                ESP_LOGW(TAG, "FLX4 Intf %d (alt %d): class=0x%02x subclass=0x%02x eps=%d",
+                                         intf->bInterfaceNumber, intf->bAlternateSetting, intf->bInterfaceClass, intf->bInterfaceSubClass, intf->bNumEndpoints);
 
-                            // Only claim MIDI Streaming interface (Class 1 Audio, SubClass 3 MIDI)
-                            if (intf->bInterfaceClass == 0x01 && intf->bInterfaceSubClass == 0x03) {
-                                esp_err_t claim_err = usb_host_interface_claim(s_client_handle, dev, intf->bInterfaceNumber, intf->bAlternateSetting);
-                                if (claim_err == ESP_OK) {
-                                    ESP_LOGW(TAG, "Claimed FLX4 MIDI Streaming Intf %d (alt %d)", intf->bInterfaceNumber, intf->bAlternateSetting);
-                                    if (s_num_claimed_ifaces < (int)(sizeof(s_claimed_ifaces))) {
-                                        s_claimed_ifaces[s_num_claimed_ifaces++] = intf->bInterfaceNumber;
+                                // Print raw descriptor bytes following this interface to inspect Audio Format Type
+                                if (intf->bInterfaceClass == 0x01 && intf->bInterfaceSubClass == 0x02) {
+                                    const uint8_t *raw = (const uint8_t *)intf;
+                                    int remaining = config_desc->wTotalLength - (raw - (const uint8_t *)config_desc);
+                                    if (remaining > 64) remaining = 64;
+                                    char hexbuf[128] = {0};
+                                    for (int b = 0; b < remaining && b < 32; ++b) {
+                                        snprintf(&hexbuf[b*3], sizeof(hexbuf) - b*3, "%02x ", raw[b]);
                                     }
-                                } else {
-                                    ESP_LOGW(TAG, "Claim MIDI intf %d failed: %s", intf->bInterfaceNumber, esp_err_to_name(claim_err));
+                                    ESP_LOGW(TAG, "  Audio Intf %d alt %d RAW: %s", intf->bInterfaceNumber, intf->bAlternateSetting, hexbuf);
                                 }
 
                                 for (int ep_idx = 0; ep_idx < intf->bNumEndpoints; ++ep_idx) {
                                     int ep_offset = offset;
                                     const usb_ep_desc_t *ep = usb_parse_endpoint_descriptor_by_index(intf, ep_idx, config_desc->wTotalLength, &ep_offset);
                                     if (!ep) continue;
-                                    ESP_LOGW(TAG, "  MIDI EP[%d]: addr=0x%02x attr=0x%02x mps=%d",
+                                    ESP_LOGW(TAG, "  EP[%d]: addr=0x%02x attr=0x%02x mps=%d",
                                              ep_idx, ep->bEndpointAddress, ep->bmAttributes, ep->wMaxPacketSize);
-                                    if (USB_EP_DESC_GET_EP_DIR(ep)) {
-                                        s_in_ep_addr = ep->bEndpointAddress;
-                                        s_in_mps = ep->wMaxPacketSize;
+                                }
+
+                                if (intf->bInterfaceClass == 0x01 && intf->bInterfaceSubClass == 0x02 && intf->bInterfaceNumber == 1 && intf->bAlternateSetting == 2) {
+                                    esp_err_t claim_err = usb_host_interface_claim(s_client_handle, dev, intf->bInterfaceNumber, intf->bAlternateSetting);
+                                    if (claim_err == ESP_OK) {
+                                        ESP_LOGW(TAG, "Claimed FLX4 Audio Streaming Intf 1 (alt 2 - 4-ch 16-bit)");
+                                        if (s_num_claimed_ifaces < (int)(sizeof(s_claimed_ifaces))) {
+                                            s_claimed_ifaces[s_num_claimed_ifaces++] = intf->bInterfaceNumber;
+                                        }
+                                        s_audio_claimed = true;
+                                        for (int ep_idx = 0; ep_idx < intf->bNumEndpoints; ++ep_idx) {
+                                            int ep_offset = offset;
+                                            const usb_ep_desc_t *ep = usb_parse_endpoint_descriptor_by_index(intf, ep_idx, config_desc->wTotalLength, &ep_offset);
+                                            if (ep && !USB_EP_DESC_GET_EP_DIR(ep)) {
+                                                s_audio_ep_addr = ep->bEndpointAddress;
+                                            }
+                                        }
                                     } else {
-                                        s_out_ep_addr = ep->bEndpointAddress;
-                                        s_out_mps = ep->wMaxPacketSize;
+                                        ESP_LOGW(TAG, "Claim Audio Streaming intf 1 alt 2 failed: %s", esp_err_to_name(claim_err));
+                                    }
+                                }
+
+                                if (intf->bInterfaceClass == 0x01 && intf->bInterfaceSubClass == 0x03) {
+                                    esp_err_t claim_err = usb_host_interface_claim(s_client_handle, dev, intf->bInterfaceNumber, intf->bAlternateSetting);
+                                    if (claim_err == ESP_OK) {
+                                        ESP_LOGW(TAG, "Claimed FLX4 MIDI Streaming Intf %d (alt %d)", intf->bInterfaceNumber, intf->bAlternateSetting);
+                                        if (s_num_claimed_ifaces < (int)(sizeof(s_claimed_ifaces))) {
+                                            s_claimed_ifaces[s_num_claimed_ifaces++] = intf->bInterfaceNumber;
+                                        }
+                                    } else {
+                                        ESP_LOGW(TAG, "Claim MIDI intf %d failed: %s", intf->bInterfaceNumber, esp_err_to_name(claim_err));
+                                    }
+
+                                    for (int ep_idx = 0; ep_idx < intf->bNumEndpoints; ++ep_idx) {
+                                        int ep_offset = offset;
+                                        const usb_ep_desc_t *ep = usb_parse_endpoint_descriptor_by_index(intf, ep_idx, config_desc->wTotalLength, &ep_offset);
+                                        if (!ep) continue;
+                                        if (USB_EP_DESC_GET_EP_DIR(ep)) {
+                                            s_in_ep_addr = ep->bEndpointAddress;
+                                            s_in_mps = ep->wMaxPacketSize;
+                                        } else {
+                                            s_out_ep_addr = ep->bEndpointAddress;
+                                            s_out_mps = ep->wMaxPacketSize;
+                                        }
                                     }
                                 }
                             }
@@ -247,6 +346,21 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                                  s_in_ep_addr, s_in_mps, esp_err_to_name(sub_err));
                     }
 
+                    // Start Isochronous Audio Streaming
+                    if (s_audio_claimed) {
+                        for (int k = 0; k < FLX4_ISOC_XFERS_NUM; ++k) {
+                            if (!s_isoc_xfers[k]) {
+                                (void)usb_host_transfer_alloc(FLX4_ISOC_MAX_PACKET_BYTES * FLX4_ISOC_PACKETS_PER_XFER,
+                                                              FLX4_ISOC_PACKETS_PER_XFER,
+                                                              &s_isoc_xfers[k]);
+                            }
+                            if (s_isoc_xfers[k]) {
+                                prepare_and_submit_isoc_transfer(s_isoc_xfers[k]);
+                            }
+                        }
+                        ESP_LOGW(TAG, "FLX4 Isochronous Audio streaming started on EP 0x%02x (4-channel 44.1 kHz 16-bit)", s_audio_ep_addr);
+                    }
+
                     // Send test LEDs: Turn ON Play and Cue on Deck 1 and Deck 2!
                     (void)p4_flx4_host_send_led(LED_PLAY, 1, CTRL_DECK_1);
                     (void)p4_flx4_host_send_led(LED_CUE, 1, CTRL_DECK_1);
@@ -268,6 +382,7 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
 
             portENTER_CRITICAL(&s_flx4_mux);
             s_connected = false;
+            s_audio_claimed = false;
             portEXIT_CRITICAL(&s_flx4_mux);
 
             for (int i = 0; i < s_num_claimed_ifaces; ++i) {

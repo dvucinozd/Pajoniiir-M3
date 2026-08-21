@@ -55,10 +55,11 @@ CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=256
 # default 3.5 KB stack overflows (stack-protection panic). Give it room.
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
 
-# ── USB host (Rekordbox media drive on the HS USB-C port) ────────────────────
+# ── USB host (Rekordbox media drive on HS port + FLX4 on FS port) ────────────
 # Allow drives presented behind an internal hub (matches the IDF P4 MSC example).
 CONFIG_USB_HOST_HUBS_SUPPORTED=y
 CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=4096
+CONFIG_USB_HOST_HW_BUFFER_BIAS_PERIODIC_OUT=y
 
 # ── FATFS ─────────────────────────────────────────────────────────────────────
 # Long filename support is OFF by default (8.3 only) → Rekordbox paths like

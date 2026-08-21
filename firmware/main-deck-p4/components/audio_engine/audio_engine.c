@@ -45,6 +45,9 @@
 #include "audio_resampler.h"
 #include "audio_smart_cfx.h"
 #include "monitor_pcm_link.h"
+#if __has_include("p4_flx4_host.h")
+#include "p4_flx4_host.h"
+#endif
 
 #include <math.h>
 #if !defined(AUDIO_ENGINE_PC_TEST)
@@ -3401,6 +3404,9 @@ static void ae_output_task(void *arg)
             phase_mark = now;
         }
         (void)monitor_pcm_link_write_nonblocking(hp_out, AE_OUT_FRAMES);
+#if __has_include("p4_flx4_host.h")
+        (void)p4_flx4_host_write_audio(master_out, hp_out, AE_OUT_FRAMES);
+#endif
         {
             int64_t now = esp_timer_get_time();
             ae_phase_note(AE_PH_MONITOR, now - phase_mark);

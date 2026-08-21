@@ -9,6 +9,9 @@ Latest live hardware verification: **2026-08-21**, on COM17.
 - **Live Dual-Deck Performance & Playback**:
   - Browse navigation and track loading on Deck 1 and Deck 2 via physical DDJ-FLX4 controls.
   - Dual-deck audio playback started with physical PLAY buttons; 2290+ audio buffers streamed to I2S with 0 drops.
+- **Pioneer DDJ-FLX4 UAC1 Isochronous Audio Streaming & MIDI Host**:
+  - Direct 4-channel 16-bit 44.1 kHz PCM Isochronous audio streaming (Interface 1, Alt 2) to the DDJ-FLX4 3.5mm headphone jack.
+  - Active MIDI In/Out for buttons, knobs, and LED illumination (Interface 4).
 - **Master Audio**: PCM5102A I2S DAC (`GPIO50/51/52`) running at 44.1 kHz / 16-bit stereo.
 - **Network**: Wi-Fi 6 provided exclusively via onboard ESP32-C6 over SDIO (ESP-Hosted). Ethernet EMAC held disabled to dedicate RMII pins to the I2S DAC.
 

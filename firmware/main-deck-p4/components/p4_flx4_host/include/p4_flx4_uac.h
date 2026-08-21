@@ -5,9 +5,10 @@
 #include <stddef.h>
 
 #define FLX4_UAC_SAMPLE_RATE 44100u
-#define FLX4_UAC_CHANNELS    2u
+#define FLX4_UAC_CHANNELS    4u
 #define FLX4_UAC_BITS        16u
 #define FLX4_UAC_BYTES_PER_SAMPLE 2u
+#define FLX4_AUDIO_RING_FRAMES 2048u
 
 // UAC1 Packetizer (handles 44.1 kHz fractional frames: 44 or 45 frames per 1 ms USB packet)
 typedef struct {

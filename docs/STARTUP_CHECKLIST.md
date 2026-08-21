@@ -30,6 +30,12 @@ Status: updated for **Pajoniiir-M3** single-chip ESP32-P4 architecture on the **
     - **BROWSE knob** scrolled library (`id=96`).
     - **LOAD 1 / LOAD 2 buttons** loaded tracks to Deck 1 (`id=97`) and Deck 2 (`id=98`).
     - **PLAY buttons** started dual-deck audio engine (`id=16` and `id=48`), streaming 2290+ PCM audio buffers over I2S with **0 drops**.
+- [x] **Pioneer DDJ-FLX4 UAC1 Isochronous Audio Streaming to Headphones (2026-08-21)**:
+  - Claimed **Interface 1 (Alt 2)**: 4-kanalni 16-bit 44.1 kHz PCM Audio Streaming (`Ch 1/2`: Master RCA, `Ch 3/4`: Headphones 3.5mm jack).
+  - Claimed **Interface 4 (Alt 0)**: USB MIDI Streaming (Bulk IN `0x82`, Bulk OUT `0x03`).
+  - Tuned hardware FIFO allocations: High-Speed controller allocated 512+ byte Bulk buffers (`nptx=256`, `rx=640`) and Full-Speed controller allocated 384+ byte Isochronous buffers (`ptx=100`, `nptx=20`, `rx=136`).
+  - Continuous triple-buffered isochronous pipeline (`EP 0x01`, `mps=384`) streaming real-time master and headphone cue mixes from `audio_engine.c`.
+  - LED commands (Play, Cue, Sync, Hot Cues) actively updating controller buttons via FreeRTOS queue worker.
 
 ## Current installed and accepted baselines
 
