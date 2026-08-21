@@ -14,7 +14,7 @@
 //     D0..D3:     GPIO39..42, CMD: GPIO44, CLK: GPIO43 (LDO channel 4)
 //
 //   PCM5102A Master Audio DAC (I2S Unit 1):
-//     BCLK: GPIO50, WS/LRCK: GPIO52, DOUT: GPIO51
+//     BCLK: GPIO1, WS/LRCK: GPIO2, DOUT: GPIO3
 //
 //   ESP32-C6 Coprocessor (SDIO slot 1):
 //     D0..D3: GPIO14..17, CLK: GPIO18, CMD: GPIO19, RST: GPIO54

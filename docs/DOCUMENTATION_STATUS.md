@@ -11,8 +11,7 @@ Latest live hardware verification: **2026-08-21**, on COM17.
   - Dual-deck audio playback started with physical PLAY buttons; 2290+ audio buffers streamed to I2S with 0 drops.
 - **Pioneer DDJ-FLX4 UAC1 Isochronous Audio Streaming & Full LED Feedback**:
   - Direct 4-channel 16-bit 44.1 kHz PCM Isochronous audio streaming (Interface 1, Alt 2) to the DDJ-FLX4 3.5mm headphone jack with -12 dB digital headroom (`>> 2`).
-  - Active MIDI In/Out for buttons, knobs, performance pads, and real-time LED illumination (Play, Cue, PFL, Hot Cues, Beat Loops, Pad FX, Beat Jump, Sync, and VU Meters via registered local LED sink).
-- **Master Audio**: PCM5102A I2S DAC (`GPIO50/51/52`) running at 44.1 kHz / 16-bit stereo.
+- **Master Audio**: PCM5102A I2S DAC (`GPIO1/2/3` na JP1 headeru) running at 44.1 kHz / 16-bit stereo.
 - **Network**: Wi-Fi 6 provided exclusively via onboard ESP32-C6 over SDIO (ESP-Hosted). Ethernet EMAC held disabled to dedicate RMII pins to the I2S DAC.
 
 This page explains which documents describe the current product and which are

@@ -26,14 +26,16 @@ Documentation status: active pin inventory for the **JC-ESP32P4-M3-DEV** board w
 
 ---
 
-## 2. Master Audio I2S DAC (PCM5102A Breakout)
+## 2. Master Audio I2S DAC (PCM5102A Breakout na JP1 headeru)
 
-| Funkcija | ESP32-P4 GPIO | Napomena |
+| Funkcija | ESP32-P4 GPIO / JP1 Pin | Napomena |
 | --- | --- | --- |
-| I2S BCLK | GPIO50 | I2S_NUM_1 Bit Clock |
-| I2S WS / LRCK | GPIO52 | I2S_NUM_1 Word Select (Left/Right Clock) |
-| I2S DOUT / DIN | GPIO51 | I2S_NUM_1 Data Out prema PCM5102A DIN |
-| GND / VCC | GND / +5V (ili +3.3V) | Napajanje DAC pločice |
+| I2S BCLK | GPIO1 (JP1 Pin 7) | I2S_NUM_1 Bit Clock prema PCM5102A BCK |
+| I2S WS / LRCK | GPIO2 (JP1 Pin 9) | I2S_NUM_1 Word Select prema PCM5102A LCK |
+| I2S DOUT / DIN | GPIO3 (JP1 Pin 11) | I2S_NUM_1 Data Out prema PCM5102A DIN |
+| SCK | GND (JP1 Pin 5 ili 6) | Za aktivaciju internog PLL-a na PCM5102A |
+| GND | GND (JP1 Pin 5, 6 ili 16) | Masa |
+| VIN | +5V (JP1 Pin 2 ili 4) | Napajanje DAC pločice |
 
 ---
 

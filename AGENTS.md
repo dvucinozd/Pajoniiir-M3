@@ -18,7 +18,7 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 - **USB1 (USB-TTL / CH340C)** služi za 5V napajanje cijele ploče, programiranje (flashing) i serijsku dijagnostiku.
 - **ESP32-P4 (JC-ESP32P4-M3-DEV)** je autoritativni single-chip host: USB MIDI i Audio host, playback engine, Rekordbox library, 800×480 DSI UI i DSP mixer.
 - **5.0" MIPI-DSI IPS zaslon (800×480)** s FocalTech FT5426 kapacitivnim dodirom pruža brzo i pregledno sučelje u nativnom landscape formatu (0° PPA hardware blit).
-- **Master audio izlaz** ide preko PCM5102A I2S DAC modula (`GPIO50/51/52`).
+- **Master audio izlaz** ide preko PCM5102A I2S DAC modula (`GPIO1/2/3` na JP1 headeru).
 - **Wi-Fi 6** je osiguran preko integriranog **ESP32-C6** modula (ESP-Hosted preko SDIO).
 - **Neaktivne periferije**: Ugrađeni mikrofon, NS4150 mono zvučničko pojačalo i RJ45 Ethernet su namjerno isključeni u softveru radi nultog šuma i oslobađanja GPIO pinova.
 
@@ -156,7 +156,7 @@ Canonical repo je **`https://github.com/dvucinozd/Pajoniiir-M3.git`**.
 
 - **Single-Chip ESP32-P4**: ESP32-P4 je autoritativan za playback state, deck state, audio position, mixer state, LED odluke, LVGL UI i USB Host klijente.
 - **3-Port USB Topologija**: USB1 za 5V napajanje/debug, USB2 za DDJ-FLX4 (FS), USB3 za Rekordbox MSC (HS). Nema potrebe za vanjskim USB hubom.
-- **Master Audio**: Vanjski PCM5102A I2S DAC (`GPIO50/51/52`) pruža primarni master audio izlaz.
+- **Master Audio**: Vanjski PCM5102A I2S DAC (`GPIO1/2/3` na JP1 headeru) pruža primarni master audio izlaz.
 - **Headphones / Cue**: Izravni UAC1 Isochronous USB audio streaming prema DDJ-FLX4 3.5mm priključku.
 - **Mreža**: Isključivo Wi-Fi 6 preko ESP32-C6 modula (ESP-Hosted preko SDIO). Ethernet EMAC je isključen u softveru kako bi se oslobodili RMII pinovi za I2S DAC.
 - **MIDI**: Koristi se provjereni Mixxx XML mapping iz `docs/reference/Pioneer-DDJ-FLX4.midi.xml`.

@@ -19,9 +19,9 @@ The ESP32-P4 handles all authoritative deck state, USB host transactions, MIDI t
 - **Processor**: ESP32-P4 (Dual-core RISC-V @ up to 400 MHz).
 - **Display**: 5.0" MIPI-DSI IPS (800×480 WVGA @ 30 MHz DPI video mode, 0° PPA hardware blitting).
 - **Touch**: FocalTech FT5426 capacitive touch controller over I2C (`0x38`).
-- **Master Audio**: External PCM5102A I2S DAC stereo output (GPIO50/52/51).
+- **Master Audio**: External PCM5102A I2S DAC stereo output (GPIO1 BCLK, GPIO2 WS, GPIO3 DOUT on JP1 header).
 - **Headphone Audio**: Direct UAC1 Isochronous USB Audio streaming to the Pioneer DDJ-FLX4 3.5mm headphone jack.
-- **USB Topology**: Single USB Host controller with multi-device support via external USB 2.0 Hub.
+- **USB Topology**: Native 3-Port topology (USB1 Power/Debug, USB2 FS DDJ-FLX4, USB3 HS Rekordbox media).
 
 ## Inherited Firmware Baseline
 

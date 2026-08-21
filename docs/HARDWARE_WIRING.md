@@ -42,13 +42,14 @@ The **JC-ESP32P4-M3-DEV** board features **3 dedicated USB Type-C ports**, elimi
 
 Master audio output uses an external PCM5102A I2S DAC breakout connected to the P4 header:
 
-| Signal | ESP32-P4 Pin | PCM5102A Pin | Notes |
+| Signal | ESP32-P4 Pin / JP1 | PCM5102A Pin | Notes |
 | :--- | :--- | :--- | :--- |
-| **I2S BCLK** | GPIO50 | BCK | Bit Clock |
-| **I2S WS / LRCK** | GPIO52 | LCK | Word Select / Frame Clock |
-| **I2S DOUT** | GPIO51 | DIN | Serial Audio Data |
-| **Power (VCC)** | 3.3V / 5V | VCC | Dependent on DAC module |
-| **Ground (GND)**| GND | GND | Common ground |
+| **I2S BCLK** | GPIO1 (JP1 Pin 7) | BCK | Bit Clock |
+| **I2S WS / LRCK** | GPIO2 (JP1 Pin 9) | LCK | Word Select / Frame Clock |
+| **I2S DOUT** | GPIO3 (JP1 Pin 11) | DIN | Serial Audio Data |
+| **I2S SCK** | GND (JP1 Pin 5/6) | SCK | Spojiti na GND za interni PLL |
+| **Power (VIN)** | 5V (JP1 Pin 2/4) | VIN | 5V napajanje modula |
+| **Ground (GND)**| GND (JP1 Pin 5/6/16) | GND | Zajednička masa |
 
 ## Headphone / Cue Audio Output
 

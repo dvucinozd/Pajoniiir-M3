@@ -42,9 +42,9 @@ static const char *TAG = "bsp_m3";
 
 // ── Master Out: PCM5102A I2S DAC ─────────────────────────────────────────────
 #define BSP_PCM5102_I2S_NUM        I2S_NUM_1
-#define BSP_PCM5102_BCLK_GPIO      GPIO_NUM_50
-#define BSP_PCM5102_WS_GPIO        GPIO_NUM_52
-#define BSP_PCM5102_DOUT_GPIO      GPIO_NUM_51
+#define BSP_PCM5102_BCLK_GPIO      GPIO_NUM_1
+#define BSP_PCM5102_WS_GPIO        GPIO_NUM_2
+#define BSP_PCM5102_DOUT_GPIO      GPIO_NUM_3
 #define BSP_PCM5102_MCLK_GPIO      I2S_GPIO_UNUSED
 
 // ── MicroSD card on SDMMC Slot 0 ─────────────────────────────────────────────
