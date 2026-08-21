@@ -14,6 +14,8 @@
 #include "esp_netif.h"
 #include "esp_wifi.h"
 
+#include "driver/gpio.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
@@ -38,6 +40,25 @@ static SemaphoreHandle_t s_ctrl_lock;
 static volatile bool s_active;
 static volatile bool s_desired;
 static volatile bool s_worker_running;
+
+/* GPIO54 is wired to the C6 EN pin on the M3 board. A P4-only reset does not
+ * power-cycle the C6, so an AP started before that reset would otherwise keep
+ * transmitting even when the restored P4 setting is OFF. Keep EN low until
+ * esp_hosted_init() deliberately takes ownership and starts the coprocessor. */
+static esp_err_t hold_c6_off(void)
+{
+    const gpio_num_t enable_gpio = CONFIG_ESP_HOSTED_GPIO_SLAVE_RESET_SLAVE;
+    const gpio_config_t config = {
+        .pin_bit_mask = 1ULL << enable_gpio,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    ESP_RETURN_ON_ERROR(gpio_config(&config), TAG, "configure C6 enable GPIO");
+    ESP_RETURN_ON_ERROR(gpio_set_level(enable_gpio, 0), TAG, "hold C6 disabled");
+    return ESP_OK;
+}
 
 static void status_publish(wifi_link_mode_t mode, esp_err_t error, bool active)
 {
@@ -242,6 +263,7 @@ static esp_err_t start_web_ap(void)
 
 esp_err_t wifi_link_init(void)
 {
+    ESP_RETURN_ON_ERROR(hold_c6_off(), TAG, "quiesce C6 at boot");
     portENTER_CRITICAL(&s_status_mux);
     memset(&s_status, 0, sizeof(s_status));
     s_status.mode = WIFI_LINK_MODE_OFF;
@@ -328,9 +350,14 @@ static void stop_ap_netif(void)
  * last thing to go and the one an AP/STA switch must NOT do. */
 static void stop_hosted_transport(void)
 {
-    if (!s_hosted_ready) return;
-    esp_hosted_deinit();
-    s_hosted_ready = false;
+    if (s_hosted_ready) {
+        esp_hosted_deinit();
+        s_hosted_ready = false;
+    }
+    esp_err_t rc = hold_c6_off();
+    if (rc != ESP_OK) {
+        ESP_LOGE(TAG, "failed to hold C6 off after teardown: %s", esp_err_to_name(rc));
+    }
 }
 
 static void stop_sta_netif(void)

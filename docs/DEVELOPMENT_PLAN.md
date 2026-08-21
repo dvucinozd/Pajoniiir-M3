@@ -12,8 +12,9 @@ Status: plan nakon single-chip čišćenja, 2026-08-22.
   peer debug/OTA i međupanački PCM link.
 
 Wi-Fi programski temelj već postoji: ESP32-C6/ESP-Hosted preko SDIO-a,
-SoftAP, web API, privremeni STA put i potpisani P4 OTA. Prije releasea treba
-dovršiti konfiguraciju, operatorski tok i hardversku/stress validaciju.
+SoftAP `Pajoniiir-M3`, web API, privremeni STA put i potpisani P4 OTA. Prije
+releasea treba dovršiti konfiguraciju, operatorski tok i hardversku/stress
+validaciju.
 
 Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
 dodirom je naručen i čeka se njegov dolazak. U dokumentaciji je to ciljana
@@ -37,7 +38,7 @@ Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
 
 ### 2. Dovršiti Wi-Fi 6 implementaciju
 
-- [ ] potvrditi ESP32-C6 firmware, ESP-Hosted i SDIO link na završnoj P4 slici;
+- [x] potvrditi ESP32-C6 firmware, ESP-Hosted i SDIO link na završnoj P4 slici;
 - [x] dovršiti trajnu Wi-Fi konfiguraciju za normalni SoftAP rad i servisne STA
   vjerodajnice, bez ispisa tajni u statusu ili logovima;
 - [x] dovršiti Settings tok za enable/disable, AP/STA stanje, IP adresu, pogreške i
@@ -51,6 +52,10 @@ Programsko učvršćivanje sada objavljuje stvarno OFF/STARTING/AP/STA/RESTORING
 ERROR stanje, AP/STA adresu i broj AP klijenata na Settings ekranu. Asinkrono
 gašenje čeka aktivni probe/OTA transition lease umjesto rušenja C6 transporta
 ispod prijelaznog taska; odluka START/STOP/WAIT pokrivena je host testom.
+Hardverski smoke 2026-08-22 potvrdio je SDIO/C6 bring-up, novi SoftAP
+`Pajoniiir-M3`, DHCP i HTTP 200 za `/api/status` i `/api/firmware`. U istom je
+testu ispravljeno zadržavanje AP-a preko P4-only reseta: GPIO54 sada drži C6
+isključenim pri bootu i nakon teardowna dok je spremljena postavka OFF.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni

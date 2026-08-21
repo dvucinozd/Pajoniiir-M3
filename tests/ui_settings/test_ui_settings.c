@@ -56,10 +56,10 @@ static void test_wifi_status_formats_actual_transport_state(void)
         .mode = UI_SETTINGS_WIFI_AP,
         .ap_clients = 2,
     };
-    snprintf(status.ssid, sizeof(status.ssid), "%s", "Pajoniiir");
+    snprintf(status.ssid, sizeof(status.ssid), "%s", "Pajoniiir-M3");
     snprintf(status.address, sizeof(status.address), "%s", "192.168.4.1");
     ui_settings_format_wifi_status(&status, text, sizeof(text));
-    assert(strcmp(text, "AP: Pajoniiir  192.168.4.1  C:2") == 0);
+    assert(strcmp(text, "AP: Pajoniiir-M3  192.168.4.1  C:2") == 0);
 
     status.mode = UI_SETTINGS_WIFI_STA;
     snprintf(status.address, sizeof(status.address), "%s", "192.168.1.42");

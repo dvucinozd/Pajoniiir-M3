@@ -450,10 +450,10 @@ function renderProbe(probe) {
 
 // Leaves the access point for up to ~25 s. This page therefore goes dead
 // mid-test, which is expected rather than a fault: the browser has to rejoin
-// Pajoniiir before the result can be read back.
+// Pajoniiir-M3 before the result can be read back.
 async function testOtaNetwork() {
     const status = document.getElementById('ota-net-status');
-    if (!confirm('The controller will leave Pajoniiir for up to 25 seconds to test the update network, then return. This page will be unreachable until it does. Continue?')) return;
+    if (!confirm('The controller will leave Pajoniiir-M3 for up to 25 seconds to test the update network, then return. This page will be unreachable until it does. Continue?')) return;
     if (status) status.textContent = 'Testing...';
     try {
         const response = await fetch('/api/ota/config', {
@@ -463,7 +463,7 @@ async function testOtaNetwork() {
         });
         const text = await response.text();
         if (!response.ok) throw new Error(text || response.statusText);
-        if (status) status.textContent = 'Test started. Rejoin Pajoniiir and reload to see the result.';
+        if (status) status.textContent = 'Test started. Rejoin Pajoniiir-M3 and reload to see the result.';
     } catch (err) {
         if (status) status.textContent = `Test refused: ${err.message}`;
     }
@@ -475,7 +475,7 @@ async function testOtaNetwork() {
 // mid-set.
 async function checkForUpdate() {
     const status = document.getElementById('ota-net-status');
-    if (!confirm('The controller will leave Pajoniiir for up to 30 seconds to check the update server, then return. Nothing is installed. Continue?')) return;
+    if (!confirm('The controller will leave Pajoniiir-M3 for up to 30 seconds to check the update server, then return. Nothing is installed. Continue?')) return;
     if (status) status.textContent = 'Checking...';
     try {
         const response = await fetch('/api/ota/config', {
@@ -485,7 +485,7 @@ async function checkForUpdate() {
         });
         const text = await response.text();
         if (!response.ok) throw new Error(text || response.statusText);
-        if (status) status.textContent = 'Check started. Rejoin Pajoniiir and reload to see the result.';
+        if (status) status.textContent = 'Check started. Rejoin Pajoniiir-M3 and reload to see the result.';
     } catch (err) {
         if (status) status.textContent = `Check refused: ${err.message}`;
     }
@@ -506,7 +506,7 @@ async function installUpdate() {
         });
         const text = await response.text();
         if (!response.ok) throw new Error(text || response.statusText);
-        if (status) status.textContent = 'Download started. The controller restarts on its own; rejoin Pajoniiir afterwards.';
+        if (status) status.textContent = 'Download started. The controller restarts on its own; rejoin Pajoniiir-M3 afterwards.';
     } catch (err) {
         if (status) status.textContent = `Install refused: ${err.message}`;
     }

@@ -506,9 +506,19 @@ Assert-FileContains `
     -LiteralPatterns @(".ddjota", "signed P4")
 
 Assert-FileContains `
-    -Name "P4 Wi-Fi Remote uses the accepted default WPA2 credential" `
+    -Name "P4 Wi-Fi Remote uses the product SSID and accepted default WPA2 credential" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/include/wifi_link.h") `
-    -LiteralPatterns @('WIFI_LINK_PASSWORD    "Pajoniiir"')
+    -LiteralPatterns @('WIFI_LINK_SOFTAP_SSID "Pajoniiir-M3"', 'WIFI_LINK_PASSWORD    "Pajoniiir"')
+
+Assert-FileContains `
+    -Name "P4 Wi-Fi lifecycle holds the C6 disabled while remote access is off" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
+    -LiteralPatterns @(
+        "static esp_err_t hold_c6_off(void)",
+        "gpio_set_level(enable_gpio, 0)",
+        'ESP_RETURN_ON_ERROR(hold_c6_off(), TAG, "quiesce C6 at boot")',
+        "esp_err_t rc = hold_c6_off();"
+    )
 
 Assert-FileDoesNotContain `
     -Name "audio_engine per-deck firmware decode PCM buffers" `

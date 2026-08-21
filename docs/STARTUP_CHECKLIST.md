@@ -44,9 +44,11 @@ idf.py -p COM17 flash monitor
 - [ ] C6/ESP-Hosted se inicijalizira.
 - [ ] Settings razlikuje spremljeni Wi-Fi zahtjev od stvarnog
   OFF/STARTING/AP/STA/ERROR stanja i prikazuje aktualnu IP adresu.
-- [ ] SoftAP `Pajoniiir` prihvaća najmanje dva istodobna klijenta i broj klijenata
-  na Settings ekranu prati connect/disconnect.
+- [ ] SoftAP `Pajoniiir-M3` prihvaća najmanje dva istodobna klijenta i broj
+  klijenata na Settings ekranu prati connect/disconnect.
 - [ ] Wi-Fi remote može se uključiti i vratiti u AP način nakon OTA probea.
+- [ ] P4 reset sa spremljenim Wi-Fi OFF stanjem ne ostavlja C6 ni SoftAP
+  aktivnim.
 - [ ] Zahtjev za gašenje tijekom probea/OTA-a izvrši se tek nakon obnove AP-a;
   nema racea, srušenog netifa ni izgubljenog ESP-Hosted transporta.
 - [ ] `/api/status` prikazuje FLX4 i USB-headphone dijagnostiku.

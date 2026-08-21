@@ -5,10 +5,10 @@
 
 #include "esp_err.h"
 
-/* Three i's, matching the product name, the mDNS hostname `pajoniiir.local` and
- * the update host. The former AP spelling omitted one i until 2026-07-24,
- * exactly the kind of near-miss that later produces a wrong URL by hand. */
-#define WIFI_LINK_SOFTAP_SSID "Pajoniiir"
+/* Three i's plus the M3 product suffix, matching the operator-facing device
+ * name. Keep the password separate: renaming the network must not silently
+ * invalidate the accepted bench credential. */
+#define WIFI_LINK_SOFTAP_SSID "Pajoniiir-M3"
 #define WIFI_LINK_PASSWORD    "Pajoniiir"
 
 typedef enum {
