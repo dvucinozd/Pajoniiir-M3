@@ -45,9 +45,6 @@ class OtaSigningTests(unittest.TestCase):
         self.assertEqual(info["version"], "RC2-test")
         self.assertEqual(info["image_size"], len(self.image))
 
-        s3 = self.bundle("s3", 0x0009, "control-board-s3")
-        self.assertEqual(ota_signing.inspect_bundle(s3, self.public)["target"], "s3")
-
     def test_tampered_signed_manifest_is_rejected(self):
         bundle = bytearray(self.bundle())
         bundle[ota_signing.OFFSET_VERSION] ^= 1

@@ -125,58 +125,17 @@ static void test_controller_json_formats_connected_and_absent(void)
 {
     char out[256];
 
-    web_api_format_controller_json(out, sizeof(out), true, 0x2B73, 0x0045,
-                                   "Pioneer DDJ-FLX4", true, true, true,
-                                   "pioneer_ddj_flx4", "active", 2);
+    web_api_format_controller_json(out, sizeof(out), true);
     assert(strcmp(out,
         "\"controller\":{\"present\":true,\"vid\":\"0x2B73\",\"pid\":\"0x0045\","
         "\"product\":\"Pioneer DDJ-FLX4\",\"midi_in\":true,\"midi_out\":true,"
-        "\"usb_audio\":true,\"active_profile\":\"pioneer_ddj_flx4\","
-        "\"profile_state\":\"active\",\"profiles\":2}") == 0);
+        "\"usb_audio\":true}") == 0);
 
-    /* No controller / unsupported (no active profile). */
-    web_api_format_controller_json(out, sizeof(out), false, 0, 0, "",
-                                   false, false, false, "", "idle", 0);
+    web_api_format_controller_json(out, sizeof(out), false);
     assert(strcmp(out,
-        "\"controller\":{\"present\":false,\"vid\":\"0x0000\",\"pid\":\"0x0000\","
-        "\"product\":\"\",\"midi_in\":false,\"midi_out\":false,"
-        "\"usb_audio\":false,\"active_profile\":\"\","
-        "\"profile_state\":\"idle\",\"profiles\":0}") == 0);
-}
-
-static void test_profile_upload_policy_is_bounded_and_explicit(void)
-{
-    bool overwrite = true;
-
-    assert(!web_api_profile_content_length_valid(0));
-    assert(!web_api_profile_content_length_valid(WEB_API_PROFILE_MIN_SIZE - 1u));
-    assert(web_api_profile_content_length_valid(WEB_API_PROFILE_MIN_SIZE));
-    assert(web_api_profile_content_length_valid(WEB_API_PROFILE_MAX_SIZE));
-    assert(!web_api_profile_content_length_valid(WEB_API_PROFILE_MAX_SIZE + 1u));
-
-    assert(web_api_profile_overwrite_parse(NULL, &overwrite) && !overwrite);
-    assert(web_api_profile_overwrite_parse("0", &overwrite) && !overwrite);
-    assert(web_api_profile_overwrite_parse("1", &overwrite) && overwrite);
-    assert(!web_api_profile_overwrite_parse("true", &overwrite));
-    assert(!web_api_profile_overwrite_parse("01", &overwrite));
-    assert(!web_api_profile_overwrite_parse("1 ", &overwrite));
-    assert(!web_api_profile_overwrite_parse("1", NULL));
-}
-
-static void test_control_link_json_formats_integrity_counters(void)
-{
-    char out[320];
-
-    int n = web_api_format_control_link_json(out, sizeof(out), true, 125u,
-                                             900u, 2u, 3u, 12u, 4u,
-                                             77u, true);
-    assert(n > 0);
-    assert(strcmp(out,
-        "\"control_link\":{\"connected\":true,\"heartbeat_age_ms\":125,"
-        "\"rx_frames\":900,\"sequence_gaps\":2,\"crc_errors\":7,"
-        "\"event_checksum_errors\":3,"
-        "\"bulk_frames\":12,\"bulk_crc_errors\":4,\"last_sequence\":77,"
-        "\"sequence_valid\":true}") == 0);
+        "\"controller\":{\"present\":false,\"vid\":\"0x2B73\",\"pid\":\"0x0045\","
+        "\"product\":\"Pioneer DDJ-FLX4\",\"midi_in\":false,\"midi_out\":false,"
+        "\"usb_audio\":false}") == 0);
 }
 
 static void test_service_log_json_formats_writer_health(void)
@@ -237,9 +196,7 @@ int main(void)
     test_alloc_printf_handles_payload_larger_than_legacy_status_buffer();
     test_clamp_seek_ms_bounds_to_loaded_track_duration();
     test_controller_json_formats_connected_and_absent();
-    test_control_link_json_formats_integrity_counters();
     test_service_log_json_formats_writer_health();
-    test_profile_upload_policy_is_bounded_and_explicit();
     test_api_host_allow_list_tracks_ap_ip_and_mdns_name();
     test_firmware_json_snapshot_escapes_in_place();
     test_firmware_json_snapshot_never_leaves_partial_escape();

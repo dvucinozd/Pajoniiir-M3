@@ -8,7 +8,6 @@
 #include "web_api_helpers.h"
 #include "deck_core.h"
 #include "control_link.h"
-#include "control_link_p4_diagnostics.h"
 #include "p4_ota.h"
 #include "web_firmware_json.h"
 #include "p4_ota_policy.h"
@@ -21,9 +20,6 @@
 #include "app_settings.h"
 #include <stdio.h>
 #include "sdkconfig.h"
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-#include "controller_profile_manager.h"
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include "esp_system.h"
@@ -45,28 +41,6 @@ static void current_ap_ipv4(char out[16])
         (void)esp_ip4addr_ntoa(&info.ip, out, 16);
     }
 }
-
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-static const char *controller_profile_state_name(controller_profile_transfer_state_t state)
-{
-    switch (state) {
-    case CPM_TRANSFER_IDLE:
-        return "idle";
-    case CPM_TRANSFER_MATCHED:
-        return "matched";
-    case CPM_TRANSFER_TRANSFERRING:
-        return "transferring";
-    case CPM_TRANSFER_ACTIVE:
-        return "active";
-    case CPM_TRANSFER_FAILED:
-        return "failed";
-    case CPM_TRANSFER_UNSUPPORTED:
-        return "unsupported";
-    default:
-        return "unknown";
-    }
-}
-#endif
 
 static esp_err_t register_uri_or_stop(httpd_handle_t server, const httpd_uri_t *uri)
 {
@@ -171,28 +145,6 @@ static esp_err_t app_js_handler(httpd_req_t *req)
     return httpd_resp_send(req, (const char *)app_js_start, size);
 }
 
-static const char *peer_fw_slot_name(uint8_t slot)
-{
-    switch (slot) {
-    case CTRL_FW_SLOT_OTA_0: return "ota_0";
-    case CTRL_FW_SLOT_OTA_1: return "ota_1";
-    case CTRL_FW_SLOT_FACTORY: return "factory";
-    default: return "unknown";
-    }
-}
-
-static const char *peer_fw_state_name(uint8_t state)
-{
-    switch (state) {
-    case CTRL_FW_STATE_NEW: return "new";
-    case CTRL_FW_STATE_PENDING_VERIFY: return "pending_verify";
-    case CTRL_FW_STATE_VALID: return "valid";
-    case CTRL_FW_STATE_INVALID: return "invalid";
-    case CTRL_FW_STATE_ABORTED: return "aborted";
-    default: return "unknown";
-    }
-}
-
 /* ── Web-originated deck mutations ───────────────────────────────────────── *
  *
  * The web UI must not reach into the audio engine directly. deck_core owns deck
@@ -238,7 +190,7 @@ static esp_err_t web_queue_loop_clear(uint8_t deck)
 }
 
 /* These strings end up inside a hand-formatted JSON body below. They originate
- * from partition labels, app descriptors and the S3's own report, so they are not
+ * from partition labels and app descriptors, so they are not
  * attacker-controlled in normal operation — but an unescaped quote or backslash
  * anywhere in that chain produces a response the client cannot parse, and the
  * failure would look like a firmware bug rather than an encoding one. Escape at
@@ -254,40 +206,24 @@ static void web_collect_p4_ota_status(p4_ota_status_t *out)
     web_firmware_json_escape_in_place(out->last_error, sizeof(out->last_error));
 }
 
-static bool web_collect_s3_firmware_report(ctrl_firmware_report_t *out)
-{
-    bool available = control_link_get_s3_firmware_report(out);
-    if (out) {
-        web_firmware_json_escape_in_place(out->version, sizeof(out->version));
-    }
-    return available;
-}
-
 static esp_err_t api_firmware_handler(httpd_req_t *req)
 {
     if (!api_request_allowed(req, false)) return ESP_FAIL;
     p4_ota_status_t status;
     web_collect_p4_ota_status(&status);
-    ctrl_firmware_report_t s3 = {0};
-    bool s3_available = web_collect_s3_firmware_report(&s3);
-    char json[640];
+    char json[512];
     int len = snprintf(json, sizeof(json),
                        "{\"target\":\"p4\",\"state\":\"%s\","
                        "\"running_slot\":\"%s\",\"running_version\":\"%s\","
                        "\"target_slot\":\"%s\",\"target_version\":\"%s\","
                        "\"expected_size\":%u,\"received_size\":%u,"
-                       "\"last_error\":\"%s\","
-                       "\"s3\":{\"available\":%s,\"slot\":\"%s\","
-                       "\"state\":\"%s\",\"version\":\"%s\"}}",
+                       "\"last_error\":\"%s\"}",
                        p4_ota_state_name(status.state),
                        status.running_slot, status.running_version,
                        status.target_slot, status.target_version,
                        (unsigned)status.expected_size,
                        (unsigned)status.received_size,
-                       status.last_error,
-                       s3_available ? "true" : "false",
-                       peer_fw_slot_name(s3.slot), peer_fw_state_name(s3.state),
-                       s3.version);
+                       status.last_error);
     if (len < 0 || (size_t)len >= sizeof(json)) {
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA status overflow");
     }
@@ -630,173 +566,6 @@ static esp_err_t api_p4_ota_handler(httpd_req_t *req)
     return send_rc;
 }
 
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-static esp_err_t api_controller_profiles_handler(httpd_req_t *req)
-{
-    if (!api_request_allowed(req, false)) return ESP_FAIL;
-    controller_profile_registry_t *reg = calloc(1, sizeof(*reg));
-    char *json = malloc(4096);
-    if (!reg || !json) {
-        free(reg);
-        free(json);
-        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                   "No memory");
-    }
-    if (controller_profile_manager_get_registry_snapshot(reg) != ESP_OK) {
-        free(reg);
-        free(json);
-        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                   "Profile manager unavailable");
-    }
-    size_t used = 0;
-    int n = snprintf(json, 4096, "{\"profiles\":[");
-    if (n < 0 || n >= 4096) {
-        free(reg);
-        free(json);
-        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                   "Profile list overflow");
-    }
-    used = (size_t)n;
-    for (uint8_t i = 0; i < reg->count; i++) {
-        const controller_profile_meta_t *m = &reg->profiles[i];
-        n = snprintf(json + used, 4096 - used,
-                     "%s{\"id\":\"%s\",\"valid\":%s,\"vid\":\"0x%04X\","
-                     "\"pid\":\"0x%04X\",\"size\":%u}",
-                     i == 0 ? "" : ",", m->id,
-                     m->valid ? "true" : "false", m->vid, m->pid,
-                     (unsigned)m->size);
-        if (n < 0 || (size_t)n >= 4096 - used) {
-            free(reg);
-            free(json);
-            return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                       "Profile list overflow");
-        }
-        used += (size_t)n;
-    }
-    n = snprintf(json + used, 4096 - used, "],\"count\":%u}",
-                 (unsigned)reg->count);
-    if (n < 0 || (size_t)n >= 4096 - used) {
-        free(reg);
-        free(json);
-        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                   "Profile list overflow");
-    }
-    used += (size_t)n;
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-    esp_err_t rc = httpd_resp_send(req, json, used);
-    free(reg);
-    free(json);
-    return rc;
-}
-
-static esp_err_t api_controller_profile_upload_handler(httpd_req_t *req)
-{
-    if (!api_request_allowed(req, true)) return ESP_FAIL;
-
-    /* A profile install is a multi-file SD swap; refuse it while the recorder
-     * owns the card rather than letting it back-pressure the writer. */
-    if (!sd_io_gate_admit(SD_IO_CLASS_PROFILE_UPLOAD, sd_io_gate_recorder_active())) {
-        httpd_resp_set_status(req, "409 Conflict");
-        return httpd_resp_send(req, "Recording in progress - stop it to install a profile",
-                               HTTPD_RESP_USE_STRLEN);
-    }
-
-    char id[CPM_ID_MAX] = {0};
-    if (httpd_req_get_hdr_value_str(req, "X-DDJ-Profile-ID", id,
-                                    sizeof(id)) != ESP_OK ||
-        !controller_profile_id_valid(id)) {
-        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                                   "Invalid or missing X-DDJ-Profile-ID");
-    }
-    if (!web_api_profile_content_length_valid((size_t)req->content_len)) {
-        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                                   "Profile size must be 32..16384 bytes");
-    }
-
-    char overwrite_header[4] = {0};
-    const char *overwrite_value = NULL;
-    size_t overwrite_len = httpd_req_get_hdr_value_len(
-        req, "X-DDJ-Profile-Overwrite");
-    if (overwrite_len > 0) {
-        if (overwrite_len >= sizeof(overwrite_header) ||
-            httpd_req_get_hdr_value_str(req, "X-DDJ-Profile-Overwrite",
-                                        overwrite_header,
-                                        sizeof(overwrite_header)) != ESP_OK) {
-            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                                       "Invalid X-DDJ-Profile-Overwrite");
-        }
-        overwrite_value = overwrite_header;
-    }
-    bool overwrite = false;
-    if (!web_api_profile_overwrite_parse(overwrite_value, &overwrite)) {
-        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                                   "Overwrite must be 0 or 1");
-    }
-
-    size_t expected = (size_t)req->content_len;
-    uint8_t *blob = malloc(expected);
-    if (!blob) {
-        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                   "No memory");
-    }
-    size_t received_total = 0;
-    while (received_total < expected) {
-        int received = ota_http_recv(req, blob + received_total,
-                                     expected - received_total);
-        if (received <= 0) {
-            free(blob);
-            if (received == HTTPD_SOCK_ERR_TIMEOUT) {
-                httpd_resp_set_status(req, "408 Request Timeout");
-                return httpd_resp_send(req, "Profile upload timed out",
-                                       HTTPD_RESP_USE_STRLEN);
-            }
-            return ESP_FAIL;
-        }
-        received_total += (size_t)received;
-    }
-
-    controller_profile_meta_t meta = {0};
-    esp_err_t rc = controller_profile_manager_install_profile(
-        id, blob, received_total, overwrite, &meta);
-    free(blob);
-    if (rc == ESP_ERR_INVALID_ARG) {
-        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                                   "Invalid S3CP profile or CRC");
-    }
-    if (rc == ESP_ERR_INVALID_STATE) {
-        httpd_resp_set_status(req, "409 Conflict");
-        return httpd_resp_send(req,
-                               "Profile exists or manager is busy",
-                               HTTPD_RESP_USE_STRLEN);
-    }
-    if (rc != ESP_OK) {
-        ESP_LOGE(TAG, "profile '%s' install failed: %s", id,
-                 esp_err_to_name(rc));
-        service_log_event(SERVICE_LOG_PROFILE_UPLOAD_FAILED, SERVICE_LOG_WARN,
-                          1u, (uint32_t)rc, 0u, 0u, 0u, id);
-        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                   "SD profile install failed");
-    }
-    service_log_event(SERVICE_LOG_PROFILE_UPLOAD_DONE, SERVICE_LOG_INFO,
-                      1u, (uint32_t)received_total, 0u, 0u, 0u, id);
-
-    char json[256];
-    int n = snprintf(json, sizeof(json),
-                     "{\"ok\":true,\"id\":\"%s\",\"size\":%u,"
-                     "\"vid\":\"0x%04X\",\"pid\":\"0x%04X\"}",
-                     meta.id, (unsigned)meta.size, meta.vid, meta.pid);
-    if (n < 0 || (size_t)n >= sizeof(json)) {
-        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                   "Profile response overflow");
-    }
-    httpd_resp_set_status(req, overwrite ? "200 OK" : "201 Created");
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-    return httpd_resp_send(req, json, (size_t)n);
-}
-#endif
-
 // GET /api/status
 #if CONFIG_AUDIO_RECORDER_ENABLED
 /* ── Master-output recorder API ────────────────────────────────────────────── */
@@ -987,9 +756,7 @@ static esp_err_t api_status_handler(httpd_req_t *req)
     deck_state_t state1 = deck_core_get_deck_state(0);
     deck_state_t state2 = deck_core_get_deck_state(1);
     deck_core_beat_fx_state_t beat_fx = deck_core_get_beat_fx_state();
-    control_link_rx_stats_t link_stats = {0};
     service_log_status_t service_status = {0};
-    control_link_get_rx_stats(&link_stats);
     (void)service_log_get_status(&service_status);
 
     float p1 = deck_core_pitch_percent(&state1);
@@ -1018,47 +785,8 @@ static esp_err_t api_status_handler(httpd_req_t *req)
                                           (unsigned)diagnostics.beat_fx_echo_delay_ms[1]);
 
     char controller_json[256] = {0};
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-    {
-        controller_profile_registry_t *reg = calloc(1, sizeof(*reg));
-        if (!reg) {
-            return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                                       "No memory for profile status");
-        }
-        (void)controller_profile_manager_get_registry_snapshot(reg);
-        char product_esc[2 * CPM_PRODUCT_MAX + 8] = {0};
-        web_api_json_escape(reg->connected_product, product_esc, sizeof(product_esc));
-        const char *active = (reg->active_index >= 0 &&
-                              reg->active_index < (int)reg->count)
-            ? reg->profiles[reg->active_index].id : "";
-        char active_esc[2 * CPM_ID_MAX + 8] = {0};
-        web_api_json_escape(active, active_esc, sizeof(active_esc));
-        char state_esc[24] = {0};
-        web_api_json_escape(controller_profile_state_name(reg->transfer_state),
-                            state_esc, sizeof(state_esc));
-        web_api_format_controller_json(controller_json, sizeof(controller_json),
-                                       reg->controller_present,
-                                       reg->connected_vid, reg->connected_pid,
-                                       product_esc,
-                                       (reg->connected_caps & CTRL_DESC_CAP_MIDI_IN) != 0,
-                                       (reg->connected_caps & CTRL_DESC_CAP_MIDI_OUT) != 0,
-                                       (reg->connected_caps & CTRL_DESC_CAP_USB_AUDIO) != 0,
-                                       active_esc, state_esc, reg->count);
-        free(reg);
-    }
-#else
     web_api_format_controller_json(controller_json, sizeof(controller_json),
-                                   false, 0, 0, "", false, false, false, "", "idle", 0);
-#endif
-
-    char control_link_json[320] = {0};
-    web_api_format_control_link_json(
-        control_link_json, sizeof(control_link_json),
-        state1.control_link_connected, state1.last_heartbeat_age_ms,
-        link_stats.rx_frames, link_stats.sequence_gaps,
-        link_stats.event_checksum_errors, link_stats.bulk_frames,
-        link_stats.bulk_crc_errors, link_stats.last_sequence,
-        link_stats.sequence_valid);
+                                   state1.controller_connected);
 
     char service_log_json[256] = {0};
     web_api_format_service_log_json(
@@ -1117,7 +845,6 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         "\"pfl1\":%s,"
         "\"pfl2\":%s"
         "},"
-        "%s,"
         "%s,"
         "%s,"
         "%s,"
@@ -1184,7 +911,6 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         mixer.pfl_enabled[0] ? "true" : "false", mixer.pfl_enabled[1] ? "true" : "false",
         beat_fx_json,
         controller_json,
-        control_link_json,
         service_log_json,
         diagnostics.output_codec_open ? "true" : "false",
         (unsigned)diagnostics.output_sample_rate,
@@ -1731,26 +1457,6 @@ esp_err_t web_server_start(void)
     };
     rc = register_uri_or_stop(s_web_server, &ota_p4_uri);
     if (rc != ESP_OK) return rc;
-
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-    httpd_uri_t controller_profiles_uri = {
-        .uri = "/api/controller-profiles",
-        .method = HTTP_GET,
-        .handler = api_controller_profiles_handler,
-        .user_ctx = NULL
-    };
-    rc = register_uri_or_stop(s_web_server, &controller_profiles_uri);
-    if (rc != ESP_OK) return rc;
-
-    httpd_uri_t controller_profile_upload_uri = {
-        .uri = "/api/controller-profile",
-        .method = HTTP_POST,
-        .handler = api_controller_profile_upload_handler,
-        .user_ctx = NULL
-    };
-    rc = register_uri_or_stop(s_web_server, &controller_profile_upload_uri);
-    if (rc != ESP_OK) return rc;
-#endif
 
     httpd_uri_t library_uri = {
         .uri = "/api/library*",

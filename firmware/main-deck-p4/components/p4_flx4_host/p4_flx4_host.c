@@ -8,6 +8,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
+#include <stdatomic.h>
 #include "usb/usb_host.h"
 
 #include <string.h>
@@ -37,6 +38,9 @@ static p4_flx4_midi_gate_t      s_midi_gate;
 static p4_flx4_audio_ring_t     s_audio_ring;
 static int16_t                  s_audio_storage[FLX4_AUDIO_RING_FRAMES * FLX4_UAC_CHANNELS];
 static p4_flx4_uac_packetizer_t s_packetizer;
+static atomic_uint_fast32_t     s_audio_submitted_blocks;
+static atomic_uint_fast32_t     s_audio_dropped_blocks;
+static atomic_uint_fast32_t     s_audio_submitted_frames;
 
 static portMUX_TYPE             s_flx4_mux      = portMUX_INITIALIZER_UNLOCKED;
 
@@ -318,7 +322,11 @@ esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t 
             temp[i * 4 + 3] = h_r; // Ch 4: Headphones R (-12dB)
         }
         portENTER_CRITICAL(&s_flx4_mux);
-        (void)p4_flx4_audio_ring_write(&s_audio_ring, temp, (uint32_t)chunk);
+        uint32_t accepted = p4_flx4_audio_ring_write(&s_audio_ring, temp, (uint32_t)chunk);
+        atomic_fetch_add_explicit(&s_audio_submitted_frames, accepted, memory_order_relaxed);
+        if (accepted < chunk) {
+            atomic_fetch_add_explicit(&s_audio_dropped_blocks, 1u, memory_order_relaxed);
+        }
         portEXIT_CRITICAL(&s_flx4_mux);
 
         s_audio_total_frames += (uint32_t)chunk;
@@ -326,12 +334,24 @@ esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t 
         if (hp_samples) hp_samples += chunk * 2;
         frame_count -= chunk;
     }
+    atomic_fetch_add_explicit(&s_audio_submitted_blocks, 1u, memory_order_relaxed);
     return ESP_OK;
 }
 
 esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples, size_t frame_count)
 {
     return p4_flx4_host_write_audio(NULL, samples, frame_count);
+}
+
+void p4_flx4_host_get_audio_stats(p4_flx4_audio_stats_t *out_stats)
+{
+    if (!out_stats) return;
+    out_stats->submitted_blocks = (uint32_t)atomic_load_explicit(
+        &s_audio_submitted_blocks, memory_order_relaxed);
+    out_stats->dropped_blocks = (uint32_t)atomic_load_explicit(
+        &s_audio_dropped_blocks, memory_order_relaxed);
+    out_stats->submitted_frames = (uint32_t)atomic_load_explicit(
+        &s_audio_submitted_frames, memory_order_relaxed);
 }
 
 static uint8_t                  s_claimed_ifaces[8];

@@ -44,7 +44,6 @@
 #include "audio_scratch.h"
 #include "audio_resampler.h"
 #include "audio_smart_cfx.h"
-#include "monitor_pcm_link.h"
 #if __has_include("p4_flx4_host.h")
 #include "p4_flx4_host.h"
 #endif
@@ -3062,13 +3061,6 @@ static esp_err_t audio_output_service_open_codec(uint32_t sample_rate)
     s_output_codec_open = true;
     s_output_sample_rate = sample_rate;
     audio_output_apply_fx_sample_rate(sample_rate);
-    (void)monitor_pcm_link_set_format(sample_rate, 2u, 16u);
-#if CONFIG_MONITOR_PCM_LINK_ENABLED && !CONFIG_MONITOR_PCM_LINK_BENCH_TONE
-    /* Product path: start publishing real hp_out to the S3 monitor link now
-       that the output rate is known. The bench-tone build enables the link
-       from its own generator task instead. */
-    monitor_pcm_link_set_enabled(true);
-#endif
     ESP_LOGI(TAG, "shared codec open @ %u Hz", (unsigned)sample_rate);
     AE_UNLOCK();
     return ESP_OK;
@@ -3403,7 +3395,6 @@ static void ae_output_task(void *arg)
             ae_phase_note(AE_PH_PUSH, now - phase_mark);
             phase_mark = now;
         }
-        (void)monitor_pcm_link_write_nonblocking(hp_out, AE_OUT_FRAMES);
 #if __has_include("p4_flx4_host.h")
         (void)p4_flx4_host_write_audio(master_out, hp_out, AE_OUT_FRAMES);
 #endif
@@ -3419,7 +3410,7 @@ static void ae_output_task(void *arg)
             phase_mark = now;
         }
         /* When ES8311 is disabled the loop paces on the PCM5102A blocking
-           write above; hp_out still reaches the FLX4 phones over the link. */
+           write above; hp_out reaches the directly attached FLX4 over USB. */
         esp_err_t hp_rc = ESP_ERR_NOT_SUPPORTED;
         if (s_codec) {
             hp_rc = esp_codec_dev_write(s_codec, hp_out, (int)(AE_OUT_FRAMES * 2 * sizeof(int16_t)));
@@ -3656,12 +3647,6 @@ esp_err_t audio_engine_init(void)
     limiter_stats_reset();
     atomic_store_bool(&s_smart_cfx_enabled, false);
     atomic_store_bool(&s_smart_fader_enabled, false);
-    esp_err_t monitor_rc = monitor_pcm_link_init();
-    if (monitor_rc != ESP_OK) {
-        ESP_LOGE(TAG, "monitor_pcm_link_init failed: %d", (int)monitor_rc);
-        return monitor_rc;
-    }
-
 #if AE_FW
     /* Firmware: the ES8311 codec was created by bsp_audio_init(); grab the handle.
      * The I2S clock is configured per-track in audio_engine_load via codec_open. */
@@ -5571,11 +5556,13 @@ void audio_engine_get_diagnostics_snapshot(audio_engine_diagnostics_snapshot_t *
         0u;
 #endif
     limiter_stats_snapshot(&out_snapshot->limiter);
-    monitor_pcm_link_stats_t monitor_stats = { 0 };
-    monitor_pcm_link_get_stats(&monitor_stats);
-    out_snapshot->usb_headphone_submitted_blocks = monitor_stats.submitted_blocks;
-    out_snapshot->usb_headphone_dropped_blocks = monitor_stats.dropped_blocks;
-    out_snapshot->usb_headphone_submitted_frames = monitor_stats.submitted_frames;
+#if AE_FW
+    p4_flx4_audio_stats_t headphone_stats = { 0 };
+    p4_flx4_host_get_audio_stats(&headphone_stats);
+    out_snapshot->usb_headphone_submitted_blocks = headphone_stats.submitted_blocks;
+    out_snapshot->usb_headphone_dropped_blocks = headphone_stats.dropped_blocks;
+    out_snapshot->usb_headphone_submitted_frames = headphone_stats.submitted_frames;
+#endif
 #if AE_FW
     out_snapshot->output_codec_open = s_output_codec_open;
     out_snapshot->output_sample_rate = s_output_sample_rate;

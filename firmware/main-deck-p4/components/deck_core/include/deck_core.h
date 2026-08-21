@@ -31,7 +31,7 @@ typedef struct {
     bool          playing;
     uint32_t      position_ms;
     uint32_t      cue_point_ms;
-    int16_t       pitch;          // 0–16383, center = 8192, from S3 ADC
+    int16_t       pitch;          // 0–16383, center = 8192, from FLX4 MIDI
     int16_t       pitch_centipercent; // effective tempo adjust in 0.01% units
     uint16_t      tempo_range_percent; // selected tempo fader range, e.g. 6/10/16
     perf_mode_t   perf_mode;
@@ -41,8 +41,7 @@ typedef struct {
     bool          quantize_enabled;
     bool          censor_active;
     bool          master_tempo;
-    bool          control_link_connected;
-    uint32_t      last_heartbeat_age_ms;
+    bool          controller_connected;
 } deck_state_t;
 
 typedef enum {
@@ -93,12 +92,6 @@ void deck_core_toggle_master_tempo(uint8_t deck);
 // Snapshot of the global Beat FX state. Beat FX DSP is not applied yet; this is
 // exposed for low-rate diagnostics and controller smoke verification.
 deck_core_beat_fx_state_t deck_core_get_beat_fx_state(void);
-
-// Called from the deck task when S3 acknowledges the runtime Debug AP status.
-typedef void (*deck_core_s3_debug_ap_status_cb_t)(uint8_t status);
-void deck_core_set_s3_debug_ap_status_cb(deck_core_s3_debug_ap_status_cb_t cb);
-typedef void (*deck_core_s3_debug_ap_token_cb_t)(uint32_t token);
-void deck_core_set_s3_debug_ap_token_cb(deck_core_s3_debug_ap_token_cb_t cb);
 
 // Loop region for waveform display. `active` = a full loop (in+out) is set;
 // `armed` = loop-in pressed and waiting for loop-out (highlight from start_ms to

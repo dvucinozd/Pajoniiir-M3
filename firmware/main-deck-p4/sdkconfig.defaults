@@ -126,8 +126,6 @@ CONFIG_LWIP_TCP_SACK_OUT=y
 # `idf.py build` produces the sound firmware. Simultaneous outputs: PCM5102A RCA
 # MAIN (I2S unit 1, paces the output loop) + FLX4 USB headphones CUE fed by the
 # monitor link (I2S unit 0). ES8311 is disabled to free unit 0.
-CONFIG_MONITOR_PCM_LINK_ENABLED=y
-CONFIG_MONITOR_PCM_LINK_I2S_UNIT=0
 CONFIG_BSP_PCM5102A_MAIN_OUT=y
 # CONFIG_BSP_ES8311_MONITOR is not set
 CONFIG_LV_FONT_MONTSERRAT_20=y

@@ -383,7 +383,7 @@ function escapeHtml(str) {
 }
 
 // Generic show/hide for the collapsible maintenance cards (USB browser,
-// controller profile, P4 firmware update).
+// P4 firmware update).
 function toggleCollapse(cardId, btn) {
     const card = document.getElementById(cardId);
     if (!card) return;
@@ -560,15 +560,9 @@ async function clearOtaNetwork() {
     }
 }
 
-// Fills the P4 update card and the read-only S3 card from one /api/firmware
-// read. The S3 half is reported separately rather than appended to the P4 line,
-// because the two boards drift apart whenever only one of them is updated and a
-// single run-on line makes that easy to miss.
 async function refreshFirmwareStatus() {
     const info = document.getElementById('ota-firmware-info');
-    const s3Info = document.getElementById('s3-firmware-info');
-    const s3Badge = document.getElementById('s3-state-badge');
-    if (!info && !s3Info) return;
+    if (!info) return;
     try {
         const response = await fetch('/api/firmware', { cache: 'no-store' });
         if (!response.ok) throw new Error(await response.text());
@@ -578,31 +572,8 @@ async function refreshFirmwareStatus() {
             info.innerText = `P4 ${fw.running_version || 'unknown'} from ${fw.running_slot || 'unknown'}`;
         }
 
-        const s3 = fw.s3 || {};
-        if (s3Info) {
-            s3Info.innerText = s3.available
-                ? `${s3.version || 'unknown'} from ${s3.slot || 'unknown'}`
-                : 'S3 did not report firmware status. Check the UART control link.';
-        }
-        if (s3Badge) {
-            s3Badge.innerText = s3.available ? (s3.state || 'unknown') : 'offline';
-            s3Badge.className = 'badge';
-            if (!s3.available) {
-                s3Badge.classList.add('error');
-            } else if (s3.state === 'valid') {
-                s3Badge.classList.add('ready');
-            }
-            // A matching pair is the normal case; flag a mismatch, since running
-            // different builds on the two boards is a real source of confusion.
-            if (s3.available && fw.running_version && s3.version &&
-                s3.version !== fw.running_version) {
-                s3Badge.innerText = 'mismatch';
-                s3Badge.className = 'badge error';
-            }
-        }
     } catch (err) {
         if (info) info.innerText = `Firmware status unavailable: ${err.message}`;
-        if (s3Info) s3Info.innerText = `S3 status unavailable: ${err.message}`;
     }
 }
 
@@ -650,89 +621,7 @@ function uploadP4Firmware() {
     xhr.send(file);
 }
 
-async function refreshControllerProfiles() {
-    const info = document.getElementById('profile-list-info');
-    if (!info) return;
-    try {
-        const response = await fetch('/api/controller-profiles', { cache: 'no-store' });
-        if (!response.ok) throw new Error(await response.text());
-        const data = await response.json();
-        const profiles = Array.isArray(data.profiles) ? data.profiles : [];
-        info.innerText = profiles.length
-            ? `SD profiles: ${profiles.map(p => `${p.id}${p.valid ? '' : ' (invalid)'}`).join(', ')}`
-            : 'No controller profiles found on the SD card.';
-    } catch (err) {
-        info.innerText = `Profile list unavailable: ${err.message}`;
-    }
-}
-
-function uploadControllerProfile() {
-    const idInput = document.getElementById('profile-id');
-    const fileInput = document.getElementById('profile-file');
-    const overwriteInput = document.getElementById('profile-overwrite');
-    const button = document.getElementById('profile-upload-btn');
-    const progress = document.getElementById('profile-progress');
-    const status = document.getElementById('profile-status');
-    const id = idInput ? idInput.value.trim() : '';
-    const file = fileInput && fileInput.files ? fileInput.files[0] : null;
-    const overwrite = Boolean(overwriteInput && overwriteInput.checked);
-
-    if (!/^[A-Za-z0-9_-]{1,39}$/.test(id)) {
-        status.innerText = 'Profile ID may contain only letters, digits, _ and - (max 39).';
-        return;
-    }
-    if (!file) {
-        status.innerText = 'Select a compiled profile.s3bin first.';
-        return;
-    }
-    if (!file.name.toLowerCase().endsWith('.s3bin')) {
-        status.innerText = 'Select a compiled .s3bin profile, not profile.json.';
-        return;
-    }
-    if (file.size < 32 || file.size > 16384) {
-        status.innerText = 'Profile must be between 32 and 16384 bytes.';
-        return;
-    }
-
-    const action = overwrite ? 'OVERWRITE' : 'install';
-    if (!confirm(`${action} SD profile "${id}" with ${file.name} (${file.size} bytes)?`)) return;
-
-    button.disabled = true;
-    progress.value = 0;
-    status.innerText = 'Uploading and validating...';
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/controller-profile');
-    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-    xhr.setRequestHeader('X-DDJ-Control', '1');
-    xhr.setRequestHeader('X-DDJ-Profile-ID', id);
-    xhr.setRequestHeader('X-DDJ-Profile-Overwrite', overwrite ? '1' : '0');
-    xhr.upload.onprogress = event => {
-        if (event.lengthComputable) progress.value = Math.round(event.loaded * 100 / event.total);
-    };
-    xhr.onload = () => {
-        button.disabled = false;
-        if (xhr.status >= 200 && xhr.status < 300) {
-            progress.value = 100;
-            status.innerText = 'Profile validated and stored; S3 activation is queued.';
-            refreshControllerProfiles();
-            refreshFirmwareStatus();
-        } else if (xhr.status === 409 && !overwrite) {
-            status.innerText = 'Profile already exists. Enable overwrite and confirm again.';
-        } else {
-            status.innerText = `Profile rejected: ${xhr.responseText || xhr.status}`;
-        }
-    };
-    xhr.onerror = () => {
-        button.disabled = false;
-        status.innerText = 'Upload connection failed. The previous SD profile remains intact.';
-    };
-    xhr.send(file);
-}
-
 refreshFirmwareStatus();
-refreshControllerProfiles();
 refreshOtaNetwork();
 
-// The S3 card is a live readout, so re-read it periodically — slowly, because
-// this shares five httpd sockets with the 250 ms status poll.
 setInterval(refreshFirmwareStatus, 15000);

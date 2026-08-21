@@ -2,7 +2,7 @@
 
 This gate builds the real P4 LVGL UI against a pinned upstream LVGL commit,
 runs it on a headless 800x480 framebuffer and drives navigation through the
-actual LVGL button callbacks. No P4, S3, FLX4, SDL window or media device is
+actual LVGL button callbacks. No P4, FLX4, SDL window or media device is
 required.
 
 Covered screenshots:

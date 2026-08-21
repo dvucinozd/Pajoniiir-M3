@@ -134,16 +134,7 @@ int web_api_format_beat_fx_echo_diag_json(char *dst,
 
 int web_api_format_controller_json(char *dst,
                                    size_t dst_size,
-                                   bool present,
-                                   unsigned vid,
-                                   unsigned pid,
-                                   const char *product_escaped,
-                                   bool midi_in,
-                                   bool midi_out,
-                                   bool usb_audio,
-                                   const char *active_profile_escaped,
-                                   const char *profile_state_escaped,
-                                   unsigned profile_count)
+                                   bool present)
 {
     if (!dst || dst_size == 0) {
         return 0;
@@ -152,53 +143,14 @@ int web_api_format_controller_json(char *dst,
                     dst_size,
                     "\"controller\":{\"present\":%s,\"vid\":\"0x%04X\","
                     "\"pid\":\"0x%04X\",\"product\":\"%s\",\"midi_in\":%s,"
-                    "\"midi_out\":%s,\"usb_audio\":%s,\"active_profile\":\"%s\","
-                    "\"profile_state\":\"%s\",\"profiles\":%u}",
+                    "\"midi_out\":%s,\"usb_audio\":%s}",
                     present ? "true" : "false",
-                    vid & 0xFFFFu,
-                    pid & 0xFFFFu,
-                    product_escaped ? product_escaped : "",
-                    midi_in ? "true" : "false",
-                    midi_out ? "true" : "false",
-                    usb_audio ? "true" : "false",
-                    active_profile_escaped ? active_profile_escaped : "",
-                    profile_state_escaped ? profile_state_escaped : "",
-                    profile_count);
-}
-
-int web_api_format_control_link_json(char *dst,
-                                     size_t dst_size,
-                                     bool connected,
-                                     uint32_t heartbeat_age_ms,
-                                     uint32_t rx_frames,
-                                     uint32_t sequence_gaps,
-                                     uint32_t event_checksum_errors,
-                                     uint32_t bulk_frames,
-                                     uint32_t bulk_crc_errors,
-                                     uint8_t last_sequence,
-                                     bool sequence_valid)
-{
-    if (!dst || dst_size == 0) {
-        return 0;
-    }
-    return snprintf(dst,
-                    dst_size,
-                    "\"control_link\":{\"connected\":%s,"
-                    "\"heartbeat_age_ms\":%u,\"rx_frames\":%u,"
-                    "\"sequence_gaps\":%u,\"crc_errors\":%u,"
-                    "\"event_checksum_errors\":%u,"
-                    "\"bulk_frames\":%u,\"bulk_crc_errors\":%u,"
-                    "\"last_sequence\":%u,\"sequence_valid\":%s}",
-                    connected ? "true" : "false",
-                    (unsigned)heartbeat_age_ms,
-                    (unsigned)rx_frames,
-                    (unsigned)sequence_gaps,
-                    (unsigned)(event_checksum_errors + bulk_crc_errors),
-                    (unsigned)event_checksum_errors,
-                    (unsigned)bulk_frames,
-                    (unsigned)bulk_crc_errors,
-                    (unsigned)last_sequence,
-                    sequence_valid ? "true" : "false");
+                    0x2B73u,
+                    0x0045u,
+                    "Pioneer DDJ-FLX4",
+                    present ? "true" : "false",
+                    present ? "true" : "false",
+                    present ? "true" : "false");
 }
 
 int web_api_format_service_log_json(char *dst,
@@ -300,28 +252,6 @@ uint32_t web_api_clamp_seek_ms(int value, uint32_t duration_ms, bool duration_kn
         return duration_ms;
     }
     return pos_ms;
-}
-
-bool web_api_profile_content_length_valid(size_t content_len)
-{
-    return content_len >= WEB_API_PROFILE_MIN_SIZE &&
-           content_len <= WEB_API_PROFILE_MAX_SIZE;
-}
-
-bool web_api_profile_overwrite_parse(const char *value, bool *overwrite)
-{
-    if (!overwrite) {
-        return false;
-    }
-    if (!value || value[0] == '\0' || strcmp(value, "0") == 0) {
-        *overwrite = false;
-        return true;
-    }
-    if (strcmp(value, "1") == 0) {
-        *overwrite = true;
-        return true;
-    }
-    return false;
 }
 
 static bool ascii_name_equal(const char *a, size_t a_len,

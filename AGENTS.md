@@ -39,7 +39,6 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
   docs\OTA-UPDATE.md
   docs\reference\Pioneer-DDJ-FLX4.midi.xml
   firmware\main-deck-p4
-  controllers\generic_midi_ci
   tests
 ```
 

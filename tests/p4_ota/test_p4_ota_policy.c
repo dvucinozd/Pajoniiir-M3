@@ -28,7 +28,7 @@ int main(void)
     assert(!p4_ota_policy_header_valid(header, sizeof(header) - 1u));
     header[0] = 0x7f;
     assert(!p4_ota_policy_header_valid(header, sizeof(header)));
-    make_header(header, 0x0009u); /* ESP32-S3 */
+    make_header(header, 0x0009u); /* wrong chip */
     assert(!p4_ota_policy_header_valid(header, sizeof(header)));
     assert(!p4_ota_policy_header_valid(NULL, 0));
 

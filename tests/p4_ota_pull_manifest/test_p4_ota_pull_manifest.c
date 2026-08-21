@@ -104,7 +104,7 @@ static void test_unknown_schema_is_refused_not_guessed(void)
 static void test_a_document_without_a_p4_target_is_distinguishable(void)
 {
     p4_ota_pull_manifest_t m;
-    const char *j = "{\"schema_version\":1,\"release\":\"a\",\"s3\":{"
+    const char *j = "{\"schema_version\":1,\"release\":\"a\",\"aux\":{"
                     "\"url\":\"u\",\"size\":1,\"sha256\":\"" SHA "\"}}";
     /* Not malformed - it is a valid channel document that simply has nothing
      * for this board, and the UI should say so rather than report an error. */
@@ -119,7 +119,7 @@ static void test_fields_are_read_from_the_p4_object_only(void)
     const char *j =
         "{\"schema_version\":1,\"release\":\"r\","
         "\"p4\":{\"url\":\"correct.ddjota\",\"size\":10,\"sha256\":\"" SHA "\"},"
-        "\"s3\":{\"url\":\"wrong.ddjota\",\"size\":99,\"sha256\":\"" SHA "\"}}";
+        "\"aux\":{\"url\":\"wrong.ddjota\",\"size\":99,\"sha256\":\"" SHA "\"}}";
     assert(parse(j, &m) == P4_OTA_PULL_MANIFEST_OK);
     assert(strcmp(m.url, "correct.ddjota") == 0);
     assert(m.size == 10u);
@@ -128,7 +128,7 @@ static void test_fields_are_read_from_the_p4_object_only(void)
      * accident of ordering. */
     const char *k =
         "{\"schema_version\":1,\"release\":\"r\","
-        "\"s3\":{\"url\":\"wrong.ddjota\",\"size\":99,\"sha256\":\"" SHA "\"},"
+        "\"aux\":{\"url\":\"wrong.ddjota\",\"size\":99,\"sha256\":\"" SHA "\"},"
         "\"p4\":{\"url\":\"correct.ddjota\",\"size\":10,\"sha256\":\"" SHA "\"}}";
     assert(parse(k, &m) == P4_OTA_PULL_MANIFEST_OK);
     assert(strcmp(m.url, "correct.ddjota") == 0);

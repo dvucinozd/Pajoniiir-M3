@@ -1,5 +1,4 @@
 #include "control_link.h"
-#include "control_link_p4_diagnostics.h"
 #include "deck_core.h"
 #include "bsp_jc4880.h"
 #include "library.h"
@@ -17,12 +16,6 @@
 #include "web_server.h"
 #include "service_log.h"
 #include "sdkconfig.h"
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-#include "controller_profile_manager.h"
-#endif
-#if CONFIG_MONITOR_PCM_LINK_ENABLED
-#include "monitor_pcm_link.h"
-#endif
 #if __has_include("p4_flx4_host.h")
 #include "p4_flx4_host.h"
 #endif
@@ -38,11 +31,6 @@ static const char *TAG = "main";
 
 void p4_tcm_heap_guard_keep(void);
 
-static void on_s3_debug_ap_toggle(bool enable)
-{
-    control_link_send_state(CTRL_ID_S3_DEBUG_AP, enable ? 1 : 0);
-}
-
 // Periodic health monitor (esp_timer task, not the audio path): reads the
 // counters the audio engine already maintains and emits rate-limited service-log
 // summaries for anomalies and low-memory edges. No hot-path work.
@@ -54,7 +42,6 @@ static void health_monitor_cb(void *arg)
 {
     (void)arg;
     static uint32_t last_late = 0u, last_underrun = 0u, last_rate = 0u;
-    static uint32_t last_link_crc = 0u, last_link_gap = 0u;
     static bool low_heap = false, low_psram = false;
 
     audio_engine_diagnostics_snapshot_t d;
@@ -97,38 +84,6 @@ static void health_monitor_cb(void *arg)
         service_log_event(SERVICE_LOG_AUDIO_RATE_CHANGED, SERVICE_LOG_INFO,
                           1u, d.output_sample_rate, 0u, 0u, 0u, NULL);
         last_rate = d.output_sample_rate;
-    }
-
-    /* S3 control-link presence is derived from heartbeat age; log the edges. */
-    static int last_link = -1;   /* -1 unknown, 0 offline, 1 online */
-    deck_state_t ds = deck_core_get_deck_state(CTRL_DECK_1);
-    int link = ds.control_link_connected ? 1 : 0;
-    if (link != last_link) {
-        service_log_event(link ? SERVICE_LOG_CONTROL_LINK_ONLINE
-                               : SERVICE_LOG_CONTROL_LINK_OFFLINE,
-                          link ? SERVICE_LOG_INFO : SERVICE_LOG_WARN,
-                          1u, ds.last_heartbeat_age_ms, 0u, 0u, 0u, NULL);
-        last_link = link;
-    }
-
-    control_link_rx_stats_t link_stats;
-    control_link_get_rx_stats(&link_stats);
-    uint32_t link_crc = link_stats.event_checksum_errors +
-                        link_stats.bulk_crc_errors;
-    if (link_crc != last_link_crc) {
-        service_log_event(SERVICE_LOG_CONTROL_LINK_CRC, SERVICE_LOG_WARN,
-                          4u, link_crc - last_link_crc, link_crc,
-                          link_stats.event_checksum_errors,
-                          link_stats.bulk_crc_errors,
-                          "event checksum + bulk crc/format");
-        last_link_crc = link_crc;
-    }
-    if (link_stats.sequence_gaps != last_link_gap) {
-        service_log_event(SERVICE_LOG_CONTROL_LINK_GAP, SERVICE_LOG_WARN,
-                          3u, link_stats.sequence_gaps - last_link_gap,
-                          link_stats.sequence_gaps,
-                          link_stats.last_sequence, 0u, NULL);
-        last_link_gap = link_stats.sequence_gaps;
     }
 
     size_t heap_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
@@ -229,27 +184,6 @@ static bool on_recording_toggle(bool enable)
 }
 #endif  /* CONFIG_AUDIO_RECORDER_ENABLED */
 
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-// S3 reports the connected controller over the 0xA6 bulk layer; the profile
-// manager matches it against the SD/TF registry.
-static void on_controller_descriptor(const ctrl_descriptor_report_t *rep)
-{
-    (void)controller_profile_manager_on_descriptor_report(rep->vid, rep->pid,
-                                                          rep->caps, rep->product,
-                                                          rep->connection_epoch);
-}
-
-static void on_controller_connection_state(bool connected)
-{
-    if (!connected) {
-        /* Retire the S3 runtime immediately; registry disconnect alone only
-         * clears P4 bookkeeping and would leave the old mapper eligible. */
-        (void)control_link_send_profile_simple(CTRL_BULK_TYPE_PROFILE_CLEAR);
-        (void)controller_profile_manager_on_disconnect();
-    }
-}
-#endif
-
 // Called from the USB storage task when the Rekordbox drive mounts/unmounts.
 static void on_usb_storage_event(bool mounted)
 {
@@ -312,19 +246,6 @@ void app_main(void)
     // spike); PANIC/WDT points at firmware. Visible at the default WARN level.
     ESP_LOGW(TAG, "reset reason: %d", (int)esp_reset_reason());
 
-#if CONFIG_MONITOR_PCM_LINK_ENABLED
-    // Acquire the monitor link I2S unit before the heavy subsystems come up:
-    // on rev v1.3 (eco2) silicon, claiming a fresh I2S unit late in boot with
-    // DSI/PSRAM/USB traffic active has hard-frozen the HP bus.
-    ESP_ERROR_CHECK(monitor_pcm_link_start_transport());
-#if CONFIG_MONITOR_PCM_LINK_BENCH_TONE
-    ESP_LOGW(TAG, "monitor PCM bench profile active; skipping full P4 app startup");
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-#endif
-#endif
-
     // ── Persistent settings (NVS) ────────────────────────────────────────────
     app_settings_init();   // also initialises NVS; falls back to defaults
     ESP_ERROR_CHECK(media_io_gate_init());
@@ -349,16 +270,6 @@ void app_main(void)
                           1u, (uint32_t)esp_reset_reason(), 0u, 0u, 0u,
                           reset_reason_str());
     }
-
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-    // Controller profiles live on the SD/TF card; a missing directory is
-    // normal (no profiles yet) and must not block boot.
-    ESP_ERROR_CHECK(controller_profile_manager_init());
-    esp_err_t profile_rc = controller_profile_manager_scan_storage();
-    if (profile_rc != ESP_OK && profile_rc != ESP_ERR_NOT_FOUND) {
-        ESP_LOGW(TAG, "controller profile scan: %s", esp_err_to_name(profile_rc));
-    }
-#endif
 
     // Restore only the product-safe RCA route. app_settings_init() migrates
     // legacy speaker selections before this point.
@@ -405,8 +316,7 @@ void app_main(void)
     audio_engine_set_master_trim(ui_settings_master_trim_gain(settings.master_trim_preset));
 
     // ── Authoritative deck state ─────────────────────────────────────────────
-    // Build the playback queue before constructing the UI, but delay the S3
-    // UART consumer until every event target (profiles, audio and UI) is ready.
+    // Build the playback queue before constructing the UI and USB controller.
     QueueHandle_t ctrl_queue;
     ESP_ERROR_CHECK(deck_core_init(&ctrl_queue));
 
@@ -414,15 +324,8 @@ void app_main(void)
     ESP_ERROR_CHECK(ui_init());
 
     // ── External control producers ───────────────────────────────────────────
-    // From this point onward incoming S3 frames may update deck/UI state.
-    deck_core_set_s3_debug_ap_status_cb(ui_settings_set_s3_debug_ap_status);
-    deck_core_set_s3_debug_ap_token_cb(ui_settings_set_s3_debug_ap_token);
-#if CONFIG_CONTROLLER_PROFILE_MANAGER
-    control_link_set_descriptor_report_cb(on_controller_descriptor);
-    control_link_set_controller_state_cb(on_controller_connection_state);
-#endif
+    // From this point onward direct FLX4 USB events may update deck/UI state.
     ESP_ERROR_CHECK(control_link_init(ctrl_queue));
-    control_link_send_state(CTRL_ID_S3_DEBUG_AP, 0);
 
     // Settings callbacks are published only after their downstream services
     // exist.  A saved Wi-Fi setting is likewise activated after the UI and
@@ -438,7 +341,6 @@ void app_main(void)
 #if CONFIG_AUDIO_RECORDER_ENABLED
     ui_settings_set_recording_toggle_cb(on_recording_toggle);
 #endif
-    ui_settings_set_s3_debug_ap_toggle_cb(on_s3_debug_ap_toggle);
     if (app_settings_get().wifi_remote) {
         ESP_LOGI(TAG, "Wi-Fi remote enabled in settings — starting web UI AP");
         wifi_link_request_enable(true);
