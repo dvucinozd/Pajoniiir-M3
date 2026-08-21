@@ -24,8 +24,8 @@ CONFIG_FREERTOS_HZ=1000
 
 # Console on UART0
 CONFIG_ESP_CONSOLE_UART_DEFAULT=y
-CONFIG_LOG_DEFAULT_LEVEL_WARN=y
-CONFIG_LOG_DEFAULT_LEVEL=2
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_DEFAULT_LEVEL=3
 
 # ── Build optimization ────────────────────────────────────────────────────────
 # The P4 is doing real-time audio, LVGL rendering and PPA blits concurrently.
@@ -58,7 +58,7 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
 # ── USB host (Rekordbox media drive on the HS USB-C port) ────────────────────
 # Allow drives presented behind an internal hub (matches the IDF P4 MSC example).
 CONFIG_USB_HOST_HUBS_SUPPORTED=y
-CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=2048
+CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=4096
 
 # ── FATFS ─────────────────────────────────────────────────────────────────────
 # Long filename support is OFF by default (8.3 only) → Rekordbox paths like

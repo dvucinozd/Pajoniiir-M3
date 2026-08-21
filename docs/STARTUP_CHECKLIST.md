@@ -16,8 +16,12 @@ Status: updated for **Pajoniiir-M3** single-chip ESP32-P4 architecture on the **
 - [x] **Display & Touch**:
   - 5.0" MIPI-DSI IPS display (800×480 @ 30 MHz DPI video mode) with native 0° PPA hardware blitting.
   - FocalTech FT5426 capacitive touch controller over I2C (`0x38`) with graceful unattached detection.
-- [x] **Networking**: Wi-Fi 6 provided exclusively via onboard **ESP32-C6** over SDIO (ESP-Hosted). Ethernet EMAC is disabled in software to keep RMII pins dedicated to the I2S DAC.
 - [x] **Live Hardware Smoke (COM17)**: Firmware successfully built, flashed, and verified live on COM17. App boots cleanly into ready state without panics or reset loops.
+- [x] **Pioneer DDJ-FLX4 USB Host Enumeration & Live MIDI Capture (2026-08-21)**:
+  - DDJ-FLX4 USB Configuration Descriptor (451 bytes) parsed with enlarged buffer (`CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=4096`).
+  - USB MIDI Streaming Interface (Intf 4) claimed on Bulk IN `0x82` (MPS: 512) and Bulk OUT `0x03` (MPS: 512).
+  - Continuous non-control asynchronous transfer polling active without root port power interruptions.
+  - Live hardware verification on COM17 confirmed reception of over 2000 raw MIDI packets from DDJ-FLX4 jog wheels (touch, scratch, bend) translated into semantic deck events.
 
 ## Current installed and accepted baselines
 

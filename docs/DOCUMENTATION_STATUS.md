@@ -1,34 +1,12 @@
 # Documentation Status
 
-Last full status reconciliation: **2026-08-02**. The `migration/esp-idf-6.0.2`
-branch has been **merged into `master`** and deleted; there is no separate
-migration head any more. `master` now builds only under **ESP-IDF v6.0.2**
-(`firmware/*/main/idf_component.yml` pins `idf: "==6.0.2"`) and carries the
-bounded compressed audio cache, paginated Library UI, immutable track sort,
-recorder safety hardening and the full `fix/release-blockers-and-concurrency`
-stabilisation set.
+Last full status reconciliation: **2026-08-21**. The architecture is now **Pajoniiir-M3 Single-Chip ESP32-P4** on the `JC-ESP32P4-M3-DEV` board. The ESP32-S3 co-processor has been retired. ESP32-P4 directly manages USB Host for Pioneer DDJ-FLX4 (USB MIDI + UAC1 Headphone audio), Rekordbox media storage (FAT32/exFAT PDB parser), 800×480 MIPI-DSI LVGL UI, and PCM5102A I2S DAC Master audio.
 
-Latest read-only source audit: **2026-08-16**, at
-`10c91c2aa536be3852cdd6a41e831088d85625d7`. It is tracked in
-[`CODE_REVIEW_REMEDIATION_20260816.md`](CODE_REVIEW_REMEDIATION_20260816.md)
-and adds six open P1 release blockers plus
-the ordered P2/P3 remediation plan. That audit is the current code-review gate
-list; it does not supersede dated build or hardware validation evidence.
-
-Because that is a different build baseline, the release prefix moved from `RC1`
-to **`RC2`**: the annotated tag `RC2` sits on `56905c89` and the latest clean
-dual-target release build is `RC2`, recorded in
-`validation/CLEAN_RELEASE_RC2_BUILD.md`. Builds after the tagged commit report
-`RC2-<distance>-g<hash>`.
-
-Hardware acceptance is in progress — see
-`migration/ESP_IDF_6_0_2_MIGRATION.md` and
-`validation/P4_IDF6_SDMMC_SMOKE_20260802.md` plus
-`validation/S3_IDF6_WIRED_FLASH_20260802.md` and
-`validation/RC2_FOCUSED_FUNCTIONAL_SMOKE_20260802.md`. The focused migrated
-smoke now passes display/touch/Library, FLX4 MIDI/LED, MAIN/headphone audio and
-real-MP3 playback. The RC2 line is still **not** release-qualified because the
-real WAV/FLAC, sustained USB/cache, recovery and fault-injection rows remain.
+Latest live hardware verification: **2026-08-21**, on COM17.
+- **Pioneer DDJ-FLX4**: Fully enumerated and claimed on USB MIDI Streaming interface (Intf 4). Live continuous polling verified with over 2000 raw MIDI packets from jog wheels and buttons decoded into semantic playback events without bus resets.
+- **Rekordbox Media**: USB MSC driver mounted USB media and loaded 191 tracks into active memory.
+- **Master Audio**: PCM5102A I2S DAC (`GPIO50/51/52`) running at 44.1 kHz / 16-bit stereo.
+- **Network**: Wi-Fi 6 provided exclusively via onboard ESP32-C6 over SDIO (ESP-Hosted). Ethernet EMAC held disabled to dedicate RMII pins to the I2S DAC.
 
 This page explains which documents describe the current product and which are
 historical design or validation records. Four states must not be conflated:

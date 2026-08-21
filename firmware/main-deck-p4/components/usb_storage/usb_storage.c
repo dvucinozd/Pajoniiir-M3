@@ -259,6 +259,11 @@ static void usb_lib_task(void *arg)
                                      session.connected,
                                      session.epoch,
                                      now);
+        usb_host_lib_info_t lib_info;
+        if (usb_host_lib_info(&lib_info) == ESP_OK && lib_info.num_devices > 0) {
+            continue;
+        }
+
         if (!usb_storage_recovery_cycle_due(
                 &recovery,
                 now,

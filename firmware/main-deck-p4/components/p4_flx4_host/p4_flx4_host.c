@@ -63,6 +63,7 @@ static void in_transfer_cb(usb_transfer_t *transfer)
         size_t bytes = transfer->actual_num_bytes;
         uint8_t *data = transfer->data_buffer;
         for (size_t i = 0; i + 4 <= bytes; i += 4) {
+            ESP_LOGW(TAG, "FLX4 RAW PKT: %02x %02x %02x %02x", data[i], data[i+1], data[i+2], data[i+3]);
             flx4_midi_message_t msg;
             if (flx4_midi_parse_usb_packet(&data[i], &msg)) {
                 flx4_control_event_t ev;
@@ -70,13 +71,20 @@ static void in_transfer_cb(usb_transfer_t *transfer)
                 bool translated = flx4_map_translate_message(&s_map_state, &msg, &ev);
                 portEXIT_CRITICAL(&s_flx4_mux);
                 if (translated) {
+                    ESP_LOGW(TAG, "FLX4 EVENT RX: type=%d id=%d value=%d", ev.type, ev.id, ev.value);
                     (void)control_link_inject_semantic(ev.type, ev.id, ev.value);
                 }
             }
         }
-        // Resubmit transfer
-        if (s_dev_handle && s_connected) {
-            (void)usb_host_transfer_submit(transfer);
+    } else {
+        ESP_LOGW(TAG, "FLX4 IN transfer completed with status: %d", transfer->status);
+    }
+
+    // Always resubmit transfer while connected so we continuously listen for controller events!
+    if (s_dev_handle && s_connected) {
+        esp_err_t sub_err = usb_host_transfer_submit(transfer);
+        if (sub_err != ESP_OK) {
+            ESP_LOGW(TAG, "Resubmit IN transfer failed: %s", esp_err_to_name(sub_err));
         }
     }
 }
@@ -98,11 +106,10 @@ esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
     }
 
     memcpy(s_out_xfer->data_buffer, packet, 4);
-    s_out_xfer->num_bytes = 4;
     s_out_xfer->device_handle = s_dev_handle;
     s_out_xfer->bEndpointAddress = s_out_ep_addr;
+    s_out_xfer->num_bytes = 4;
     s_out_xfer->callback = out_transfer_cb;
-    s_out_xfer->context = NULL;
 
     esp_err_t err = usb_host_transfer_submit(s_out_xfer);
     p4_flx4_midi_gate_end(&s_midi_gate);
@@ -111,11 +118,11 @@ esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
 
 esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
 {
-    uint8_t packet[4];
-    if (flx4_led_midi_build_packet(led, state, deck, packet)) {
-        return p4_flx4_host_send_packet(packet);
+    uint8_t packet[4] = {0};
+    if (!flx4_led_midi_build_packet(led, state, deck, packet)) {
+        return ESP_ERR_INVALID_ARG;
     }
-    return ESP_ERR_NOT_SUPPORTED;
+    return p4_flx4_host_send_packet(packet);
 }
 
 esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples, size_t frame_count)
@@ -130,6 +137,9 @@ esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples, size_t fram
     return ESP_OK;
 }
 
+static uint8_t                  s_claimed_ifaces[8];
+static int                      s_num_claimed_ifaces = 0;
+
 static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg)
 {
     (void)arg;
@@ -137,14 +147,57 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
 
     if (event_msg->event == USB_HOST_CLIENT_EVENT_NEW_DEV) {
         uint8_t addr = event_msg->new_dev.address;
+        ESP_LOGW(TAG, "New USB device detected at addr %d", addr);
         usb_device_handle_t dev = NULL;
         if (usb_host_device_open(s_client_handle, addr, &dev) == ESP_OK) {
             const usb_device_desc_t *desc = NULL;
             if (usb_host_get_device_descriptor(dev, &desc) == ESP_OK && desc) {
+                ESP_LOGW(TAG, "USB Device descriptor: VID=0x%04X PID=0x%04X (addr %d)", desc->idVendor, desc->idProduct, addr);
                 if (desc->idVendor == FLX4_USB_VID && desc->idProduct == FLX4_USB_PID) {
-                    ESP_LOGI(TAG, "Pioneer DDJ-FLX4 detected at USB address %d", addr);
+                    ESP_LOGW(TAG, ">>> Pioneer DDJ-FLX4 MATCHED at USB addr %d <<<", addr);
                     s_dev_handle = dev;
                     s_dev_addr = addr;
+                    s_num_claimed_ifaces = 0;
+
+                    const usb_config_desc_t *config_desc = NULL;
+                    if (usb_host_get_active_config_descriptor(dev, &config_desc) == ESP_OK && config_desc) {
+                        ESP_LOGW(TAG, "FLX4 Config Desc: total_len=%d, num_intf=%d", config_desc->wTotalLength, config_desc->bNumInterfaces);
+                        for (int i = 0; i < config_desc->bNumInterfaces; ++i) {
+                            int offset = 0;
+                            const usb_intf_desc_t *intf = usb_parse_interface_descriptor(config_desc, i, 0, &offset);
+                            if (!intf) continue;
+                            ESP_LOGW(TAG, "FLX4 Intf %d: class=0x%02x subclass=0x%02x eps=%d",
+                                     intf->bInterfaceNumber, intf->bInterfaceClass, intf->bInterfaceSubClass, intf->bNumEndpoints);
+
+                            // Only claim MIDI Streaming interface (Class 1 Audio, SubClass 3 MIDI)
+                            if (intf->bInterfaceClass == 0x01 && intf->bInterfaceSubClass == 0x03) {
+                                esp_err_t claim_err = usb_host_interface_claim(s_client_handle, dev, intf->bInterfaceNumber, intf->bAlternateSetting);
+                                if (claim_err == ESP_OK) {
+                                    ESP_LOGW(TAG, "Claimed FLX4 MIDI Streaming Intf %d (alt %d)", intf->bInterfaceNumber, intf->bAlternateSetting);
+                                    if (s_num_claimed_ifaces < (int)(sizeof(s_claimed_ifaces))) {
+                                        s_claimed_ifaces[s_num_claimed_ifaces++] = intf->bInterfaceNumber;
+                                    }
+                                } else {
+                                    ESP_LOGW(TAG, "Claim MIDI intf %d failed: %s", intf->bInterfaceNumber, esp_err_to_name(claim_err));
+                                }
+
+                                for (int ep_idx = 0; ep_idx < intf->bNumEndpoints; ++ep_idx) {
+                                    int ep_offset = offset;
+                                    const usb_ep_desc_t *ep = usb_parse_endpoint_descriptor_by_index(intf, ep_idx, config_desc->wTotalLength, &ep_offset);
+                                    if (!ep) continue;
+                                    ESP_LOGW(TAG, "  MIDI EP[%d]: addr=0x%02x attr=0x%02x mps=%d",
+                                             ep_idx, ep->bEndpointAddress, ep->bmAttributes, ep->wMaxPacketSize);
+                                    if (USB_EP_DESC_GET_EP_DIR(ep)) {
+                                        s_in_ep_addr = ep->bEndpointAddress;
+                                        s_in_mps = ep->wMaxPacketSize;
+                                    } else {
+                                        s_out_ep_addr = ep->bEndpointAddress;
+                                        s_out_mps = ep->wMaxPacketSize;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     portENTER_CRITICAL(&s_flx4_mux);
                     s_connected = true;
@@ -167,8 +220,16 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                         s_in_xfer->bEndpointAddress = s_in_ep_addr;
                         s_in_xfer->num_bytes = s_in_mps;
                         s_in_xfer->callback = in_transfer_cb;
-                        (void)usb_host_transfer_submit(s_in_xfer);
+                        esp_err_t sub_err = usb_host_transfer_submit(s_in_xfer);
+                        ESP_LOGW(TAG, "FLX4 MIDI IN transfer submitted (EP 0x%02x, mps=%d): %s",
+                                 s_in_ep_addr, s_in_mps, esp_err_to_name(sub_err));
                     }
+
+                    // Send test LEDs: Turn ON Play and Cue on Deck 1 and Deck 2!
+                    (void)p4_flx4_host_send_led(LED_PLAY, 1, CTRL_DECK_1);
+                    (void)p4_flx4_host_send_led(LED_CUE, 1, CTRL_DECK_1);
+                    (void)p4_flx4_host_send_led(LED_PLAY, 1, CTRL_DECK_2);
+                    (void)p4_flx4_host_send_led(LED_CUE, 1, CTRL_DECK_2);
 
                     if (s_conn_cb) {
                         s_conn_cb(true, s_conn_cb_ctx);
@@ -180,12 +241,17 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
         }
     } else if (event_msg->event == USB_HOST_CLIENT_EVENT_DEV_GONE) {
         if (s_dev_handle && event_msg->dev_gone.dev_hdl == s_dev_handle) {
-            ESP_LOGI(TAG, "Pioneer DDJ-FLX4 disconnected");
+            ESP_LOGW(TAG, "Pioneer DDJ-FLX4 disconnected");
             p4_flx4_midi_gate_stop(&s_midi_gate);
 
             portENTER_CRITICAL(&s_flx4_mux);
             s_connected = false;
             portEXIT_CRITICAL(&s_flx4_mux);
+
+            for (int i = 0; i < s_num_claimed_ifaces; ++i) {
+                (void)usb_host_interface_release(s_client_handle, s_dev_handle, s_claimed_ifaces[i]);
+            }
+            s_num_claimed_ifaces = 0;
 
             (void)usb_host_device_close(s_client_handle, s_dev_handle);
             s_dev_handle = NULL;
