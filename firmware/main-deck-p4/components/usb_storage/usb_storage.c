@@ -217,12 +217,22 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
     }
 }
 
+#if CONFIG_IDF_TARGET_ESP32P4
+#include "hal/usb_wrap_ll.h"
+#endif
+
 static void usb_lib_task(void *arg)
 {
     (void)arg;
+#if CONFIG_IDF_TARGET_ESP32P4
+    // Route physical FSLS USB pads (GPIO 26/27 on middle Port 9) to USB OTG 1.1 Host controller
+    usb_wrap_ll_phy_select(&USB_WRAP, 0);
+    usb_wrap_ll_phy_set_defaults(&USB_WRAP);
+#endif
     const usb_host_config_t host_cfg = {
         .intr_flags = ESP_INTR_FLAG_LEVEL1,
         .root_port_unpowered = true,
+        .peripheral_map = (1 << 0) | (1 << 1),
     };
     ESP_ERROR_CHECK(usb_host_install(&host_cfg));
 

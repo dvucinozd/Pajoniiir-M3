@@ -19,9 +19,17 @@ Status: updated for **Pajoniiir-M3** single-chip ESP32-P4 architecture on the **
 - [x] **Live Hardware Smoke (COM17)**: Firmware successfully built, flashed, and verified live on COM17. App boots cleanly into ready state without panics or reset loops.
 - [x] **Pioneer DDJ-FLX4 USB Host Enumeration & Live MIDI Capture (2026-08-21)**:
   - DDJ-FLX4 USB Configuration Descriptor (451 bytes) parsed with enlarged buffer (`CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=4096`).
-  - USB MIDI Streaming Interface (Intf 4) claimed on Bulk IN `0x82` (MPS: 512) and Bulk OUT `0x03` (MPS: 512).
+  - USB MIDI Streaming Interface (Intf 4) claimed on Bulk IN `0x82` (MPS: 512/64) and Bulk OUT `0x03` (MPS: 512/64).
   - Continuous non-control asynchronous transfer polling active without root port power interruptions.
   - Live hardware verification on COM17 confirmed reception of over 2000 raw MIDI packets from DDJ-FLX4 jog wheels (touch, scratch, bend) translated into semantic deck events.
+- [x] **Simultaneous Dual USB Host Operation & Dual-Deck Playback (2026-08-21)**:
+  - Enabled ESP32-P4 Dual Host (`peripheral_map = (1 << 0) | (1 << 1)`):
+    - **Port 8 (Top USB-C / HS)**: Mounted Rekordbox USB flash drive (`VID: 0x18A5`, `PID: 0x0302`) and loaded 191 tracks into active memory.
+    - **Port 9 (Middle USB-C / FS)**: Routed physical pads (GPIO 26/27) to OTG 1.1 via `usb_wrap_ll_phy_select()`. Successfully claimed DDJ-FLX4 simultaneously without any external USB hub.
+  - Live DJ performance flow verified end-to-end on hardware:
+    - **BROWSE knob** scrolled library (`id=96`).
+    - **LOAD 1 / LOAD 2 buttons** loaded tracks to Deck 1 (`id=97`) and Deck 2 (`id=98`).
+    - **PLAY buttons** started dual-deck audio engine (`id=16` and `id=48`), streaming 2290+ PCM audio buffers over I2S with **0 drops**.
 
 ## Current installed and accepted baselines
 

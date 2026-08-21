@@ -3,8 +3,12 @@
 Last full status reconciliation: **2026-08-21**. The architecture is now **Pajoniiir-M3 Single-Chip ESP32-P4** on the `JC-ESP32P4-M3-DEV` board. The ESP32-S3 co-processor has been retired. ESP32-P4 directly manages USB Host for Pioneer DDJ-FLX4 (USB MIDI + UAC1 Headphone audio), Rekordbox media storage (FAT32/exFAT PDB parser), 800×480 MIPI-DSI LVGL UI, and PCM5102A I2S DAC Master audio.
 
 Latest live hardware verification: **2026-08-21**, on COM17.
-- **Pioneer DDJ-FLX4**: Fully enumerated and claimed on USB MIDI Streaming interface (Intf 4). Live continuous polling verified with over 2000 raw MIDI packets from jog wheels and buttons decoded into semantic playback events without bus resets.
-- **Rekordbox Media**: USB MSC driver mounted USB media and loaded 191 tracks into active memory.
+- **Simultaneous Dual USB Host Operation (No External Hub)**:
+  - **Port 8 (Top USB-C / HS)**: Mounted Rekordbox USB flash drive (`VID: 0x18A5`, `PID: 0x0302`) and loaded 191 tracks into active memory.
+  - **Port 9 (Middle USB-C / FS)**: Configured internal FSLS PHY routing (`usb_wrap_ll_phy_select`) and claimed Pioneer DDJ-FLX4 MIDI Streaming (Intf 4).
+- **Live Dual-Deck Performance & Playback**:
+  - Browse navigation and track loading on Deck 1 and Deck 2 via physical DDJ-FLX4 controls.
+  - Dual-deck audio playback started with physical PLAY buttons; 2290+ audio buffers streamed to I2S with 0 drops.
 - **Master Audio**: PCM5102A I2S DAC (`GPIO50/51/52`) running at 44.1 kHz / 16-bit stereo.
 - **Network**: Wi-Fi 6 provided exclusively via onboard ESP32-C6 over SDIO (ESP-Hosted). Ethernet EMAC held disabled to dedicate RMII pins to the I2S DAC.
 
