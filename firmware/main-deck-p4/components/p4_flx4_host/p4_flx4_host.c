@@ -15,8 +15,11 @@
 
 static const char *TAG = "p4_flx4";
 
-#define FLX4_MIDI_TASK_STACK  4096
-#define FLX4_MIDI_TASK_PRIO   5
+#define FLX4_USB_TASK_STACK  4096
+/* USB client callbacks refill the UAC isochronous queue. Keep them above the
+ * audio producer (priority 6) so a producer burst cannot starve the consumer
+ * long enough to fill the headphone ring. */
+#define FLX4_USB_TASK_PRIO   7
 
 static usb_host_client_handle_t s_client_handle = NULL;
 static usb_device_handle_t      s_dev_handle    = NULL;
@@ -616,9 +619,9 @@ esp_err_t p4_flx4_host_init(void)
         return err;
     }
 
-    if (xTaskCreatePinnedToCore(flx4_midi_task, "flx4_midi", FLX4_MIDI_TASK_STACK,
-                                NULL, FLX4_MIDI_TASK_PRIO, &s_midi_task, 0) != pdPASS) {
-        ESP_LOGE(TAG, "failed to create flx4_midi task");
+    if (xTaskCreatePinnedToCore(flx4_midi_task, "flx4_usb", FLX4_USB_TASK_STACK,
+                                NULL, FLX4_USB_TASK_PRIO, &s_midi_task, 0) != pdPASS) {
+        ESP_LOGE(TAG, "failed to create flx4_usb task");
         return ESP_ERR_NO_MEM;
     }
 
