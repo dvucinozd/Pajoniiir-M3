@@ -310,3 +310,17 @@ Nakon mjerenja Deck 2 vraćen je u `READY`. Wi-Fi i Windows profil
 Time su zatvoreni osnovni FLX4 descriptor, hot-plug i LED snapshot gateovi.
 Duži ponavljani reconnect stress i analiza dvaju deadline promašaja tijekom
 samog USB prijelaza ostaju dio dual-USB/audio stress faze.
+
+## Stanje na kraju sesije
+
+Uređaj je ostavljen na verificiranom firmwareu `M3-2-g4613c4a`. Deck 1 je
+`IDLE`, Deck 2 `READY`, playback je zaustavljen, FLX4 prijavljuje MIDI In/Out i
+UAC, USB3 library ima 191 track, a service-log dropped counter je 0. Wi-Fi radio,
+SoftAP i spremljeni Windows profil `Pajoniiir-M3` namjerno ostaju uključeni za
+sljedeću sesiju i učitavanje traka do dolaska zaslona.
+
+Sljedeći acceptance blok počinje ponovljenim FLX4 hot-plug ciklusima i mjerenjem
+output deadlinea tijekom samog prijelaza. Nakon toga slijede fizički AP
+multi-client te AP→STA→AP/potpisani OTA test kada servisna mreža bude
+konfigurirana. Generirani lokalni browser artefakti nisu dio izvornog koda ni
+release dokumentacije.

@@ -26,6 +26,27 @@ dobiva iz `git describe`, pa je implementacijski commit namijenjen anotiranom
 M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 `RC2` → `M3`. Clean build na tagu mora prijaviti točno `M3`.
 
+## Handoff za sljedeću sesiju
+
+Završni hardverski baseline 2026-08-22 je `M3-2-g4613c4a` na P4 ploči:
+FLX4 je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena, USB3 library
+sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
+`Pajoniiir-M3` ostavljeni su uključeni. Lokalni source baseline uključuje i
+naknadni dokumentacijski commit, bez nove firmware promjene.
+
+Sutrašnji prioritetni redoslijed:
+
+1. ponoviti FLX4 hot-plug više puta tijekom utišanog D1/D2 playbacka te izolirati
+   dva output-deadline promašaja nastala samo tijekom USB prijelaza;
+2. potvrditi da svaki ciklus vraća MIDI In/Out, UAC i puni LED snapshot bez
+   dropa, overflowa, PCM underruna ili potrebe za P4 resetom;
+3. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
+   audio promet;
+4. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
+   servisni SSID, zaporka i update URL;
+5. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+   zaslona.
+
 ## Sljedeće faze
 
 ### 1. Učvrstiti izravni FLX4 host
