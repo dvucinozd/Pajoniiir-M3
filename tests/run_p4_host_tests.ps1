@@ -2346,6 +2346,33 @@ Assert-FileDoesNotContain `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/usb_storage/usb_storage.c") `
     -LiteralPatterns @("xQueueSend(s_queue", "s_event_drop_count")
 
+# usb_host_interface_release() cannot succeed from DEV_GONE while canceled
+# endpoint URBs still need their completion callbacks. Keep FLX4 teardown in the
+# client task after usb_host_client_handle_events() has returned.
+$flx4HostPath = Join-Path $RepoRoot "firmware/main-deck-p4/components/p4_flx4_host/p4_flx4_host.c"
+$flx4HostSource = Get-Content -LiteralPath $flx4HostPath -Raw
+$flx4GoneMatch = [regex]::Match(
+    $flx4HostSource,
+    '(?s)else if \(event_msg->event == USB_HOST_CLIENT_EVENT_DEV_GONE\).*?\n    }\n}\n\nstatic void flx4_midi_task')
+Write-Host "==> static FLX4 DEV_GONE defers interface and device cleanup"
+if (-not $flx4GoneMatch.Success) {
+    throw "could not isolate the FLX4 DEV_GONE callback block"
+}
+foreach ($forbidden in @("usb_host_interface_release", "usb_host_device_close")) {
+    if ($flx4GoneMatch.Value.Contains($forbidden)) {
+        throw ("FLX4 DEV_GONE callback performs inline cleanup through {0}" -f $forbidden)
+    }
+}
+foreach ($required in @("s_cleanup_dev_handle = s_dev_handle", "s_disconnect_cleanup_pending = true")) {
+    if (-not $flx4GoneMatch.Value.Contains($required)) {
+        throw ("FLX4 DEV_GONE callback does not schedule deferred cleanup through {0}" -f $required)
+    }
+}
+Assert-FilePatternsOrdered `
+    -Name "FLX4 USB client task retires callbacks before deferred cleanup" `
+    -Path $flx4HostPath `
+    -LiteralPatterns @("usb_host_client_handle_events", "try_cleanup_disconnected_device", "try_submit_next_out")
+
 # Behaviour for this is covered by tests/library_anlz/test_library_anlz.c
 # (nonzero duration survives enrichment; zero duration falls back to the last
 # beat). The gate below only pins that the rule lives in the producer rather than

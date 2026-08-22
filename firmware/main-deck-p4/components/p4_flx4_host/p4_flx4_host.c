@@ -391,6 +391,61 @@ void p4_flx4_host_get_audio_stats(p4_flx4_audio_stats_t *out_stats)
 
 static uint8_t                  s_claimed_ifaces[8];
 static int                      s_num_claimed_ifaces = 0;
+static usb_device_handle_t      s_cleanup_dev_handle = NULL;
+static bool                     s_disconnect_cleanup_pending = false;
+static uint32_t                 s_disconnect_cleanup_attempts = 0u;
+
+static void try_cleanup_disconnected_device(void)
+{
+    if (!s_disconnect_cleanup_pending || !s_cleanup_dev_handle) {
+        return;
+    }
+
+    s_disconnect_cleanup_attempts++;
+    int retained = 0;
+    for (int i = 0; i < s_num_claimed_ifaces; ++i) {
+        const uint8_t interface_number = s_claimed_ifaces[i];
+        const esp_err_t err = usb_host_interface_release(
+            s_client_handle, s_cleanup_dev_handle, interface_number);
+        if (err == ESP_OK || err == ESP_ERR_NOT_FOUND) {
+            ESP_LOGI(TAG, "Released disconnected FLX4 interface %u",
+                     (unsigned)interface_number);
+            continue;
+        }
+
+        s_claimed_ifaces[retained++] = interface_number;
+        if (s_disconnect_cleanup_attempts == 1u ||
+            (s_disconnect_cleanup_attempts % 100u) == 0u) {
+            ESP_LOGW(TAG, "FLX4 interface %u cleanup pending: %s",
+                     (unsigned)interface_number, esp_err_to_name(err));
+        }
+    }
+    s_num_claimed_ifaces = retained;
+    if (retained != 0) {
+        return;
+    }
+
+    const esp_err_t close_err = usb_host_device_close(
+        s_client_handle, s_cleanup_dev_handle);
+    if (close_err != ESP_OK && close_err != ESP_ERR_NOT_FOUND) {
+        if (s_disconnect_cleanup_attempts == 1u ||
+            (s_disconnect_cleanup_attempts % 100u) == 0u) {
+            ESP_LOGW(TAG, "FLX4 device cleanup pending: %s",
+                     esp_err_to_name(close_err));
+        }
+        return;
+    }
+
+    ESP_LOGI(TAG, "Disconnected FLX4 device handle released after %" PRIu32
+                  " cleanup attempts", s_disconnect_cleanup_attempts);
+    if (s_dev_handle == s_cleanup_dev_handle) {
+        s_dev_handle = NULL;
+        s_dev_addr = 0;
+    }
+    s_cleanup_dev_handle = NULL;
+    s_disconnect_cleanup_pending = false;
+    s_disconnect_cleanup_attempts = 0u;
+}
 
 static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg)
 {
@@ -555,15 +610,9 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
             portEXIT_CRITICAL(&s_flx4_mux);
 
             s_out_inflight = false;
-
-            for (int i = 0; i < s_num_claimed_ifaces; ++i) {
-                (void)usb_host_interface_release(s_client_handle, s_dev_handle, s_claimed_ifaces[i]);
-            }
-            s_num_claimed_ifaces = 0;
-
-            (void)usb_host_device_close(s_client_handle, s_dev_handle);
-            s_dev_handle = NULL;
-            s_dev_addr = 0;
+            s_cleanup_dev_handle = s_dev_handle;
+            s_disconnect_cleanup_pending = true;
+            s_disconnect_cleanup_attempts = 0u;
 
             (void)control_link_inject_semantic(CTRL_TYPE_STATE, CTRL_ID_FLX4_CONNECTION, CTRL_FLX4_DISCONNECTED);
 
@@ -580,6 +629,10 @@ static void flx4_midi_task(void *arg)
     while (1) {
         if (s_client_handle) {
             (void)usb_host_client_handle_events(s_client_handle, pdMS_TO_TICKS(10));
+            /* DEV_GONE completion callbacks must run before claimed interfaces
+             * can be released. Retrying here, outside the client callback,
+             * lets canceled MIDI/UAC URBs retire before closing the device. */
+            try_cleanup_disconnected_device();
             try_submit_next_out();
         } else {
             vTaskDelay(pdMS_TO_TICKS(100));
