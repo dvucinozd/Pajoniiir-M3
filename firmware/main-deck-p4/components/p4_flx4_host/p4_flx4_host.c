@@ -45,6 +45,7 @@ static p4_flx4_midi_gate_t      s_midi_gate;
 static p4_flx4_audio_ring_t     s_audio_ring;
 static int16_t                  s_audio_storage[FLX4_AUDIO_RING_FRAMES * FLX4_UAC_CHANNELS];
 static p4_flx4_uac_packetizer_t s_packetizer;
+static p4_flx4_uac_resampler_t  s_resampler;
 static atomic_uint_fast32_t     s_audio_submitted_blocks;
 static atomic_uint_fast32_t     s_audio_dropped_blocks;
 static atomic_uint_fast32_t     s_audio_submitted_frames;
@@ -334,48 +335,87 @@ static void ctrl_transfer_cb(usb_transfer_t *transfer)
     }
 }
 
-esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t *hp_samples, size_t frame_count)
+#define FLX4_RESAMPLE_INPUT_FRAMES  128u
+#define FLX4_RESAMPLE_OUTPUT_FRAMES 129u
+
+esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples,
+                                   const int16_t *hp_samples,
+                                   size_t frame_count,
+                                   uint32_t source_sample_rate)
 {
     if ((!master_samples && !hp_samples) || frame_count == 0) return ESP_ERR_INVALID_ARG;
+    if (source_sample_rate < FLX4_UAC_SAMPLE_RATE || source_sample_rate > 48000u) {
+        return ESP_ERR_INVALID_ARG;
+    }
     if (!p4_flx4_host_is_connected()) return ESP_ERR_INVALID_STATE;
 
-    int16_t temp[128 * 4];
+    if (s_resampler.source_rate != source_sample_rate ||
+        s_resampler.target_rate != FLX4_UAC_SAMPLE_RATE ||
+        s_resampler.channels != FLX4_UAC_CHANNELS) {
+        if (!p4_flx4_uac_resampler_init(&s_resampler,
+                                        source_sample_rate,
+                                        FLX4_UAC_SAMPLE_RATE,
+                                        FLX4_UAC_CHANNELS)) {
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+
+    int16_t input[FLX4_RESAMPLE_INPUT_FRAMES * FLX4_UAC_CHANNELS];
+    int16_t output[FLX4_RESAMPLE_OUTPUT_FRAMES * FLX4_UAC_CHANNELS];
+    bool dropped = false;
     while (frame_count > 0) {
-        size_t chunk = frame_count > 128 ? 128 : frame_count;
+        size_t chunk = frame_count > FLX4_RESAMPLE_INPUT_FRAMES
+                           ? FLX4_RESAMPLE_INPUT_FRAMES
+                           : frame_count;
         for (size_t i = 0; i < chunk; ++i) {
             int16_t m_l = master_samples ? (master_samples[i * 2 + 0] >> 2) : 0;
             int16_t m_r = master_samples ? (master_samples[i * 2 + 1] >> 2) : 0;
             int16_t h_l = hp_samples ? (hp_samples[i * 2 + 0] >> 2) : m_l;
             int16_t h_r = hp_samples ? (hp_samples[i * 2 + 1] >> 2) : m_r;
 
-            temp[i * 4 + 0] = m_l; // Ch 1: Master L (-12dB)
-            temp[i * 4 + 1] = m_r; // Ch 2: Master R (-12dB)
-            temp[i * 4 + 2] = h_l; // Ch 3: Headphones L (-12dB)
-            temp[i * 4 + 3] = h_r; // Ch 4: Headphones R (-12dB)
+            input[i * 4 + 0] = m_l; // Ch 1: Master L (-12dB)
+            input[i * 4 + 1] = m_r; // Ch 2: Master R (-12dB)
+            input[i * 4 + 2] = h_l; // Ch 3: Headphones L (-12dB)
+            input[i * 4 + 3] = h_r; // Ch 4: Headphones R (-12dB)
         }
-        portENTER_CRITICAL(&s_flx4_mux);
-        uint32_t overflow_before = s_audio_ring.overflow_frames;
-        uint32_t accepted = p4_flx4_audio_ring_write_clocked(
-            &s_audio_ring, temp, (uint32_t)chunk);
-        bool overflowed = s_audio_ring.overflow_frames != overflow_before;
-        portEXIT_CRITICAL(&s_flx4_mux);
-        atomic_fetch_add_explicit(&s_audio_submitted_frames, accepted, memory_order_relaxed);
-        if (overflowed) {
-            atomic_fetch_add_explicit(&s_audio_dropped_blocks, 1u, memory_order_relaxed);
+        size_t output_frames = p4_flx4_uac_resampler_process(
+            &s_resampler, input, chunk, output, FLX4_RESAMPLE_OUTPUT_FRAMES);
+        if (output_frames > 0u) {
+            portENTER_CRITICAL(&s_flx4_mux);
+            if (!s_connected) {
+                portEXIT_CRITICAL(&s_flx4_mux);
+                return ESP_ERR_INVALID_STATE;
+            }
+            uint32_t overflow_before = s_audio_ring.overflow_frames;
+            uint32_t accepted = p4_flx4_audio_ring_write_clocked(
+                &s_audio_ring, output, (uint32_t)output_frames);
+            bool overflowed = s_audio_ring.overflow_frames != overflow_before;
+            portEXIT_CRITICAL(&s_flx4_mux);
+            atomic_fetch_add_explicit(&s_audio_submitted_frames, accepted,
+                                      memory_order_relaxed);
+            if (overflowed) {
+                dropped = true;
+            }
         }
 
-        s_audio_total_frames += (uint32_t)chunk;
+        s_audio_total_frames += (uint32_t)output_frames;
         if (master_samples) master_samples += chunk * 2;
         if (hp_samples) hp_samples += chunk * 2;
         frame_count -= chunk;
+    }
+    if (dropped) {
+        atomic_fetch_add_explicit(&s_audio_dropped_blocks, 1u, memory_order_relaxed);
     }
     atomic_fetch_add_explicit(&s_audio_submitted_blocks, 1u, memory_order_relaxed);
     return ESP_OK;
 }
 
-esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples, size_t frame_count)
+esp_err_t p4_flx4_host_write_headphone_audio(const int16_t *samples,
+                                             size_t frame_count,
+                                             uint32_t source_sample_rate)
 {
-    return p4_flx4_host_write_audio(NULL, samples, frame_count);
+    return p4_flx4_host_write_audio(NULL, samples, frame_count,
+                                    source_sample_rate);
 }
 
 void p4_flx4_host_get_audio_stats(p4_flx4_audio_stats_t *out_stats)

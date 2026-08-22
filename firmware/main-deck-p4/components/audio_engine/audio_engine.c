@@ -2605,10 +2605,11 @@ static void ae_decode_task(void *arg)
         goto cleanup;
     }
 
-    /* The I2S/codec output path targets 44.1/48 kHz; hi-res sources (96/192 kHz
-     * FLAC) are downsampled by the per-deck output resampler, so the codec opens
-     * at a supported rate while the deck keeps its native source rate. */
+    /* The shared output path targets 44.1/48 kHz. Low- and hi-res sources are
+     * normalized by the per-deck output resampler, so PCM5102A never opens at a
+     * rate outside the FLX4 converter's supported source range. */
     uint32_t codec_rate = eng->sample_rate > 48000u ? 48000u : eng->sample_rate;
+    if (codec_rate < 44100u) codec_rate = 44100u;
     if (audio_output_service_open_codec(codec_rate) != ESP_OK) {
         ESP_LOGE(TAG, "esp_codec_dev_open(%u Hz) failed", (unsigned)codec_rate);
         ae_fail_load(eng, fw, runtime, ESP_FAIL, "CODEC OPEN ERR");
@@ -3396,7 +3397,8 @@ static void ae_output_task(void *arg)
             phase_mark = now;
         }
 #if __has_include("p4_flx4_host.h")
-        (void)p4_flx4_host_write_audio(master_out, hp_out, AE_OUT_FRAMES);
+        (void)p4_flx4_host_write_audio(master_out, hp_out, AE_OUT_FRAMES,
+                                       s_output_sample_rate);
 #endif
         {
             int64_t now = esp_timer_get_time();

@@ -1833,7 +1833,7 @@ $tests = @(
     },
     @{
         Name = "p4_flx4_uac"
-        MinTestsRun = 1050
+        MinTestsRun = 1100
         Dir = "tests/p4_flx4_host"
         Target = "test_p4_flx4_uac.exe"
         Args = @(
@@ -2384,7 +2384,7 @@ Assert-FilePatternsOrdered `
 
 $flx4CtrlMatch = [regex]::Match(
     $flx4HostSource,
-    '(?s)static void ctrl_transfer_cb\(usb_transfer_t \*transfer\).*?\n}\n\nesp_err_t p4_flx4_host_write_audio')
+    '(?s)static void ctrl_transfer_cb\(usb_transfer_t \*transfer\).*?\n}\n\n#define FLX4_RESAMPLE_INPUT_FRAMES')
 Write-Host "==> static FLX4 USB priority is high only for active UAC streaming"
 if (-not $flx4CtrlMatch.Success -or
     -not $flx4CtrlMatch.Value.Contains("vTaskPrioritySet(NULL, FLX4_USB_ACTIVE_TASK_PRIO)")) {
@@ -2404,6 +2404,23 @@ Assert-FileContains `
         "#define FLX4_USB_ACTIVE_TASK_PRIO      7",
         "#define FLX4_USB_TRANSITION_TASK_PRIO  5",
         "NULL, FLX4_USB_TRANSITION_TASK_PRIO,"
+    )
+
+Assert-FileContains `
+    -Name "p4 audio output passes its real clock to the FLX4 converter" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/audio_engine/audio_engine.c") `
+    -LiteralPatterns @(
+        "if (codec_rate < 44100u) codec_rate = 44100u;",
+        "p4_flx4_host_write_audio(master_out, hp_out, AE_OUT_FRAMES,",
+        "s_output_sample_rate);"
+    )
+Assert-FileContains `
+    -Name "FLX4 host resamples the shared output clock before its fixed-rate ring" `
+    -Path $flx4HostPath `
+    -LiteralPatterns @(
+        "source_sample_rate < FLX4_UAC_SAMPLE_RATE",
+        "p4_flx4_uac_resampler_process(",
+        "FLX4_RESAMPLE_OUTPUT_FRAMES"
     )
 
 # Behaviour for this is covered by tests/library_anlz/test_library_anlz.c
