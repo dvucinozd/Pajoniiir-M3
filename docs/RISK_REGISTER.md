@@ -1,6 +1,6 @@
 # Risk Register
 
-Status: aktivni rizici single-chip P4 izvedbe, 2026-08-22.
+Status: aktivni rizici single-chip P4 izvedbe, 2026-08-23.
 
 | ID | Rizik | Posljedica | Mitigacija / gate |
 |---|---|---|---|
@@ -15,6 +15,8 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-22.
 | R9 | OTA paket nije vezan uz P4 target | nebootabilna slika | signed manifest, chip/project/version provjera prije `esp_ota_begin` |
 | R10 | Dokumentacija ponovno pomiješa povijesnu i važeću topologiju | pogrešan wiring ili razvojni smjer | aktivni docs index; validation/spec mape označene kao povijesne |
 | R11 | Settings gašenje se sudari s probe/OTA AP→STA→AP prijelazom | srušen netif, prekinut download ili AP koji se ne vrati | transition lease, host-testirani START/STOP/WAIT policy i hardware fault-injection smoke |
+| R12 | PCM5102A output radi na 48 kHz dok je FLX4 UAC fiksiran na 44,1 kHz | kontinuirani headphone ring overflow i odbačeni blokovi na 48-kHz trakama | stateful 48→44,1-kHz resampler, rate-aware testovi i 48-kHz hardware soak |
 
-Najveći otvoreni acceptance rizik je cjeloviti hardware soak izravnog FLX4
-MIDI/UAC puta uz istodobni USB3 streaming i aktivan UI.
+Najveći otvoreni acceptance rizici su 48-kHz FLX4 UAC resampling i cjeloviti
+hardware soak izravnog FLX4 MIDI/UAC puta uz istodobni USB3 streaming i aktivan
+UI.

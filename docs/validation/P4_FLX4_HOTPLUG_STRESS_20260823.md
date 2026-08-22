@@ -1,0 +1,113 @@
+# P4 FLX4 hot-plug stress — 2026-08-23
+
+## Opseg
+
+Fizički USB2 unplug/replug stress provjerava da DDJ-FLX4 tijekom utišanog
+dual-deck playbacka vraća MIDI In/Out, UAC1 i LED state bez P4 reseta, prekida
+playbacka, PCM underruna ili trajnog audio deadline problema. Test je uz to
+izolirao rad FLX4 USB event taska tijekom disconnect i reconnect prijelaza.
+
+## Konfiguracija
+
+- ploča: JC-ESP32P4-M3-DEV, ESP32-P4 revizija v1.3;
+- serijski port: `COM17`;
+- ESP-IDF: v6.0.2;
+- FLX4: USB2 FS Host, Pioneer VID:PID `2B73:0045`;
+- Rekordbox medij: USB3 HS Host, library 191 track;
+- Wi-Fi: SoftAP `Pajoniiir-M3`, uključen tijekom cijelog testa;
+- audio: oba channel fadera programski na nuli, PCM5102A master aktivan;
+- service log: microSD prisutan, dropped counter 0.
+
+## Početni stress — `M3-2-g4613c4a`
+
+Deset uzastopnih ciklusa završilo je bez API pogreške ili P4 reseta. Svaki je
+ciklus vratio FLX4 `present`, MIDI In/Out i UAC; reconnect je trajao približno
+4,9–7,7 s, a oba decka nastavila su playback.
+
+| Brojač | Rezultat |
+| --- | --- |
+| puni reconnect | 10/10 |
+| output late | +20, točno +2 po ciklusu |
+| najveći output blok | 265.131 µs |
+| PCM underrun D1/D2 | 0/0 |
+| UAC dropped/overflow | 0/0 u 20-s post-prozoru |
+| service-log dropped | 0 |
+
+Fazni maksimumi (`main=264.058 µs`, `mix=257.838 µs`) pokazali su da audio
+task nije radio sporo unutar jedne funkcije, nego je bio descheduliran tijekom
+USB transition rada. FLX4 USB task i audio output bili su na istom CPU0, a USB
+task je stalno ostajao na prioritetu 7.
+
+## Prva korekcija — `M3-5-gec3850a`
+
+FLX4 USB task počeo je na transition prioritetu 5, spuštao se nakon
+`DEV_GONE`, a nakon enumeracije dizao na aktivni prioritet 7. Pet fizičkih
+ciklusa i dalje je dalo +2 output-latea po ciklusu, ali je maksimum pao na
+50.502 µs i PCM underrun ostao 0/0. Telemetrija je pokazala dva preostala ruba:
+
+- disconnect rad prije stvarnog spuštanja prioriteta (`monitor` do 19.291 µs);
+- početno UAC queue punjenje nakon prerano podignutog prioriteta (`main` do
+  48.177 µs).
+
+## Završna korekcija — `M3-6-g546fa58`
+
+Prioritet se sada spušta odmah na ulazu u `DEV_GONE`. Reconnect ostaje na
+transition prioritetu kroz descriptor parsing, kontrolne transfere, alokaciju i
+početno punjenje tri isochronous transfera; na prioritet 7 diže se tek nakon što
+je periodični UAC red predan hostu.
+
+Ponovljeni test koristio je dvije 44,1-kHz trake i PCM5102A output na 44,1 kHz:
+
+| Provjera | Rezultat |
+| --- | --- |
+| puni reconnect | 3/3 |
+| reconnect vrijeme | 4,916–6,665 s |
+| MIDI In/Out + UAC nakon reconnecta | 3/3 |
+| playback nastavljen | 3/3 oba decka |
+| output late na disconnectu | +1 po ciklusu |
+| output late na reconnectu | 0 po ciklusu |
+| najveći output blok tijekom gatea | 27.626 µs |
+| PCM underrun tijekom gatea | 0/0 |
+| završni aktivni UAC drop/overflow/underflow | 0/0/0 |
+| service-log dropped | 0 |
+
+Nakon posljednjeg reconnecta Deck 2 je dodatnih 20 s radio bez novog
+output-latea, PCM underruna, UAC dropa, overflowa ili underflowa. Deck 1 je u
+prethodnom prozoru došao do prirodnog EOF-a i tada je izvan hot-plug gatea
+zabilježio 136 PCM underrun frameova; taj EOF/STOP rub ostaje zaseban zadatak.
+
+## Otkriveni 48-kHz UAC problem
+
+Za dulji test prvotno su odabrane dvije 48-kHz trake. PCM5102A/output engine
+otvorio se na 48 kHz, dok FLX4 UAC packetizer i endpoint ostaju na 44,1 kHz.
+U mirnom 20-sekundnom prozoru nastalo je:
+
+- 3.759 predanih producer blokova;
+- 1.245 dropped blokova;
+- 70.846 overflow frameova;
+- 7.518 clock-trim frameova;
+- 0 PCM underruna i 0 output-latea.
+
+To odgovara trajnom nominalnom rate mismatchu, a ne scheduler jitteru.
+Postojeća korekcija od najviše jednog framea po producer bloku namijenjena je
+ppm driftu između dva jednaka nominalna clocka. Potreban je stateful
+48→44,1-kHz resampler prije FLX4 četverokanalnog UAC ringa, uz očuvanje faze
+između output blokova.
+
+## Dodatna opažanja
+
+- fizički donji položaji channel fadera jednom su očitani kao D1=1.521 i
+  D2=17, pa prije konačnog mixer acceptancea treba potvrditi raw min/max i
+  eventualnu per-deck kalibraciju;
+- preostali jedan disconnect-only deadline događaj ne raste nakon reconnecta i
+  nije proizveo PCM underrun, ali ostaje otvoren za izolaciju USB interrupt/
+  I2S pacing puta.
+
+## Software i flash gate
+
+- `tests/run_p4_host_tests.ps1`: PASS;
+- ESP-IDF v6.0.2 `idf.py build`: PASS;
+- aplikacija: `M3-6-g546fa58`, `0x2402b0`, 44% slobodno;
+- flash na `COM17`: PASS, svi zapisani hashovi verificirani;
+- završno stanje: FLX4 spojen, oba decka `READY`, Wi-Fi uključen, library 191,
+  service-log dropped 0.

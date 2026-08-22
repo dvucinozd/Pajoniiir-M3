@@ -1,6 +1,6 @@
 # Documentation Status
 
-Status: 2026-08-22.
+Status: 2026-08-23.
 
 ## Aktivni dokumenti
 

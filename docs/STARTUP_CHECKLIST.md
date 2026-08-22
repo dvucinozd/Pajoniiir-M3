@@ -1,6 +1,6 @@
 # Startup Checklist
 
-Status: važeći bench postupak, 2026-08-22.
+Status: važeći bench postupak, 2026-08-23.
 
 ## Priprema
 
@@ -37,6 +37,8 @@ idf.py -p COM17 flash monitor
 - [ ] Master L/R izlazi preko PCM5102A bez speaker-amp šuma.
 - [ ] PFL/master cue i headphone mix izlaze preko FLX4 slušalica.
 - [ ] Nema kontinuiranih UAC dropova, underruna ili clippinga.
+- [ ] UAC je bez aktivnog dropa/overflowa i s 44,1-kHz i s 48-kHz izvornim
+  trakama; promjena source ratea ne mijenja brzinu ni visinu tona.
 - [ ] Dual-deck playback, pitch/Master Tempo i scratch ostaju stabilni.
 
 ## Mreža i servis

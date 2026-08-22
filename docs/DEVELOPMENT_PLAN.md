@@ -1,6 +1,6 @@
 # Development Plan
 
-Status: plan nakon single-chip čišćenja, 2026-08-22.
+Status: plan nakon FLX4 hot-plug stressa, 2026-08-23.
 
 ## Trenutna baza
 
@@ -28,23 +28,26 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-22 je `M3-2-g4613c4a` na P4 ploči:
-FLX4 je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena, USB3 library
+Završni hardverski baseline 2026-08-23 je `M3-6-g546fa58` na P4 ploči. FLX4 je
+spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `READY`, USB3 library
 sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
-`Pajoniiir-M3` ostavljeni su uključeni. Lokalni source baseline uključuje i
-naknadni dokumentacijski commit, bez nove firmware promjene.
+`Pajoniiir-M3` ostavljeni su uključeni. Firmware sadrži dvostupanjski prioritet
+FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
+nakon početnog UAC queue priminga.
 
-Sutrašnji prioritetni redoslijed:
+Prioritetni redoslijed nastavka:
 
-1. ponoviti FLX4 hot-plug više puta tijekom utišanog D1/D2 playbacka te izolirati
-   dva output-deadline promašaja nastala samo tijekom USB prijelaza;
-2. potvrditi da svaki ciklus vraća MIDI In/Out, UAC i puni LED snapshot bez
-   dropa, overflowa, PCM underruna ili potrebe za P4 resetom;
-3. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
+1. dodati stateful 48→44,1-kHz resampling za FLX4 UAC put, uz host testove za
+   44,1-kHz passthrough, točan 48-kHz omjer i kontinuitet između blokova;
+2. ponoviti dual-deck/UAC soak sa stvarnim 48-kHz trakama i zahtijevati nula
+   aktivnih dropova, overflowa i underflowa;
+3. izolirati preostali jedan output-deadline događaj na samom fizičkom USB2
+   disconnectu te zasebno provjeriti PCM brojače na prirodnom EOF-u i STOP-u;
+4. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
    audio promet;
-4. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
+5. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
    servisni SSID, zaporka i update URL;
-5. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+6. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona.
 
 ## Sljedeće faze
@@ -123,6 +126,29 @@ UAC dropa, overflowa, novog aktivnog underflowa ili PCM underruna; library je
 ostao na 191 tracku i API nije imao prekid. Sam prijelaz povećao je output-late
 brojač za dva, bez daljnjeg rasta nakon reconnecta, pa deadline ponašanje ostaje
 dio dužeg stress gatea.
+
+Duži stress 2026-08-23 prvo je na `M3-2-g4613c4a` odradio 10/10 fizičkih
+unplug/replug ciklusa tijekom utišanog dual-deck playbacka. Svaki reconnect
+vratio je MIDI In/Out i UAC bez P4 reseta, prekida playbacka ili PCM underruna,
+ali svaki je ciklus dodao dva output-latea, a maksimum je bio 265.131 µs.
+Fazna telemetrija pokazala je da FLX4 event task na prioritetu 7 deschedulira
+audio output tijekom descriptor/cleanup transition rada.
+
+`M3-6-g546fa58` zato spušta prioritet odmah na ulazu u `DEV_GONE`, enumerira i
+prima početni UAC queue na transition prioritetu te se podiže iznad producenta
+tek kada su periodični transferi predani. Ponovljena 3/3 ciklusa na 44,1-kHz
+dual-deck profilu vratila su puni controller status za 4,916–6,665 s, bez PCM
+underruna, UAC dropa, overflowa ili underflowa tijekom samog gatea. Reconnect
+više ne dodaje deadline miss; ostaje po jedan događaj na fizičkom disconnectu,
+s maksimumom 27.626 µs. Naknadni 20-sekundni aktivni prozor na Decku 2 bio je
+potpuno stabilan. Detalji su u
+`docs/validation/P4_FLX4_HOTPLUG_STRESS_20260823.md`.
+
+Isti test otkrio je odvojenu sample-rate prazninu: s 48-kHz outputom FLX4 UAC
+ostaje fiksan na 44,1 kHz. U 20 s nastalo je 70.846 overflow frameova i 1.245
+dropped blokova, iako nije bilo output-latea ni PCM underruna. Jednoframe clock
+regulator pokriva samo drift dvaju nominalno jednakih clockova; ne smije se
+koristiti kao zamjena za 48→44,1-kHz resampler. To je prvi zadatak nastavka.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni
