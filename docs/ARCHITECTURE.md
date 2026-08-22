@@ -49,8 +49,11 @@ LED stanje se računa iz P4 statea i preko registriranog sinka šalje izravno
 
 Svaki deck dekodira u bounded PCM timeline. Output task radi DSP i mixer u
 blokovima, šalje master na PCM5102A te cue/headphone miks u FLX4 UAC1 ring.
-UAC packetizer prilagođava broj frameova USB mikroframe ritmu. Brojači predanih
-i odbačenih blokova dostupni su u dijagnostici.
+PCM5102A prati zajednički output rate od 44,1 ili 48 kHz, dok stateful linearni
+resampler pretvara FLX4 cue/headphone tap u njegov fiksni 44,1-kHz četverokanalni
+format i čuva fazu između proizvoljno podijeljenih output blokova. UAC packetizer
+prilagođava broj frameova USB mikroframe ritmu. Brojači predanih i odbačenih
+blokova, ringa i clock korekcija dostupni su u dijagnostici.
 
 ## Uklonjena arhitektura
 

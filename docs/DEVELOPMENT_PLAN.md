@@ -1,6 +1,6 @@
 # Development Plan
 
-Status: plan nakon FLX4 hot-plug stressa, 2026-08-23.
+Status: plan nakon FLX4 48-kHz UAC acceptancea, 2026-08-23.
 
 ## Trenutna baza
 
@@ -28,26 +28,26 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-23 je `M3-6-g546fa58` na P4 ploči. FLX4 je
+Završni hardverski baseline 2026-08-23 je `M3-8-gffb9f42` na P4 ploči. FLX4 je
 spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `READY`, USB3 library
 sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
 `Pajoniiir-M3` ostavljeni su uključeni. Firmware sadrži dvostupanjski prioritet
 FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
-nakon početnog UAC queue priminga.
+nakon početnog UAC queue priminga. Stateful linearni UAC resampler sada pretvara
+44,1–48-kHz output u FLX4-ov fiksni 44,1-kHz format uz kontinuitet faze između
+output blokova.
 
 Prioritetni redoslijed nastavka:
 
-1. dodati stateful 48→44,1-kHz resampling za FLX4 UAC put, uz host testove za
-   44,1-kHz passthrough, točan 48-kHz omjer i kontinuitet između blokova;
-2. ponoviti dual-deck/UAC soak sa stvarnim 48-kHz trakama i zahtijevati nula
-   aktivnih dropova, overflowa i underflowa;
-3. izolirati preostali jedan output-deadline događaj na samom fizičkom USB2
+1. proširiti 48-kHz gate na duži mixed-rate soak i napraviti slušni acceptance
+   brzine, visine tona i cue/master kvalitete na FLX4 slušalicama;
+2. izolirati preostali jedan output-deadline događaj na samom fizičkom USB2
    disconnectu te zasebno provjeriti PCM brojače na prirodnom EOF-u i STOP-u;
-4. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
+3. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
    audio promet;
-5. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
+4. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
    servisni SSID, zaporka i update URL;
-6. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+5. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona.
 
 ## Sljedeće faze
@@ -58,10 +58,13 @@ Prioritetni redoslijed nastavka:
   UAC packetizer i audio ring;
 - [x] potvrditi sve interface/endpoint/alternate-setting izbore na stvarnom
   FLX4;
-- [x] provjeriti reconnect tijekom playbacka i puni LED resync.
+- [x] provjeriti reconnect tijekom playbacka i puni LED resync;
+- [x] dodati stateful 44,1–48→44,1-kHz UAC resampling i potvrditi 48-kHz
+  dual-deck counter gate na stvarnom FLX4.
 
-Host gate sada pokriva 1.417 provjera i dio je `tests/run_p4_host_tests.ps1`.
-Uz testove su ispravljeni kombinirani Beat FX CH1/CH2 target, odbijanje
+FLX4 host gate i rate-aware resampler testovi dio su
+`tests/run_p4_host_tests.ps1`. Uz testove su ispravljeni kombinirani Beat FX
+CH1/CH2 target, odbijanje
 nevažećeg LED decka te MIDI OUT admission/reset pri disconnectu.
 
 Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
@@ -148,7 +151,18 @@ Isti test otkrio je odvojenu sample-rate prazninu: s 48-kHz outputom FLX4 UAC
 ostaje fiksan na 44,1 kHz. U 20 s nastalo je 70.846 overflow frameova i 1.245
 dropped blokova, iako nije bilo output-latea ni PCM underruna. Jednoframe clock
 regulator pokriva samo drift dvaju nominalno jednakih clockova; ne smije se
-koristiti kao zamjena za 48→44,1-kHz resampler. To je prvi zadatak nastavka.
+koristiti kao zamjena za 48→44,1-kHz resampler.
+
+`M3-8-gffb9f42` dodao je stateful linearni resampler s točnim racionalnim
+vremenom i host testovima za bit-identični 44,1-kHz passthrough, točan
+48→44,1-kHz omjer te split/whole-block kontinuitet. Ponovljeni 60,028-sekundni
+hardware gate s dvije 48-kHz trake i outputom na 48 kHz završio je s 0 novih
+UAC dropped blokova, 0 overflowa i 0 aktivnih underflowa. Oba decka napredovala
+su približno 60 s, ring je počeo i završio na 1.161 frameu, PCM underrun ostao
+je 0/0, service log nije dropao zapise, a 60/60 status, 6/6 library i 4/4
+firmware zahtjeva je prošlo. Jedan izolirani output-late, s maksimumom 11.218 µs,
+nije proizveo PCM ili UAC grešku. Funkcionalni counter gate time je zatvoren;
+duži mixed-rate i slušni quality acceptance ostaju otvoreni.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni

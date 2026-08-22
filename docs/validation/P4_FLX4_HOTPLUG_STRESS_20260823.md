@@ -94,6 +94,38 @@ ppm driftu između dva jednaka nominalna clocka. Potreban je stateful
 48→44,1-kHz resampler prije FLX4 četverokanalnog UAC ringa, uz očuvanje faze
 između output blokova.
 
+## 48-kHz resampler acceptance — `M3-8-gffb9f42`
+
+Dodani stateful linearni resampler koristi točno racionalno source/target
+vrijeme, čuva prethodni frame i fazu preko granica output blokova te ostavlja
+44,1-kHz ulaz bit-identičnim. Host testovi pokrivaju passthrough, točan
+48→44,1-kHz omjer, jednu sekundu 48-kHz ulaza, split/whole-block kontinuitet i
+nevažeće argumente.
+
+Ponovljeni hardware gate koristio je dvije stvarne 48-kHz trake, zajednički
+output na 48 kHz i FLX4 UAC endpoint na 44,1 kHz. Oba channel fadera ostala su
+programski utišana; zato je ovo counter/timing acceptance, a ne završni slušni
+quality gate.
+
+| Provjera | Rezultat tijekom 60,028 s |
+| --- | --- |
+| oba decka nastavila playback | da, +60.053/+60.054 ms |
+| HTTP status/library/firmware | 60/60, 6/6, 4/4 |
+| FLX4 MIDI In/Out + UAC | prisutni cijelo vrijeme |
+| UAC producer blokovi/frameovi | 11.260 / 2.648.293 |
+| UAC dropped/overflow/aktivni underflow | 0/0/0 |
+| ring početak/kraj/high-water | 1.161/1.161/1.454 od 2.048 frameova |
+| clock trim/duplicate | 62/3 framea |
+| PCM underrun D1/D2 | 0/0 |
+| output late | +1, maksimum 11.218 µs |
+| service-log dropped | 0 |
+| slobodni heap početak/kraj | 25.095.292/25.095.292 B |
+
+Nasuprot početnom 20-sekundnom prozoru s 1.245 dropped blokova i 70.846
+overflow frameova, ponovljeni gate nema aktivni UAC gubitak i ring nema neto
+pomak. Time je funkcionalni rate-mismatch counter gate zatvoren. Otvoreni ostaju
+duži mixed-rate soak, slušna provjera brzine/visine tona i cue/master kvalitete.
+
 ## Dodatna opažanja
 
 - fizički donji položaji channel fadera jednom su očitani kao D1=1.521 i
@@ -107,7 +139,7 @@ između output blokova.
 
 - `tests/run_p4_host_tests.ps1`: PASS;
 - ESP-IDF v6.0.2 `idf.py build`: PASS;
-- aplikacija: `M3-6-g546fa58`, `0x2402b0`, 44% slobodno;
+- aplikacija: `M3-8-gffb9f42`, `0x240730`, 44% slobodno;
 - flash na `COM17`: PASS, svi zapisani hashovi verificirani;
 - završno stanje: FLX4 spojen, oba decka `READY`, Wi-Fi uključen, library 191,
   service-log dropped 0.
