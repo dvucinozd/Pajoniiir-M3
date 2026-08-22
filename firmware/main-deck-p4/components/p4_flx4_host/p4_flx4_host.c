@@ -20,8 +20,8 @@ static const char *TAG = "p4_flx4";
  * audio producer (priority 6) so a producer burst cannot starve the consumer
  * long enough to fill the headphone ring. Enumeration and disconnect cleanup
  * do not have that deadline and run below audio output instead: descriptor
- * parsing and host teardown can otherwise deschedule ae_output for hundreds of
- * milliseconds during a hot-plug transition. */
+ * parsing, initial UAC queue priming and host teardown can otherwise deschedule
+ * ae_output during a hot-plug transition. */
 #define FLX4_USB_ACTIVE_TASK_PRIO      7
 #define FLX4_USB_TRANSITION_TASK_PRIO  5
 
@@ -326,6 +326,11 @@ static void ctrl_transfer_cb(usb_transfer_t *transfer)
             }
         }
         ESP_LOGW(TAG, "FLX4 Isochronous Audio streaming started on EP 0x%02x", s_audio_ep_addr);
+        /* Initial allocation and ring priming are transition work. Raise the
+         * client only after all periodic transfers are queued, so subsequent
+         * UAC completion callbacks outrank the audio producer without letting
+         * reconnect setup preempt an in-flight PCM5102A block. */
+        vTaskPrioritySet(NULL, FLX4_USB_ACTIVE_TASK_PRIO);
     }
 }
 
@@ -595,10 +600,6 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                     if (s_conn_cb) {
                         s_conn_cb(true, s_conn_cb_ctx);
                     }
-                    /* Descriptor parsing and setup ran at transition priority.
-                     * Once connected, USB event callbacks must outrank the
-                     * audio producer so the UAC ring cannot overflow. */
-                    vTaskPrioritySet(NULL, FLX4_USB_ACTIVE_TASK_PRIO);
                     return;
                 }
             }
@@ -606,6 +607,11 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
         }
     } else if (event_msg->event == USB_HOST_CLIENT_EVENT_DEV_GONE) {
         if (s_dev_handle && event_msg->dev_gone.dev_hdl == s_dev_handle) {
+            /* The periodic endpoint is already gone, so no isochronous
+             * deadline remains. Lower before any gate/queue/callback work; the
+             * audio task must not be descheduled by disconnect publication. */
+            vTaskPrioritySet(NULL, FLX4_USB_TRANSITION_TASK_PRIO);
+
             ESP_LOGW(TAG, "Pioneer DDJ-FLX4 disconnected");
             p4_flx4_midi_gate_stop(&s_midi_gate);
             if (s_out_queue) {
@@ -616,11 +622,6 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
             s_connected = false;
             s_audio_claimed = false;
             portEXIT_CRITICAL(&s_flx4_mux);
-
-            /* No isochronous deadline remains after DEV_GONE. Drop below
-             * ae_output before queue reset, callback publication and deferred
-             * host cleanup so a hot-plug transition cannot starve PCM output. */
-            vTaskPrioritySet(NULL, FLX4_USB_TRANSITION_TASK_PRIO);
 
             s_out_inflight = false;
             s_cleanup_dev_handle = s_dev_handle;
