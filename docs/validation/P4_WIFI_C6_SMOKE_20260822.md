@@ -163,8 +163,9 @@ za učitavanje traka dok novi ekran ne stigne:
 - originalni OFF NVS backup ostao je lokalno sa SHA-256
   `48C626B2D0871CD64320FD7166F1E1BF7DDCE7700C3C05DC613F431BA2A95967`.
 
-Preostaju pravi test s najmanje dva fizička klijenta, konfigurirani
-AP→STA→AP/OTA round-trip i kombinirani Wi-Fi/USB/audio stress.
+Preostaju pravi test s najmanje dva fizička klijenta i konfigurirani
+AP→STA→AP/OTA round-trip. Osnovni kombinirani Wi-Fi/USB/audio stress zatvoren je
+M3 mjerenjem niže; duži i reconnect stress ostaju release gate.
 
 ## Kombinirani FLX4 + USB media + Wi-Fi soak
 
@@ -196,11 +197,11 @@ prozora. Dodatna izolacija dala je:
 | 30 s burst prometa | 135 zahtjeva, 0 HTTP grešaka, 5 novih dropova |
 | 45 s normalnog 1 Hz status pollinga | 45/45, 7 novih dropova |
 
-Brojač raste kada u 2.048-frame UAC ring ne stane cijeli 128-frame producer
-chunk; trenutačno ne objavljuje broj stvarno izgubljenih frameova, ring fill ni
-underflow. Rezultat zato nije dovoljan za zatvaranje audio acceptance gatea.
-M3 zahvat dodaje tu telemetriju i jednoframe clock-drift regulaciju između
-PCM5102A i FLX4 USB audio domena; isti test treba ponoviti na stvarnom M3 buildu.
+Brojač je rastao kada u 2.048-frame UAC ring nije stao cijeli 128-frame producer
+chunk. Rezultat nije bio dovoljan za zatvaranje audio acceptance gatea, pa je M3
+zahvat dodao broj stvarno izgubljenih frameova, ring fill/high-water,
+underflow/overflow i trim/duplicate telemetriju te jednoframe clock-drift
+regulaciju između PCM5102A i FLX4 USB audio domena.
 Pri gotovo istodobnom zaustavljanju oba decka nakon mjernih prozora zabilježen
 je još jedan odvojeni tail događaj: jedan output-late od 12.347 µs i 1.792
 underrun framea. Nije nastao tijekom 189,5-sekundnog soaka, ali ga treba uključiti
@@ -210,3 +211,102 @@ Nakon mjerenja oba decka vraćena su u `READY`, playback je zaustavljen, channel
 faderi su ostali na nuli, FLX4 MIDI/UAC ostao je spojen, web root je vratio HTTP
 200 i library je i dalje sadržavao 191 track. Wi-Fi i Windows profil
 `Pajoniiir-M3` ostavljeni su uključeni.
+
+## M3 UAC A/B acceptance
+
+Clean tag build `M3` (`1f9ad7c`) izgrađen je s ESP-IDF v6.0.2, imao je binarnu
+veličinu `0x240040` i nakon flasha se prijavio kao factory / `M3`. Wi-Fi se nakon
+reseta automatski vratio, FLX4 je prijavio MIDI In/Out i UAC, a USB library je
+ostao na 191 tracku. Nova `/api/status` telemetrija bila je prisutna.
+
+Prvi 180-sekundni dual-deck/Wi-Fi run prošao je svih 180 status, 18 library i 12
+firmware zahtjeva bez HTTP greške. Oba decka napredovala su po 181.894 ms, bez
+controller disconnecta, output-latea, PCM underruna ili aktivnog UAC underflowa.
+Ipak je zabilježeno 60 `dropped_blocks` i 6.757 `overflow_frames`; ring je dosegao
+2.048/2.048. Jednoframe regulator ispravno je obradio stabilni clock drift, ali
+nije mogao spriječiti burst punjenje dok je zajednički FLX4 USB event task na
+prioritetu 5 čekao ispod audio output producenta na prioritetu 6.
+
+FLX4 USB event task zato je podignut na prioritet 7 i preimenovan u `flx4_usb`.
+Host regresije i ESP-IDF build prošli su prije flasha, a popravljena slika
+prijavila se kao `M3-1-g243e996`.
+
+Identičan ponovljeni test dao je:
+
+| Provjera | Rezultat |
+| --- | --- |
+| stvarno trajanje mjernog prozora | 183,724 s |
+| `GET /api/status` | 179/180, jedan izolirani timeout |
+| `GET /api/library` | 18/18, svaki 191 track |
+| `GET /api/firmware` | 12/12 |
+| dual-deck napredak | D1/D2 po 183.757 ms |
+| FLX4 MIDI In/Out i UAC | spojeni na završnom uzorku |
+| submitted blocks/frames | 31.655 / 8.103.428 |
+| dropped blocks / overflow frames | **0 / 0** |
+| aktivni underflow frames | **0** |
+| ring start/final/high-water | 1.253 / 1.394 / 1.640 od 2.048 frameova |
+| clock trim / duplicate | 295 / 43 framea |
+| output late / D1 underrun / D2 underrun | **0 / 0 / 0** |
+| heap free start/final | 25.308.036 / 25.308.056 B |
+| internal free start/final | 109.371 / 109.391 B |
+
+Nakon zaustavljanja oba decka nije nastao prijašnji tail output-late/underrun:
+oba su decka ostala `READY`, FLX4 MIDI/UAC spojen, web API dostupan, a library na
+191 tracku. Channel faderi ostali su na nuli. Wi-Fi i Windows profil
+`Pajoniiir-M3` namjerno su ostavljeni uključeni za daljnje učitavanje traka.
+
+Ovim je osnovni paralelni USB2 FLX4 + USB3 medij + dual-deck + Wi-Fi audio gate
+prošao. Jedan izolirani HTTP timeout nije imao audio ni USB posljedicu; fizički
+multi-client, AP→STA→AP/OTA, dugi soak i reconnect/medij stress ostaju otvoreni.
+
+## FLX4 hot-plug tijekom playbacka
+
+Prvi fizički unplug/replug test na `M3-1-g243e996` otkrio je stvarni lifecycle
+kvar. Status je odmah prijavio FLX4 disconnect, Deck 2 je nastavio playback,
+Wi-Fi API je ostao dostupan i USB3 library je ostao na 191 tracku, ali se MIDI i
+UAC nisu vratili ni nakon 120 sekundi. P4 reset odmah je ponovno enumerirao isti
+FLX4 (`2B73:0045`) i uspješno otvorio Audio Streaming interface 1 / alt 2 te MIDI
+Streaming interface 4, čime su kabel, napajanje i descriptor izbori isključeni
+kao uzrok.
+
+Uzrok je bio inline poziv `usb_host_interface_release()` i
+`usb_host_device_close()` iz `USB_HOST_CLIENT_EVENT_DEV_GONE` callbacka. U tom
+trenutku otkazani MIDI i UAC URB-ovi još nisu stigli odraditi completion
+callbackove, release je vraćao `ESP_ERR_INVALID_STATE`, a rezultat se ignorirao.
+Stari device handle zato je ostao otvoren i blokirao novu enumeraciju.
+
+Commit `4613c4a` (`fix(usb): recover FLX4 after hotplug`) premjestio je cleanup u
+FLX4 USB client task nakon `usb_host_client_handle_events()`. Interfacei se sada
+otpuštaju tek nakon što se pending URB-ovi povuku, a device handle zatvara se tek
+nakon uspješnog releasea svih claimed interfacea. Dodan je statički regression
+gate koji zabranjuje povratak release/close poziva u `DEV_GONE` callback.
+
+Čisti ESP-IDF v6.0.2 build prijavio se kao `M3-2-g4613c4a`, veličine
+`0x2402b0`, te je flashan na COM17. Nakon boota status je potvrdio FLX4 MIDI
+In/Out + UAC, USB library od 191 tracka i aktivan `Pajoniiir-M3` SoftAP.
+
+Deck 2 učitan je s USB3 medija, pozicioniran na približno 30 s, channel volume
+postavljen je na nulu i pokrenut je playback. Fizički USB2 unplug/replug dao je:
+
+| Provjera | Rezultat |
+| --- | --- |
+| disconnect status | detektiran; MIDI In/Out i UAC prešli na false |
+| playback tijekom disconnecta | ostao aktivan, bez PCM underruna |
+| puni reconnect | približno 6,1 s između status prijelaza |
+| MIDI In / MIDI Out / UAC nakon reconnecta | true / true / true |
+| Wi-Fi API greške tijekom prijelaza | 0 |
+| USB3 library nakon reconnecta | generation 1, 191 track |
+| LED resync | operator potvrdio vraćen PLAY LED za aktivni Deck 2 |
+| output-late tijekom unplug/replug prijelaza | +2; nakon reconnecta nije rastao |
+
+U sljedećem 30-sekundnom stabilizacijskom prozoru Deck 2 napredovao je s
+127.872 ms na 157.936 ms. UAC je predao dodatnih 5.179 blokova / 1.325.790
+frameova; `dropped_blocks` i `overflow_frames` ostali su 0, a aktivni
+`underflow_frames` ostao je nepromijenjen na 1.234. Output-late ostao je 5,
+Deck 2 PCM underrun 0, service-log dropped 0 i FLX4 je ostao potpuno spojen.
+Nakon mjerenja Deck 2 vraćen je u `READY`. Wi-Fi i Windows profil
+`Pajoniiir-M3` namjerno su ostavljeni uključeni.
+
+Time su zatvoreni osnovni FLX4 descriptor, hot-plug i LED snapshot gateovi.
+Duži ponavljani reconnect stress i analiza dvaju deadline promašaja tijekom
+samog USB prijelaza ostaju dio dual-USB/audio stress faze.

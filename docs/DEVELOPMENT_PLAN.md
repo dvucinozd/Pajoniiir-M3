@@ -32,9 +32,9 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 - [x] dodati host testove za `p4_flx4_map`, MIDI generation gate, LED encoder,
   UAC packetizer i audio ring;
-- [ ] potvrditi sve interface/endpoint/alternate-setting izbore na stvarnom
+- [x] potvrditi sve interface/endpoint/alternate-setting izbore na stvarnom
   FLX4;
-- [ ] provjeriti reconnect tijekom playbacka i puni LED resync.
+- [x] provjeriti reconnect tijekom playbacka i puni LED resync.
 
 Host gate sada pokriva 1.417 provjera i dio je `tests/run_p4_host_tests.ps1`.
 Uz testove su ispravljeni kombinirani Beat FX CH1/CH2 target, odbijanje
@@ -70,17 +70,38 @@ tok dodatno je potvrdio prikaz 191 tracka, pretragu i HTTP 200 D1 LOAD za
 `Darude - Sandstorm.mp3`; Deck 1 ostao je `READY` i nakon reloadanja stranice,
 bez JavaScript pogrešaka. Wi-Fi je zatim trajno ostavljen uključen uz očuvane
 postojeće NVS postavke i hot cueove, kako bi web controller služio za učitavanje
-traka do dolaska novog ekrana. Kombinirani 189,5-sekundni USB2/USB3/audio/Wi-Fi
-soak s priključenim FLX4 prošao je 180 status, 18 library i 12 firmware zahtjeva
-bez HTTP greške, controller disconnecta, prekida playbacka, codec greške,
-output deadline missova ili PCM underruna tijekom samog prozora. Međutim,
-FLX4 UAC ring prijavio je 339 nepotpunih write blokova; naknadni prozori dali su
-0/30 s uz gotovo bez mrežnog prometa, 5/135 zahtjeva pod burst prometom i 7/45 s
-uz normalni status polling. Zato paralelni audio gate ostaje otvoren dok se ne
-dodaju dropped-frame/ring-fill brojači i clock-drift regulacija te ponovi soak.
-M3 implementacija dodaje overflow/underflow, ring fill/high-water i
-trim/duplicate telemetriju te jednoframe korekciju izvan 3/8–5/8 dead-banda;
-hardverski M3 soak tek treba potvrditi rezultat.
+traka do dolaska novog ekrana. Početni 189,5-sekundni USB2/USB3/audio/Wi-Fi soak
+s priključenim FLX4 prošao je 180 status, 18 library i 12 firmware zahtjeva bez
+HTTP greške, controller disconnecta, prekida playbacka, codec greške, output
+deadline missova ili PCM underruna tijekom samog prozora. Međutim, stari UAC
+brojač prijavio je 339 nepotpunih write blokova. M3 je zato dodao stvarne
+overflow/underflow, ring fill/high-water i trim/duplicate brojače te jednoframe
+clock korekciju izvan 3/8–5/8 dead-banda.
+
+Prvi 180-sekundni M3 A/B run pokazao je da korekcija frekvencijskog drifta sama
+nije dovoljna: 60 blokova / 6.757 frameova overflowa nastalo je dok je FLX4 USB
+event task na prioritetu 5 čekao ispod audio producenta na prioritetu 6. Nakon
+podizanja USB taska na prioritet 7, ponovljeni `M3-1-g243e996` run trajao je
+183,724 s: oba decka napredovala su po 183.757 ms, 179/180 status, 18/18 library
+i 12/12 firmware zahtjeva završili su uz jedan izolirani HTTP timeout, a FLX4 je
+ostao spojen. UAC rezultat bio je 0 dropped blokova, 0 overflowa i 0 aktivnih
+underflowa, uz high-water 1.640/2.048 frameova, 295 clock trimova i 43
+duplikacije. Nije bilo output-latea ni PCM underruna tijekom reprodukcije ni
+nakon zaustavljanja oba decka. Time je paralelni audio gate zatvoren za ovaj
+profil; duži soak, fizički multi-client i USB reconnect/medij stress ostaju u
+sljedećim fazama.
+
+FLX4 reconnect gate zatvoren je na `M3-2-g4613c4a`. Početni test na prethodnoj
+slici otkrio je da se interfacei pokušavaju otpustiti izravno u `DEV_GONE`
+callbacku dok su otkazani MIDI/UAC URB-ovi još bili aktivni, pa se uređaj nije
+mogao ponovno otvoriti bez P4 reseta. Cleanup je premješten u USB client task,
+nakon obrade completion callbackova. U ponovljenom fizičkom testu Deck 2 nastavio
+je playback kroz unplug/replug, a FLX4 se za približno 6,1 s vratio s MIDI In/Out
+i UAC-om. Operator je potvrdio obnovljen PLAY LED. Sljedećih 30 s prošlo je bez
+UAC dropa, overflowa, novog aktivnog underflowa ili PCM underruna; library je
+ostao na 191 tracku i API nije imao prekid. Sam prijelaz povećao je output-late
+brojač za dva, bez daljnjeg rasta nakon reconnecta, pa deadline ponašanje ostaje
+dio dužeg stress gatea.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni
