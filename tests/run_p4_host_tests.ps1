@@ -2368,10 +2368,30 @@ foreach ($required in @("s_cleanup_dev_handle = s_dev_handle", "s_disconnect_cle
         throw ("FLX4 DEV_GONE callback does not schedule deferred cleanup through {0}" -f $required)
     }
 }
+if (-not $flx4GoneMatch.Value.Contains("vTaskPrioritySet(NULL, FLX4_USB_TRANSITION_TASK_PRIO)")) {
+    throw "FLX4 DEV_GONE callback does not lower transition work below audio output"
+}
 Assert-FilePatternsOrdered `
     -Name "FLX4 USB client task retires callbacks before deferred cleanup" `
     -Path $flx4HostPath `
     -LiteralPatterns @("usb_host_client_handle_events", "try_cleanup_disconnected_device", "try_submit_next_out")
+
+$flx4ConnectMatch = [regex]::Match(
+    $flx4HostSource,
+    '(?s)if \(event_msg->event == USB_HOST_CLIENT_EVENT_NEW_DEV\).*?else if \(event_msg->event == USB_HOST_CLIENT_EVENT_DEV_GONE\)')
+Write-Host "==> static FLX4 USB priority is high only for active UAC streaming"
+if (-not $flx4ConnectMatch.Success -or
+    -not $flx4ConnectMatch.Value.Contains("vTaskPrioritySet(NULL, FLX4_USB_ACTIVE_TASK_PRIO)")) {
+    throw "FLX4 connect path does not raise the USB task for active UAC streaming"
+}
+Assert-FileContains `
+    -Name "FLX4 USB client starts at transition priority below audio output" `
+    -Path $flx4HostPath `
+    -LiteralPatterns @(
+        "#define FLX4_USB_ACTIVE_TASK_PRIO      7",
+        "#define FLX4_USB_TRANSITION_TASK_PRIO  5",
+        "NULL, FLX4_USB_TRANSITION_TASK_PRIO,"
+    )
 
 # Behaviour for this is covered by tests/library_anlz/test_library_anlz.c
 # (nonzero duration survives enrichment; zero duration falls back to the last

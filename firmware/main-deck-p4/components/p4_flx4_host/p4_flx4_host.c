@@ -18,8 +18,12 @@ static const char *TAG = "p4_flx4";
 #define FLX4_USB_TASK_STACK  4096
 /* USB client callbacks refill the UAC isochronous queue. Keep them above the
  * audio producer (priority 6) so a producer burst cannot starve the consumer
- * long enough to fill the headphone ring. */
-#define FLX4_USB_TASK_PRIO   7
+ * long enough to fill the headphone ring. Enumeration and disconnect cleanup
+ * do not have that deadline and run below audio output instead: descriptor
+ * parsing and host teardown can otherwise deschedule ae_output for hundreds of
+ * milliseconds during a hot-plug transition. */
+#define FLX4_USB_ACTIVE_TASK_PRIO      7
+#define FLX4_USB_TRANSITION_TASK_PRIO  5
 
 static usb_host_client_handle_t s_client_handle = NULL;
 static usb_device_handle_t      s_dev_handle    = NULL;
@@ -591,6 +595,10 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                     if (s_conn_cb) {
                         s_conn_cb(true, s_conn_cb_ctx);
                     }
+                    /* Descriptor parsing and setup ran at transition priority.
+                     * Once connected, USB event callbacks must outrank the
+                     * audio producer so the UAC ring cannot overflow. */
+                    vTaskPrioritySet(NULL, FLX4_USB_ACTIVE_TASK_PRIO);
                     return;
                 }
             }
@@ -608,6 +616,11 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
             s_connected = false;
             s_audio_claimed = false;
             portEXIT_CRITICAL(&s_flx4_mux);
+
+            /* No isochronous deadline remains after DEV_GONE. Drop below
+             * ae_output before queue reset, callback publication and deferred
+             * host cleanup so a hot-plug transition cannot starve PCM output. */
+            vTaskPrioritySet(NULL, FLX4_USB_TRANSITION_TASK_PRIO);
 
             s_out_inflight = false;
             s_cleanup_dev_handle = s_dev_handle;
@@ -673,7 +686,8 @@ esp_err_t p4_flx4_host_init(void)
     }
 
     if (xTaskCreatePinnedToCore(flx4_midi_task, "flx4_usb", FLX4_USB_TASK_STACK,
-                                NULL, FLX4_USB_TASK_PRIO, &s_midi_task, 0) != pdPASS) {
+                                NULL, FLX4_USB_TRANSITION_TASK_PRIO,
+                                &s_midi_task, 0) != pdPASS) {
         ESP_LOGE(TAG, "failed to create flx4_usb task");
         return ESP_ERR_NO_MEM;
     }
