@@ -51,6 +51,18 @@ static void test_release_comparison_is_newer_only_and_monotonic(void)
     assert(p4_ota_pull_release_compare("RC1-7-gabcdef0",
                                        "RC1-7-g1234567") ==
            P4_OTA_PULL_RELEASE_UNORDERED);
+    assert(p4_ota_pull_release_compare("M3", "RC2-999-gffffffff") ==
+           P4_OTA_PULL_RELEASE_NEWER);
+    assert(p4_ota_pull_release_compare("RC2-999-gffffffff", "M3") ==
+           P4_OTA_PULL_RELEASE_OLDER);
+    assert(p4_ota_pull_release_compare("M3-1-gabcdef0", "M3") ==
+           P4_OTA_PULL_RELEASE_NEWER);
+    assert(p4_ota_pull_release_compare("M2-99-gabcdef0", "M3") ==
+           P4_OTA_PULL_RELEASE_OLDER);
+    assert(p4_ota_pull_release_compare("M3-1-gabcdef0", "M3-1-g1234567") ==
+           P4_OTA_PULL_RELEASE_UNORDERED);
+    assert(p4_ota_pull_release_compare("M", "RC2") ==
+           P4_OTA_PULL_RELEASE_UNORDERED);
     assert(p4_ota_pull_release_compare("custom", "RC1") ==
            P4_OTA_PULL_RELEASE_UNORDERED);
     assert(p4_ota_pull_release_compare(NULL, "RC1") ==
@@ -88,6 +100,12 @@ static void test_signed_bundle_release_is_bound_to_offer_and_newer_only(void)
            P4_OTA_PULL_BUNDLE_RELEASE_NOT_NEWER);
     assert(p4_ota_pull_validate_bundle_release(
                "RC2-10-g7654321", "RC2-10-g7654321", "RC2-11-g1234567") ==
+           P4_OTA_PULL_BUNDLE_RELEASE_NOT_NEWER);
+    assert(p4_ota_pull_validate_bundle_release(
+               "M3", "M3", "RC2-999-gffffffff") ==
+           P4_OTA_PULL_BUNDLE_RELEASE_OK);
+    assert(p4_ota_pull_validate_bundle_release(
+               "RC2-999-gffffffff", "RC2-999-gffffffff", "M3") ==
            P4_OTA_PULL_BUNDLE_RELEASE_NOT_NEWER);
     assert(p4_ota_pull_validate_bundle_release(NULL, "RC2", "RC1") ==
            P4_OTA_PULL_BUNDLE_RELEASE_INVALID_ARG);

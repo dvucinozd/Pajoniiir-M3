@@ -342,12 +342,15 @@ esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples, const int16_t 
             temp[i * 4 + 3] = h_r; // Ch 4: Headphones R (-12dB)
         }
         portENTER_CRITICAL(&s_flx4_mux);
-        uint32_t accepted = p4_flx4_audio_ring_write(&s_audio_ring, temp, (uint32_t)chunk);
+        uint32_t overflow_before = s_audio_ring.overflow_frames;
+        uint32_t accepted = p4_flx4_audio_ring_write_clocked(
+            &s_audio_ring, temp, (uint32_t)chunk);
+        bool overflowed = s_audio_ring.overflow_frames != overflow_before;
+        portEXIT_CRITICAL(&s_flx4_mux);
         atomic_fetch_add_explicit(&s_audio_submitted_frames, accepted, memory_order_relaxed);
-        if (accepted < chunk) {
+        if (overflowed) {
             atomic_fetch_add_explicit(&s_audio_dropped_blocks, 1u, memory_order_relaxed);
         }
-        portEXIT_CRITICAL(&s_flx4_mux);
 
         s_audio_total_frames += (uint32_t)chunk;
         if (master_samples) master_samples += chunk * 2;
@@ -372,6 +375,15 @@ void p4_flx4_host_get_audio_stats(p4_flx4_audio_stats_t *out_stats)
         &s_audio_dropped_blocks, memory_order_relaxed);
     out_stats->submitted_frames = (uint32_t)atomic_load_explicit(
         &s_audio_submitted_frames, memory_order_relaxed);
+    portENTER_CRITICAL(&s_flx4_mux);
+    out_stats->ring_queued_frames = s_audio_ring.queued_frames;
+    out_stats->ring_capacity_frames = s_audio_ring.frame_capacity;
+    out_stats->ring_high_water_frames = s_audio_ring.high_water_frames;
+    out_stats->overflow_frames = s_audio_ring.overflow_frames;
+    out_stats->underflow_frames = s_audio_ring.underflow_frames;
+    out_stats->clock_trimmed_frames = s_audio_ring.clock_trimmed_frames;
+    out_stats->clock_duplicated_frames = s_audio_ring.clock_duplicated_frames;
+    portEXIT_CRITICAL(&s_flx4_mux);
 }
 
 static uint8_t                  s_claimed_ifaces[8];
@@ -478,7 +490,14 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                     portENTER_CRITICAL(&s_flx4_mux);
                     s_connected = true;
                     flx4_map_init(&s_map_state);
+                    p4_flx4_uac_packetizer_init(&s_packetizer, FLX4_UAC_SAMPLE_RATE,
+                                                FLX4_UAC_CHANNELS,
+                                                FLX4_UAC_BYTES_PER_SAMPLE);
                     p4_flx4_audio_ring_reset(&s_audio_ring, FLX4_UAC_SAMPLE_RATE);
+                    atomic_store_explicit(&s_audio_submitted_blocks, 0u, memory_order_relaxed);
+                    atomic_store_explicit(&s_audio_dropped_blocks, 0u, memory_order_relaxed);
+                    atomic_store_explicit(&s_audio_submitted_frames, 0u, memory_order_relaxed);
+                    s_audio_total_frames = 0u;
                     portEXIT_CRITICAL(&s_flx4_mux);
 
                     s_out_inflight = false;

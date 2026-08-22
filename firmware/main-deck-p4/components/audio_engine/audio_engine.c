@@ -5562,6 +5562,13 @@ void audio_engine_get_diagnostics_snapshot(audio_engine_diagnostics_snapshot_t *
     out_snapshot->usb_headphone_submitted_blocks = headphone_stats.submitted_blocks;
     out_snapshot->usb_headphone_dropped_blocks = headphone_stats.dropped_blocks;
     out_snapshot->usb_headphone_submitted_frames = headphone_stats.submitted_frames;
+    out_snapshot->usb_headphone_ring_queued_frames = headphone_stats.ring_queued_frames;
+    out_snapshot->usb_headphone_ring_capacity_frames = headphone_stats.ring_capacity_frames;
+    out_snapshot->usb_headphone_ring_high_water_frames = headphone_stats.ring_high_water_frames;
+    out_snapshot->usb_headphone_overflow_frames = headphone_stats.overflow_frames;
+    out_snapshot->usb_headphone_underflow_frames = headphone_stats.underflow_frames;
+    out_snapshot->usb_headphone_clock_trimmed_frames = headphone_stats.clock_trimmed_frames;
+    out_snapshot->usb_headphone_clock_duplicated_frames = headphone_stats.clock_duplicated_frames;
 #endif
 #if AE_FW
     out_snapshot->output_codec_open = s_output_codec_open;

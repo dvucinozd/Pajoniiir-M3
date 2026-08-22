@@ -14,6 +14,13 @@ typedef struct {
     uint32_t submitted_blocks;
     uint32_t dropped_blocks;
     uint32_t submitted_frames;
+    uint32_t ring_queued_frames;
+    uint32_t ring_capacity_frames;
+    uint32_t ring_high_water_frames;
+    uint32_t overflow_frames;
+    uint32_t underflow_frames;
+    uint32_t clock_trimmed_frames;
+    uint32_t clock_duplicated_frames;
 } p4_flx4_audio_stats_t;
 
 esp_err_t p4_flx4_host_init(void);

@@ -55,6 +55,11 @@ void p4_flx4_audio_ring_reset(p4_flx4_audio_ring_t *ring, uint32_t sample_rate)
     ring->queued_frames = 0u;
     ring->sample_rate = sample_rate;
     ring->generation++;
+    ring->high_water_frames = 0u;
+    ring->overflow_frames = 0u;
+    ring->underflow_frames = 0u;
+    ring->clock_trimmed_frames = 0u;
+    ring->clock_duplicated_frames = 0u;
 }
 
 uint32_t p4_flx4_audio_ring_write(p4_flx4_audio_ring_t *ring,
@@ -72,7 +77,42 @@ uint32_t p4_flx4_audio_ring_write(p4_flx4_audio_ring_t *ring,
     }
     ring->write_frame = (ring->write_frame + accepted) % ring->frame_capacity;
     ring->queued_frames += accepted;
+    if (ring->queued_frames > ring->high_water_frames) {
+        ring->high_water_frames = ring->queued_frames;
+    }
+    ring->overflow_frames += frames - accepted;
     return accepted;
+}
+
+uint32_t p4_flx4_audio_ring_write_clocked(p4_flx4_audio_ring_t *ring,
+                                          const int16_t *interleaved,
+                                          uint32_t frames)
+{
+    if (!ring || !ring->samples || !interleaved || frames == 0u) return 0u;
+
+    /* The PCM5102A/I2S producer and FLX4 USB SOF consumer use independent
+     * clocks. Keep a wide dead band around half-full and slip at most one
+     * frame per producer block outside it. This turns an eventual 128-frame
+     * overflow/underflow into sparse single-frame corrections. */
+    const uint32_t low_water = (ring->frame_capacity * 3u) / 8u;
+    const uint32_t high_water = (ring->frame_capacity * 5u) / 8u;
+    const uint32_t free_frames = p4_flx4_audio_ring_free(ring);
+
+    if (ring->queued_frames >= high_water && frames > 1u) {
+        ring->clock_trimmed_frames++;
+        return p4_flx4_audio_ring_write(ring, interleaved, frames - 1u);
+    }
+
+    const bool duplicate = ring->queued_frames <= low_water && free_frames > frames;
+    uint32_t written = p4_flx4_audio_ring_write(ring, interleaved, frames);
+    if (duplicate && written == frames) {
+        const int16_t *last = &interleaved[(size_t)(frames - 1u) * ring->channels];
+        if (p4_flx4_audio_ring_write(ring, last, 1u) == 1u) {
+            ring->clock_duplicated_frames++;
+            written++;
+        }
+    }
+    return written;
 }
 
 uint32_t p4_flx4_audio_ring_read(p4_flx4_audio_ring_t *ring,
@@ -94,6 +134,7 @@ uint32_t p4_flx4_audio_ring_read(p4_flx4_audio_ring_t *ring,
     }
     ring->read_frame = (ring->read_frame + available) % ring->frame_capacity;
     ring->queued_frames -= available;
+    ring->underflow_frames += frames - available;
     return available;
 }
 

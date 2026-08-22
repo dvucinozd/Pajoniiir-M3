@@ -32,11 +32,17 @@ typedef struct {
     uint32_t write_frame;
     uint32_t queued_frames;
     uint32_t generation;
+    uint32_t high_water_frames;
+    uint32_t overflow_frames;
+    uint32_t underflow_frames;
+    uint32_t clock_trimmed_frames;
+    uint32_t clock_duplicated_frames;
 } p4_flx4_audio_ring_t;
 
 bool     p4_flx4_audio_ring_init(p4_flx4_audio_ring_t *ring, int16_t *storage, uint32_t frame_capacity, uint8_t channels, uint32_t sample_rate);
 void     p4_flx4_audio_ring_reset(p4_flx4_audio_ring_t *ring, uint32_t sample_rate);
 uint32_t p4_flx4_audio_ring_write(p4_flx4_audio_ring_t *ring, const int16_t *interleaved, uint32_t frames);
+uint32_t p4_flx4_audio_ring_write_clocked(p4_flx4_audio_ring_t *ring, const int16_t *interleaved, uint32_t frames);
 uint32_t p4_flx4_audio_ring_read(p4_flx4_audio_ring_t *ring, int16_t *interleaved, uint32_t frames, bool zero_fill);
 uint32_t p4_flx4_audio_ring_queued(const p4_flx4_audio_ring_t *ring);
 uint32_t p4_flx4_audio_ring_free(const p4_flx4_audio_ring_t *ring);

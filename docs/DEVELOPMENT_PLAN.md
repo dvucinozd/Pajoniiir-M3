@@ -20,6 +20,12 @@ Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
 dodirom je naručen i čeka se njegov dolazak. U dokumentaciji je to ciljana
 konfiguracija; hardverski bring-up još nije potvrđen.
 
+Prvi korisni firmware nakon `RC2` uvodi release identitet `M3`. Verzija se
+dobiva iz `git describe`, pa je implementacijski commit namijenjen anotiranom
+`M3` tagu. `p4_ota_pull` parser sada prihvaća `RC<number>` i `M<number>`, tretira
+M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
+`RC2` → `M3`. Clean build na tagu mora prijaviti točno `M3`.
+
 ## Sljedeće faze
 
 ### 1. Učvrstiti izravni FLX4 host
@@ -56,6 +62,25 @@ Hardverski smoke 2026-08-22 potvrdio je SDIO/C6 bring-up, novi SoftAP
 `Pajoniiir-M3`, DHCP i HTTP 200 za `/api/status` i `/api/firmware`. U istom je
 testu ispravljeno zadržavanje AP-a preko P4-only reseta: GPIO54 sada drži C6
 isključenim pri bootu i nakon teardowna dok je spremljena postavka OFF.
+Nastavak s umetnutom microSD karticom prošao je tri AP reconnect ciklusa,
+četiri paralelna status zahtjeva te kratki 100× status / 10× library soak bez
+HTTP greške, service-log dropa ili vidljivog heap curenja. Puni AP→STA→AP
+ostaje otvoren jer servisna STA mreža još nije konfigurirana. Stvarni Chromium
+tok dodatno je potvrdio prikaz 191 tracka, pretragu i HTTP 200 D1 LOAD za
+`Darude - Sandstorm.mp3`; Deck 1 ostao je `READY` i nakon reloadanja stranice,
+bez JavaScript pogrešaka. Wi-Fi je zatim trajno ostavljen uključen uz očuvane
+postojeće NVS postavke i hot cueove, kako bi web controller služio za učitavanje
+traka do dolaska novog ekrana. Kombinirani 189,5-sekundni USB2/USB3/audio/Wi-Fi
+soak s priključenim FLX4 prošao je 180 status, 18 library i 12 firmware zahtjeva
+bez HTTP greške, controller disconnecta, prekida playbacka, codec greške,
+output deadline missova ili PCM underruna tijekom samog prozora. Međutim,
+FLX4 UAC ring prijavio je 339 nepotpunih write blokova; naknadni prozori dali su
+0/30 s uz gotovo bez mrežnog prometa, 5/135 zahtjeva pod burst prometom i 7/45 s
+uz normalni status polling. Zato paralelni audio gate ostaje otvoren dok se ne
+dodaju dropped-frame/ring-fill brojači i clock-drift regulacija te ponovi soak.
+M3 implementacija dodaje overflow/underflow, ring fill/high-water i
+trim/duplicate telemetriju te jednoframe korekciju izvan 3/8–5/8 dead-banda;
+hardverski M3 soak tek treba potvrditi rezultat.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni

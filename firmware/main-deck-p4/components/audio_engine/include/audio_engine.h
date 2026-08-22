@@ -217,6 +217,13 @@ typedef struct {
     uint32_t usb_headphone_submitted_blocks;
     uint32_t usb_headphone_dropped_blocks;
     uint32_t usb_headphone_submitted_frames;
+    uint32_t usb_headphone_ring_queued_frames;
+    uint32_t usb_headphone_ring_capacity_frames;
+    uint32_t usb_headphone_ring_high_water_frames;
+    uint32_t usb_headphone_overflow_frames;
+    uint32_t usb_headphone_underflow_frames;
+    uint32_t usb_headphone_clock_trimmed_frames;
+    uint32_t usb_headphone_clock_duplicated_frames;
     uint32_t heap_free;
     uint32_t internal_free;
     uint32_t psram_free;

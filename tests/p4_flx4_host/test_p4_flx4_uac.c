@@ -72,12 +72,15 @@ static void test_audio_ring_fifo_wrap_and_overflow(void)
     CHECK_EQ(p4_flx4_audio_ring_free(&ring), 4u);
     CHECK_EQ(p4_flx4_audio_ring_write(&ring, first, 3u), 3u);
     CHECK_EQ(p4_flx4_audio_ring_queued(&ring), 3u);
+    CHECK_EQ(ring.high_water_frames, 3u);
     CHECK_EQ(p4_flx4_audio_ring_read(&ring, output, 2u, false), 2u);
     expect_frame(output, 0u, 1, 2, 3, 4);
     expect_frame(output, 1u, 5, 6, 7, 8);
     CHECK_EQ(p4_flx4_audio_ring_write(&ring, second, 3u), 3u);
     CHECK_EQ(p4_flx4_audio_ring_free(&ring), 0u);
     CHECK_EQ(p4_flx4_audio_ring_write(&ring, second, 1u), 0u);
+    CHECK_EQ(ring.high_water_frames, 4u);
+    CHECK_EQ(ring.overflow_frames, 1u);
 
     memset(output, 0x55, sizeof(output));
     CHECK_EQ(p4_flx4_audio_ring_read(&ring, output, 5u, true), 4u);
@@ -88,6 +91,7 @@ static void test_audio_ring_fifo_wrap_and_overflow(void)
     expect_frame(output, 4u, 0, 0, 0, 0);
     CHECK_EQ(p4_flx4_audio_ring_queued(&ring), 0u);
     CHECK_EQ(p4_flx4_audio_ring_free(&ring), 4u);
+    CHECK_EQ(ring.underflow_frames, 1u);
 
     CHECK_EQ(p4_flx4_audio_ring_write(&ring, first, 2u), 2u);
     p4_flx4_audio_ring_reset(&ring, 48000u);
@@ -96,6 +100,43 @@ static void test_audio_ring_fifo_wrap_and_overflow(void)
     CHECK_EQ(p4_flx4_audio_ring_queued(&ring), 0u);
     CHECK_EQ(ring.read_frame, 0u);
     CHECK_EQ(ring.write_frame, 0u);
+    CHECK_EQ(ring.high_water_frames, 0u);
+    CHECK_EQ(ring.overflow_frames, 0u);
+    CHECK_EQ(ring.underflow_frames, 0u);
+    CHECK_EQ(ring.clock_trimmed_frames, 0u);
+    CHECK_EQ(ring.clock_duplicated_frames, 0u);
+}
+
+static void test_audio_ring_clock_drift_correction(void)
+{
+    p4_flx4_audio_ring_t ring;
+    int16_t storage[16u * 4u] = { 0 };
+    const int16_t input[4u * 4u] = {
+        1, 2, 3, 4,
+        5, 6, 7, 8,
+        9, 10, 11, 12,
+        13, 14, 15, 16,
+    };
+
+    CHECK(p4_flx4_audio_ring_init(&ring, storage, 16u, 4u, 44100u));
+    CHECK_EQ(p4_flx4_audio_ring_write_clocked(&ring, input, 4u), 5u);
+    CHECK_EQ(p4_flx4_audio_ring_queued(&ring), 5u);
+    CHECK_EQ(ring.clock_duplicated_frames, 1u);
+    CHECK_EQ(ring.clock_trimmed_frames, 0u);
+
+    CHECK_EQ(p4_flx4_audio_ring_write_clocked(&ring, input, 4u), 5u);
+    CHECK_EQ(p4_flx4_audio_ring_queued(&ring), 10u);
+    CHECK_EQ(ring.clock_duplicated_frames, 2u);
+
+    CHECK_EQ(p4_flx4_audio_ring_write_clocked(&ring, input, 4u), 3u);
+    CHECK_EQ(p4_flx4_audio_ring_queued(&ring), 13u);
+    CHECK_EQ(ring.clock_trimmed_frames, 1u);
+    CHECK_EQ(ring.overflow_frames, 0u);
+    CHECK_EQ(ring.high_water_frames, 13u);
+
+    CHECK_EQ(p4_flx4_audio_ring_write_clocked(NULL, input, 4u), 0u);
+    CHECK_EQ(p4_flx4_audio_ring_write_clocked(&ring, NULL, 4u), 0u);
+    CHECK_EQ(p4_flx4_audio_ring_write_clocked(&ring, input, 0u), 0u);
 }
 
 static void test_audio_ring_invalid_operations(void)
@@ -114,6 +155,7 @@ int main(void)
 {
     test_packetizer();
     test_audio_ring_fifo_wrap_and_overflow();
+    test_audio_ring_clock_drift_correction();
     test_audio_ring_invalid_operations();
     test_report("p4_flx4_uac");
     return 0;
