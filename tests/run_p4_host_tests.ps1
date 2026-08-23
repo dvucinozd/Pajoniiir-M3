@@ -939,15 +939,20 @@ Assert-FileContains `
     -LiteralPatterns @("wifi_link_restore_ap", "STA_BIT_GOT_IP", "xEventGroupWaitBits")
 
 Assert-FileContains `
-    -Name "p4 AP restore resets the remote data path and verifies DHCP readiness" `
+    -Name "p4 AP restore preserves shared SDMMC and verifies DHCP readiness" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
     -LiteralPatterns @(
         "AP_BIT_STARTED",
-        "stop_wifi_stack();",
-        "stop_hosted_transport();",
         "esp_netif_dhcps_get_status",
-        "dhcp != ESP_NETIF_DHCP_STARTED"
+        "esp_netif_dhcps_start(s_ap_netif)",
+        "dhcp != ESP_NETIF_DHCP_STARTED",
+        "Keep ESP-Hosted alive"
     )
+
+Assert-FileDoesNotContain `
+    -Name "p4 AP restore does not tear down the SDMMC-shared Hosted transport" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
+    -RegexPattern 'wifi_link_restore_ap[\s\S]*?stop_hosted_transport\(\)[\s\S]*?^\}'
 
 Assert-FileDoesNotContain `
     -Name "p4 STA switch does not tear down ESP-Hosted" `

@@ -284,12 +284,27 @@ static esp_err_t start_web_ap(void)
         return ESP_ERR_TIMEOUT;
     }
 
+    /* Our AP_START callback is registered before the default esp-netif AP
+     * callback, so the event bit may wake this task while DHCPS is legitimately
+     * still INIT. Yield to the event loop and then verify/re-arm it. A bounded
+     * poll also covers the physical failure seen after AP->STA->AP, where the
+     * beacon returned but Windows received no lease. */
     esp_netif_dhcp_status_t dhcp = ESP_NETIF_DHCP_INIT;
-    ESP_RETURN_ON_ERROR(esp_netif_dhcps_get_status(s_ap_netif, &dhcp),
-                        TAG, "read AP DHCP state");
+    for (unsigned attempt = 0; attempt < 100u; ++attempt) {
+        ESP_RETURN_ON_ERROR(esp_netif_dhcps_get_status(s_ap_netif, &dhcp),
+                            TAG, "read AP DHCP state");
+        if (dhcp == ESP_NETIF_DHCP_STARTED) break;
+
+        rc = esp_netif_dhcps_start(s_ap_netif);
+        if (rc != ESP_OK && rc != ESP_ERR_ESP_NETIF_DHCP_ALREADY_STARTED &&
+            rc != ESP_ERR_ESP_NETIF_IF_NOT_READY) {
+            ESP_RETURN_ON_ERROR(rc, TAG, "restart AP DHCP server");
+        }
+        vTaskDelay(pdMS_TO_TICKS(10u));
+    }
     if (dhcp != ESP_NETIF_DHCP_STARTED) {
-        ESP_LOGE(TAG, "AP event arrived without DHCP server (state=%d)", (int)dhcp);
-        return ESP_ERR_INVALID_STATE;
+        ESP_LOGE(TAG, "AP DHCP server did not become ready (state=%d)", (int)dhcp);
+        return ESP_ERR_TIMEOUT;
     }
     ESP_LOGI(TAG, "web AP started: ssid=%s", WIFI_LINK_SOFTAP_SSID);
     return ESP_OK;
@@ -474,16 +489,11 @@ esp_err_t wifi_link_restore_ap(void)
     }
     stop_sta_netif();
 
-    /* A warm AP->STA->AP mode flip on the M3's remote C6 can bring the beacon
-     * back while leaving the SDIO data path unable to carry DHCP/HTTP frames.
-     * Recreate the remote Wi-Fi stack and reset the C6 before announcing the
-     * AP. esp-hosted 2.12.12 safely preserves the other SDMMC slot during this
-     * deinit/init cycle. */
-    stop_wifi_stack();
-    stop_hosted_transport();
-
-    esp_err_t rc = ensure_wifi_stack();
-    if (rc == ESP_OK) rc = start_web_ap();
+    /* Keep ESP-Hosted alive: the C6 and the mounted microSD use two slots of
+     * the same SDMMC controller, so tearing down the Hosted transport here
+     * would invalidate a controller which the card still owns. start_web_ap()
+     * performs the bounded AP-event/DHCP readiness gate instead. */
+    esp_err_t rc = start_web_ap();
     if (rc == ESP_OK) rc = web_server_start();
     if (rc == ESP_OK) rc = dns_server_start();
 
