@@ -939,14 +939,13 @@ Assert-FileContains `
     -LiteralPatterns @("wifi_link_restore_ap", "STA_BIT_GOT_IP", "xEventGroupWaitBits")
 
 Assert-FileContains `
-    -Name "p4 AP restore preserves shared SDMMC and verifies DHCP readiness" `
+    -Name "p4 AP startup verifies DHCP readiness" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
     -LiteralPatterns @(
         "AP_BIT_STARTED",
         "esp_netif_dhcps_get_status",
         "esp_netif_dhcps_start(s_ap_netif)",
-        "dhcp != ESP_NETIF_DHCP_STARTED",
-        "Keep ESP-Hosted alive"
+        "dhcp != ESP_NETIF_DHCP_STARTED"
     )
 
 Assert-FileDoesNotContain `
@@ -958,6 +957,20 @@ Assert-FileDoesNotContain `
     -Name "p4 STA switch does not tear down ESP-Hosted" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
     -RegexPattern 'wifi_link_switch_to_sta[\s\S]*?stop_hosted_transport\(\)[\s\S]*?^\}'
+
+Assert-FileContains `
+    -Name "p4 service-network visit uses APSTA without dropping local services" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
+    -LiteralPatterns @(
+        "esp_wifi_set_mode(WIFI_MODE_APSTA)",
+        "esp_wifi_set_mode(WIFI_MODE_AP)",
+        "The AP services were never stopped"
+    )
+
+Assert-FileDoesNotContain `
+    -Name "p4 APSTA visit does not stop the AP data path" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
+    -RegexPattern 'wifi_link_switch_to_sta[\s\S]*?(stop_ap_services|stop_ap_netif|esp_wifi_stop)\(\)[\s\S]*?^\}'
 
 # Pull OTA must gain no authority from having arrived over TLS: the same signed
 # manifest, verified by the same code, before anything reaches flash.

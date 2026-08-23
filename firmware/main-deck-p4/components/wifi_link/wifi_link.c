@@ -425,12 +425,13 @@ esp_err_t wifi_link_switch_to_sta(const char *ssid, const char *password,
     if (!s_wifi_ready || !s_hosted_ready) return ESP_ERR_INVALID_STATE;
     if (!s_sta_events) return ESP_ERR_INVALID_STATE;
 
-    /* Drop the AP's services and interface but keep esp_wifi and the C6 link
-     * up — that separation is the whole reason the teardown was split. */
-    stop_ap_services();
-    ESP_RETURN_ON_ERROR(esp_wifi_stop(), TAG, "stop before STA");
-    stop_ap_netif();
-    status_reset_clients();
+    /* Keep the AP netif, DHCP, HTTP/DNS and Hosted transport alive. A warm
+     * AP->STA->AP stop/start on the remote C6 can restore its beacon while the
+     * SDIO data path no longer carries client frames; fully deinitialising
+     * Hosted is also forbidden while microSD owns the controller's other slot.
+     * APSTA adds the service uplink without tearing either path down. The C6
+     * may move the AP to the STA channel, so clients can briefly reconnect,
+     * but their netif and lease remain valid. */
     status_publish(WIFI_LINK_MODE_STA, ESP_OK, false);
 
     s_sta_netif = esp_netif_create_default_wifi_sta();
@@ -446,10 +447,9 @@ esp_err_t wifi_link_switch_to_sta(const char *ssid, const char *password,
 
     xEventGroupClearBits(s_sta_events, STA_BIT_GOT_IP | STA_BIT_DISCONNECTED);
 
-    ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "set STA mode");
-    ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_STA, &cfg), TAG, "set STA config");
-    ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "start STA");
+    ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_APSTA), TAG, "set APSTA mode");
     s_sta_mode = true;
+    ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_STA, &cfg), TAG, "set STA config");
     ESP_LOGI(TAG, "joining service network \"%s\"", ssid);
     ESP_RETURN_ON_ERROR(esp_wifi_connect(), TAG, "connect");
 
@@ -482,20 +482,24 @@ esp_err_t wifi_link_restore_ap(void)
      * runs the same way whether the visit succeeded, failed or never got
      * started. */
     status_publish(WIFI_LINK_MODE_RESTORING_AP, ESP_OK, false);
+    esp_err_t rc = ESP_OK;
     if (s_sta_mode) {
-        esp_wifi_disconnect();
-        esp_wifi_stop();
+        (void)esp_wifi_disconnect();
+        rc = esp_wifi_set_mode(WIFI_MODE_AP);
         s_sta_mode = false;
     }
     stop_sta_netif();
 
-    /* Keep ESP-Hosted alive: the C6 and the mounted microSD use two slots of
-     * the same SDMMC controller, so tearing down the Hosted transport here
-     * would invalidate a controller which the card still owns. start_web_ap()
-     * performs the bounded AP-event/DHCP readiness gate instead. */
-    esp_err_t rc = start_web_ap();
-    if (rc == ESP_OK) rc = web_server_start();
-    if (rc == ESP_OK) rc = dns_server_start();
+    /* The AP services were never stopped. Confirm that its DHCP server stayed
+     * live across the APSTA visit before advertising RESTORED to the caller. */
+    if (rc == ESP_OK) {
+        esp_netif_dhcp_status_t dhcp = ESP_NETIF_DHCP_INIT;
+        rc = esp_netif_dhcps_get_status(s_ap_netif, &dhcp);
+        if (rc == ESP_OK && dhcp != ESP_NETIF_DHCP_STARTED) {
+            ESP_LOGE(TAG, "AP DHCP lost during APSTA visit (state=%d)", (int)dhcp);
+            rc = ESP_ERR_INVALID_STATE;
+        }
+    }
 
     if (rc == ESP_OK) {
         s_active = true;
