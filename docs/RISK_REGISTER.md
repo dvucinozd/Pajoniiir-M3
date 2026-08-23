@@ -18,7 +18,7 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-23.
 | R12 | PCM5102A output radi na 48 kHz dok je FLX4 UAC fiksiran na 44,1 kHz | kriva brzina/visina tona ili headphone ring overflow na 48-kHz trakama | implementiran stateful 48→44,1-kHz resampler; host omjer/kontinuitet, 60-s 48-kHz gate, 6-min mixed-rate soak i FLX4 slušni acceptance prošli |
 
 Najveći otvoreni acceptance rizici su puni noviji signed-bundle OTA install,
-download fault i rollback pod audio opterećenjem, duži dual-USB stress s
+download fault i rollback sa zaustavljenim deckovima, duži dual-USB stress s
 aktivnim UI-jem te bring-up još nedostupnog
 800×480 DSI/FT5426 sklopa. Jednokratni simultani start/seek PCM D1=202 događaj
 nije se ponovio u 12 kontroliranih ciklusa i ostaje telemetrijska soak stavka,

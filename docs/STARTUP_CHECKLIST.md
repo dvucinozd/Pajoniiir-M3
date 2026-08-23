@@ -65,6 +65,8 @@ idf.py -p COM17 flash monitor
   `192.168.4.x` adresu bez link-local fallbacka.
 - [ ] HTTPS update check prihvaća samo usporediv noviji M3 release, a jednaku ili
   stariju objavu završava bez downloada i bez pisanja u flash.
+- [ ] Probe/check/install zahtjev dok ijedan deck svira vraća HTTP 400
+  `a deck is playing`, ne pokreće APSTA i ne prekida playback.
 - [ ] P4 reset sa spremljenim Wi-Fi OFF stanjem ne ostavlja C6 ni SoftAP
   aktivnim.
 - [ ] Zahtjev za gašenje tijekom probea/OTA-a izvrši se tek nakon obnove AP-a;

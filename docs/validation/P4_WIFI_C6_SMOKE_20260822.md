@@ -438,6 +438,11 @@ Hardware rezultat:
 
 Test je namjerno završio bez OTA instalacije jer kanal nije nudio noviju verziju.
 Preostaju objava novijeg potpisanog M3 testnog bundlea, uspješni install/reboot,
-neuspjeli-download i rollback scenariji te ponavljanje APSTA/OTA prijelaza pod
-aktivnim dual-deck audio opterećenjem. Wi-Fi i Windows profil `Pajoniiir-M3`
-ostavljeni su uključeni.
+neuspjeli-download i rollback scenariji sa zaustavljenim deckovima. Aktivni
+dual-deck sigurnosni gate zasebno je prošao: uz potvrđeno utišane izlaze oba su
+decka napredovala približno osam sekundi, a POST probe vraćen je s HTTP 400
+`a deck is playing` bez APSTA prijelaza. Output-late, PCM underrun, UAC
+drop/overflow i service-log dropped ostali su 0, FLX4 MIDI In/Out/UAC ostao je
+spojen, a AP klijent na `192.168.4.2`. Nakon provjere oba decka vraćena su u
+`READY`, crossfader na sredinu i channel faderi na početne vrijednosti. Wi-Fi i
+Windows profil `Pajoniiir-M3` ostavljeni su uključeni.

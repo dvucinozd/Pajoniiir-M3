@@ -235,6 +235,12 @@ AP adresom klijenta `192.168.4.2`. Zasebni HTTPS OTA check pročitao je kanal i
 ispravno odbio stariju objavljenu verziju bez preuzimanja ili flashanja. FLX4
 MIDI In/Out/UAC, 191-track library i service-log dropped=0 ostali su uredni.
 Puni noviji signed-bundle install, download fault i rollback ostaju otvoreni.
+Probe zahtjev tijekom utišanog dual-deck playbacka zasebno je ispravno odbijen
+s HTTP 400 `a deck is playing`: oba decka nastavila su napredovati, AP je ostao
+na `192.168.4.2`, a output-late, PCM underrun, UAC drop/overflow i service-log
+drop brojači ostali su 0. OTA acceptance zato se izvodi samo sa zaustavljenim
+deckovima; aktivni playback acceptance provjerava fail-closed odbijanje bez
+mrežnog prijelaza.
 
 Izolirani predmjerni PCM D1=202 start događaj dodatno je provjeren bez promjene
 firmwarea. Sedam kontroliranih no-seek startova, uključujući tri cold boota i
