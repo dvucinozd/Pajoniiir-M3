@@ -2383,6 +2383,18 @@ Assert-FilePatternsOrdered `
     -Path $flx4HostPath `
     -LiteralPatterns @("usb_host_client_handle_events", "try_cleanup_disconnected_device", "try_submit_next_out")
 
+Assert-FileContains `
+    -Name "FLX4 canceled transfers lower priority before DEV_GONE and never resubmit" `
+    -Path $flx4HostPath `
+    -LiteralPatterns @(
+        "lower_priority_for_disconnected_transfer",
+        "USB_TRANSFER_STATUS_CANCELED",
+        "USB_TRANSFER_STATUS_NO_DEVICE",
+        "if (disconnected) return;",
+        "if (!disconnected) {",
+        "if (!transfer || lower_priority_for_disconnected_transfer(transfer))"
+    )
+
 $flx4CtrlMatch = [regex]::Match(
     $flx4HostSource,
     '(?s)static void ctrl_transfer_cb\(usb_transfer_t \*transfer\).*?\n}\n\n#define FLX4_RESAMPLE_INPUT_FRAMES')

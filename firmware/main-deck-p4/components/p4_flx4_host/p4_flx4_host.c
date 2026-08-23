@@ -25,6 +25,24 @@ static const char *TAG = "p4_flx4";
 #define FLX4_USB_ACTIVE_TASK_PRIO      7
 #define FLX4_USB_TRANSITION_TASK_PRIO  5
 
+static bool transfer_ended_with_disconnect(const usb_transfer_t *transfer)
+{
+    return transfer &&
+           (transfer->status == USB_TRANSFER_STATUS_CANCELED ||
+            transfer->status == USB_TRANSFER_STATUS_NO_DEVICE);
+}
+
+static bool lower_priority_for_disconnected_transfer(const usb_transfer_t *transfer)
+{
+    if (!transfer_ended_with_disconnect(transfer)) return false;
+
+    /* Canceled URB callbacks can be delivered before DEV_GONE. Drop below the
+     * audio producer on that earliest unambiguous signal; otherwise the burst
+     * of retired MIDI/UAC callbacks can deschedule one PCM5102A output block. */
+    vTaskPrioritySet(NULL, FLX4_USB_TRANSITION_TASK_PRIO);
+    return true;
+}
+
 static usb_host_client_handle_t s_client_handle = NULL;
 static usb_device_handle_t      s_dev_handle    = NULL;
 static uint8_t                  s_dev_addr      = 0;
@@ -70,6 +88,8 @@ static void in_transfer_cb(usb_transfer_t *transfer)
 {
     if (!transfer) return;
 
+    bool disconnected = lower_priority_for_disconnected_transfer(transfer);
+
     if (transfer->status == USB_TRANSFER_STATUS_COMPLETED) {
         size_t bytes = transfer->actual_num_bytes;
         uint8_t *data = transfer->data_buffer;
@@ -85,9 +105,11 @@ static void in_transfer_cb(usb_transfer_t *transfer)
                 }
             }
         }
-    } else {
+    } else if (!disconnected) {
         ESP_LOGW(TAG, "FLX4 IN transfer completed with status: %d", transfer->status);
     }
+
+    if (disconnected) return;
 
     // Always resubmit transfer while connected so we continuously listen for controller events!
     if (s_dev_handle && s_connected) {
@@ -149,11 +171,13 @@ static void try_submit_next_out(void)
 
 static void out_transfer_cb(usb_transfer_t *transfer)
 {
-    (void)transfer;
+    bool disconnected = lower_priority_for_disconnected_transfer(transfer);
     portENTER_CRITICAL(&s_flx4_mux);
     s_out_inflight = false;
     portEXIT_CRITICAL(&s_flx4_mux);
-    try_submit_next_out();
+    if (!disconnected) {
+        try_submit_next_out();
+    }
 }
 
 esp_err_t p4_flx4_host_send_packet(const uint8_t packet[4])
@@ -248,6 +272,9 @@ static void prepare_and_submit_isoc_transfer(usb_transfer_t *transfer)
 
 static void isoc_transfer_cb(usb_transfer_t *transfer)
 {
+    if (!transfer || lower_priority_for_disconnected_transfer(transfer)) {
+        return;
+    }
     if (s_connected && s_dev_handle && s_audio_claimed) {
         prepare_and_submit_isoc_transfer(transfer);
     }
@@ -283,6 +310,9 @@ static void start_audio_config_sequence(void)
 
 static void ctrl_transfer_cb(usb_transfer_t *transfer)
 {
+    if (!transfer || lower_priority_for_disconnected_transfer(transfer)) {
+        return;
+    }
     if (transfer->status != USB_TRANSFER_STATUS_COMPLETED) {
         ESP_LOGW(TAG, "Control transfer step %d failed with status %d", s_ctrl_step, transfer->status);
         return;
