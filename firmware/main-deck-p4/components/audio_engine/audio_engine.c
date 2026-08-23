@@ -357,6 +357,7 @@ static uint32_t         s_master_trim_bits = 0x3F800000u; /* float 1.0f */
 static uint16_t         s_master_volume = AUDIO_MIXER_CONTROL_MAX;
 static uint16_t         s_headphone_mix = AUDIO_MIXER_CONTROL_MAX;
 static uint16_t         s_headphone_level = AUDIO_MIXER_CONTROL_MAX;
+static audio_output_gain_ramp_t s_headphone_level_ramp = { .current = 1.0f };
 static bool             s_master_cue_enabled = true;
 static bool             s_pfl_enabled[AUDIO_ENGINE_DECK_COUNT];
 /* Control/UI writers and the audio output reader run on different cores. Keep
@@ -3224,6 +3225,7 @@ static void ae_output_task(void *arg)
                                                  audio_mixer_fader_gain(
                                                      atomic_load_u16(&s_master_volume)),
                                              master_cue_enabled);
+        const float headphone_level_target = mixer_controls.headphone_level_gain;
 
         const uint8_t deck0_index = AE_DECK_0;
         const uint8_t deck1_index = 1u;
@@ -3306,6 +3308,11 @@ static void ae_output_task(void *arg)
         }
 
         if (!deck0.active && !deck1.active) {
+            /* With no rendered signal there is nothing to ramp. Seed the next
+             * active block at the physical knob value so playback never starts
+             * with a stale, potentially louder headphone gain. */
+            audio_output_gain_ramp_reset(&s_headphone_level_ramp,
+                                         headphone_level_target);
             /* No audio block will reach the normal peak-recording path below,
              * but the UI meter still needs zero-input release ticks. */
             decay_idle_deck_ui_peaks();
@@ -3345,6 +3352,11 @@ static void ae_output_task(void *arg)
         for (int i = 0; i < AE_OUT_FRAMES; i++) {
             uint32_t frame_consumed0 = 0;
             uint32_t frame_consumed1 = 0;
+
+            mixer_controls.headphone_level_gain = audio_output_gain_ramp_next(
+                &s_headphone_level_ramp,
+                headphone_level_target,
+                (uint32_t)(AE_OUT_FRAMES - i));
 
             audio_output_mix_result_t mix = audio_output_mixer_next_prepared(
                 &deck0,
@@ -3644,6 +3656,7 @@ esp_err_t audio_engine_init(void)
     atomic_store_u16(&s_master_volume, AUDIO_MIXER_CONTROL_MAX);
     atomic_store_u16(&s_headphone_mix, AUDIO_MIXER_CONTROL_MAX);
     atomic_store_u16(&s_headphone_level, AUDIO_MIXER_CONTROL_MAX);
+    audio_output_gain_ramp_reset(&s_headphone_level_ramp, 1.0f);
     atomic_store_bool(&s_master_cue_enabled, true);
     headphone_route_store(AUDIO_HEADPHONE_MODE_MASTER_MONO, 0u);
     limiter_stats_reset();

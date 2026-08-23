@@ -74,7 +74,6 @@ static void in_transfer_cb(usb_transfer_t *transfer)
         size_t bytes = transfer->actual_num_bytes;
         uint8_t *data = transfer->data_buffer;
         for (size_t i = 0; i + 4 <= bytes; i += 4) {
-            ESP_LOGW(TAG, "FLX4 RAW PKT: %02x %02x %02x %02x", data[i], data[i+1], data[i+2], data[i+3]);
             flx4_midi_message_t msg;
             if (flx4_midi_parse_usb_packet(&data[i], &msg)) {
                 flx4_control_event_t ev;
@@ -82,7 +81,6 @@ static void in_transfer_cb(usb_transfer_t *transfer)
                 bool translated = flx4_map_translate_message(&s_map_state, &msg, &ev);
                 portEXIT_CRITICAL(&s_flx4_mux);
                 if (translated) {
-                    ESP_LOGW(TAG, "FLX4 EVENT RX: type=%d id=%d value=%d", ev.type, ev.id, ev.value);
                     (void)control_link_inject_semantic(ev.type, ev.id, ev.value);
                 }
             }

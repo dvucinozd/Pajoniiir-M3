@@ -2405,6 +2405,10 @@ Assert-FileContains `
         "#define FLX4_USB_TRANSITION_TASK_PRIO  5",
         "NULL, FLX4_USB_TRANSITION_TASK_PRIO,"
     )
+Assert-FileDoesNotContain `
+    -Name "FLX4 real-time MIDI callback contains no per-packet serial logging" `
+    -Path $flx4HostPath `
+    -LiteralPatterns @("FLX4 RAW PKT", "FLX4 EVENT RX")
 
 Assert-FileContains `
     -Name "p4 audio output passes its real clock to the FLX4 converter" `
