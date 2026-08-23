@@ -1,6 +1,7 @@
 # Development Plan
 
-Status: plan nakon mixed-rate i FLX4 headphone acceptancea, 2026-08-23.
+Status: plan nakon mixed-rate, FLX4 headphone i disconnect/EOF acceptancea,
+2026-08-23.
 
 ## Trenutna baza
 
@@ -28,9 +29,9 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-23 je `M3-10-g638f542` na P4 ploči. FLX4 je
-spojen s MIDI In/Out i UAC-om, Deck 1 je `IDLE`, Deck 2 zaustavljen u `READY`,
-oba channel fadera su na nuli, USB3 library sadrži 191 track, service log nema
+Završni hardverski baseline 2026-08-23 je `M3-13-gc95bd4b` na P4 ploči. FLX4
+je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `READY`, oba
+channel fadera su na nuli, USB3 library sadrži 191 track, service log nema
 dropova, a SoftAP i Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
 Firmware sadrži dvostupanjski prioritet
 FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
@@ -38,17 +39,18 @@ nakon početnog UAC queue priminga. Stateful linearni UAC resampler sada pretvar
 44,1–48-kHz output u FLX4-ov fiksni 44,1-kHz format uz kontinuitet faze između
 output blokova. FLX4 MIDI callback više ne radi packet/event logiranje iz
 real-time puta, a `HEADPHONES LEVEL` gain mijenja se kontinuiranim per-frame
-rampom bez skoka na granici 256-frame output bloka.
+rampom bez skoka na granici 256-frame output bloka. Otkazani USB transferi sada
+spuštaju prioritet već prije `DEV_GONE` događaja i ne predaju novi MIDI/UAC
+transfer. Prirodni decoder EOF više se ne broji kao PCM underrun kada zadnji
+izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. izolirati preostali jedan output-deadline događaj na samom fizičkom USB2
-   disconnectu te zasebno provjeriti PCM brojače na prirodnom EOF-u i STOP-u;
-2. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
+1. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
    audio promet;
-3. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
+2. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
    servisni SSID, zaporka i update URL;
-4. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona.
 
 ## Sljedeće faze
@@ -181,6 +183,23 @@ i 30.230 ms neprekinutog napretka. Operator je potvrdio da više nema pucketanja
 ni prekida. Dodatno je potvrđeno da kanalni PFL ostaje čujan sa spuštenim
 faderom kada je kanalni CUE uključen i `HEADPHONES MIX` okrenut prema CUE.
 Detalji su u `docs/validation/P4_FLX4_HEADPHONE_LEVEL_20260823.md`.
+
+Na mixed-rate 44,1/48-kHz profilu prirodni EOF 44,1-kHz decka prvotno je
+prijavljivao 38 PCM underrun frameova. To nije bio gubitak podataka nego
+očekivani source miss u zadnjem djelomičnom output bloku nakon decoder EOF-a.
+`M3-12-g6535f92` broji source miss samo dok decoder još nije na EOF-u; isti
+fizički test zatim je završio s PCM deltom 0/0. Zasebni STOP/reload rub također
+je ostao na 0/0.
+
+Završni USB2 A/B test prvo je na `M3-12-g6535f92` reproducirao još jedan
+disconnect-only deadline miss od 27.658 µs. Canceled/no-device callbackovi
+stizali su prije `DEV_GONE` događaja dok je USB task još bio na aktivnom
+prioritetu, a callback je mogao pripremiti i ponovno predati transfer.
+`M3-13-gc95bd4b` na prvom takvom terminalnom statusu odmah spušta task na
+transition prioritet i prekida resubmit. Ponovljeni fizički unplug/replug uz
+utišani mixed-rate dual-deck playback vratio je FLX4 MIDI In/Out i UAC, oba
+decka nastavila su playback, a output-late, PCM underrun, UAC dropped/overflow
+i service-log dropped ostali su 0. Time su disconnect i EOF rubovi zatvoreni.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni

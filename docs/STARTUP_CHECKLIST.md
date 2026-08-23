@@ -42,6 +42,10 @@ idf.py -p COM17 flash monitor
 - [ ] Nema kontinuiranih UAC dropova, underruna ili clippinga.
 - [ ] UAC je bez aktivnog dropa/overflowa i s 44,1-kHz i s 48-kHz izvornim
   trakama; promjena source ratea ne mijenja brzinu ni visinu tona.
+- [ ] Prirodni EOF i STOP/reload na mixed-rate deckovima ne povećavaju PCM
+  underrun brojače.
+- [ ] Fizički USB2 unplug/replug tijekom utišanog dual-deck playbacka vraća
+  MIDI In/Out i UAC, playback nastavlja, a output-late i PCM underrun ostaju 0.
 - [ ] Dual-deck playback, pitch/Master Tempo i scratch ostaju stabilni.
 
 ## Mreža i servis

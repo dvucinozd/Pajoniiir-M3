@@ -155,16 +155,53 @@ je zasebno u `P4_FLX4_HEADPHONE_LEVEL_20260823.md`.
 
 - fizički donji položaji channel fadera jednom su očitani kao D1=1.521 i
   D2=17, pa prije konačnog mixer acceptancea treba potvrditi raw min/max i
-  eventualnu per-deck kalibraciju;
-- preostali jedan disconnect-only deadline događaj ne raste nakon reconnecta i
-  nije proizveo PCM underrun, ali ostaje otvoren za izolaciju USB interrupt/
-  I2S pacing puta.
+  eventualnu per-deck kalibraciju.
+
+## EOF/STOP counter izolacija — `M3-12-g6535f92`
+
+Na 48-kHz source/output profilu prirodni EOF nije povećao PCM brojač. Na
+mixed-rate profilu, s Deckom 1 na 44,1 kHz i zajedničkim outputom na 48 kHz,
+isti rub je na prethodnoj slici deterministički prijavio +38 PCM frameova.
+Ponavljanje bez web pollinga dalo je isti rezultat, dok je STOP/reload tijekom
+playbacka ostao na 0/0. Time je isključen web promet i potvrđen EOF-specifičan
+uzrok.
+
+Zadnji resamplirani output blok može legitimno zatražiti još jedan source frame
+nakon što je decoder već dosegnuo EOF. `audio_eof_policy` sada takav očekivani
+miss ne broji kao underrun; stvarni miss prije decoder EOF-a i dalje se broji.
+Ponovljeni fizički mixed-rate EOF na točnom `M3-12` buildu završio je s PCM
+deltom 0/0 i UAC dropped/overflow 0/0. Jedan 10.829-µs deadline događaj nastao
+je približno sekundu prije EOF-a i nije bio uzročno vezan uz završni blok.
+
+## Završni disconnect rub — `M3-13-gc95bd4b`
+
+Kontrolni A/B ciklus na `M3-12-g6535f92` koristio je isti utišani mixed-rate
+dual-deck profil. FLX4 se potpuno vratio za približno 7,075 s, oba decka
+napredovala su po 37.610 ms, PCM underrun ostao je 0/0, ali fizički disconnect
+je dodao jedan output-late od 27.658 µs. Na samom rubu zabilježena su tri UAC
+dropped bloka i 575 overflow frameova; reconnect reset je brojače vratio na
+0/0 i sljedećih 15 s bilo je stabilno. Fazni maksimum `monitor=26.488 µs`, uz
+`main=8.942 µs`, smjestio je zastoj prije PCM5102A writea.
+
+USB host može dostaviti canceled/no-device transfer callback prije
+`DEV_GONE` eventa. Takav callback je zato još radio na aktivnom prioritetu 7 i
+mogao pripremiti ili predati novi MIDI/UAC transfer. `M3-13` na prvom
+terminalnom transfer statusu odmah spušta USB task na transition prioritet 5 i
+iz callbacka izlazi bez resubmita; `DEV_GONE` ostaje autoritativan za state i
+cleanup.
+
+Ponovljeni fizički unplug/replug vratio je FLX4 `present`, MIDI In/Out i UAC bez
+P4 reseta. Oba mixed-rate decka nastavila su playback. Nakon punog reconnecta i
+stabilizacijskog prozora rezultat je bio output-late 0, PCM underrun 0/0, UAC
+dropped/overflow 0/0 i service-log dropped 0. Završni fazni snapshot ostao je
+unutar bloka (`monitor=2.262 µs`, `main=8.750 µs`). Time je zatvoren posljednji
+poznati disconnect-only deadline rub.
 
 ## Software i flash gate
 
 - `tests/run_p4_host_tests.ps1`: PASS;
 - ESP-IDF v6.0.2 `idf.py build`: PASS;
-- aplikacija: `M3-8-gffb9f42`, `0x240730`, 44% slobodno;
+- aplikacija: `M3-13-gc95bd4b`, `0x2407d0`, 44% slobodno;
 - flash na `COM17`: PASS, svi zapisani hashovi verificirani;
-- završno stanje: FLX4 spojen, oba decka `READY`, Wi-Fi uključen, library 191,
-  service-log dropped 0.
+- završno stanje: FLX4 spojen s MIDI In/Out i UAC-om, oba decka `READY` i
+  utišana, Wi-Fi uključen, library 191, service-log dropped 0.
