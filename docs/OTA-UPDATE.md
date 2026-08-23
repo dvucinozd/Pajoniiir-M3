@@ -1,6 +1,6 @@
 # P4 OTA Update
 
-Status: važeći P4-only postupak, hardverski potvrđen 2026-08-23.
+Status: važeći P4-only postupak, hardverski potvrđen 2026-08-24.
 
 Projekt proizvodi samo jedan OTA target: `main-deck-p4` za chip ID `0x0012`.
 Bundle mora biti `.ddjota`, potpisan pouzdanim ECDSA P-256 ključem, s ispravnim
@@ -57,8 +57,9 @@ Kontrolirani check jednake objavljene verzije vratio je
 `already running this build` bez reseta i uz isti boot ID 175. Jedan raniji
 neposredni same-version check nakon lokalnog web-upload OTA boota izazvao je
 izolirani PANIC reset koji se u odgođenim provjerama nije ponovio. Namjerni
-health-failure rollback i reprodukcija tog panica ostaju otvoreni acceptance
-scenariji.
+health-failure rollback sada je potvrđen. Tri dodatna svježa post-OTA ciklusa
+s uključenim flash coredumpom nisu reproducirala PANIC, pa događaj ostaje
+rezidualna monitoring stavka i ne blokira OTA acceptance.
 
 ### Missing-bundle fault, 2026-08-24
 
@@ -73,3 +74,43 @@ firmware `ota_0 / M3-22-gd7466ea`. SoftAP se obnovio, NVS zaporka ostala je
 spremljena, FLX4 MIDI In/Out/UAC i 191-track library ostali su dostupni, a
 output-late, PCM underrun, UAC drop/overflow i service-log dropped ostali su 0.
 Nakon testa produkcijski `/ota/` base URL vraćen je u NVS.
+
+### Firmware-health rollback, 2026-08-24
+
+Test-only overlay `firmware/common/sdkconfig.rollback_test.defaults` izgrađen
+je odvojeno od produkcijskog `sdkconfig.defaults`. Potpisani
+`M3-24-g3b2dc41` image od 2.360.864 B lokalno je učitan iz valjanog
+`ota_0 / M3-22-gd7466ea` u `ota_1`. Novi slot podigao se kao
+`pending_verify`, dovršio startup do health gatea i namjerno se restartao prije
+`esp_ota_mark_app_valid_cancel_rollback()` potvrde.
+
+Bootloader je na sljedećem bootu automatski odbacio nepotvrđeni slot i vratio
+`ota_0 / M3-22-gd7466ea` u stanju `valid`. OTA API ostao je `idle`, SoftAP se
+vratio, produkcijski HTTPS URL i `has_password=true` ostali su u NVS-u,
+191-track library ponovno se učitao, a service-log dropped ostao je 0. FLX4 je
+za završnu provjeru bio namjerno odspojen i njegova odsutnost nije tretirana kao
+rollback regresija.
+
+### Coredump dijagnostika
+
+`firmware/common/sdkconfig.coredump_test.defaults` je test-only overlay koji
+sprema jedan flash coredump u postojeću 64-KiB `coredump` particiju. Snimka je
+ograničena na osam taskova, ne uključuje cijeli DRAM i koristi zaseban 1.792-B
+stack. Produkcijski defaults eksplicitno se provjeravaju host testom i ne
+uključuju ni coredump ni prisilni rollback.
+
+Dijagnostički image izgrađen je s ESP-IDF 6.0.2 i pinanim
+`PROJECT_VER=M3-22-gd7466ea`, tako da je produkcijski same-version kanal mogao
+poslužiti kao equality gate bez promjene servera. Potpisani image tri puta je
+svježe podignut preko `ota_0` i `ota_1`; svaki je boot prošao startup health
+gate, a neposredni check završio je s `already running this build`. Nije bilo
+PANIC-a ni neočekivanog reseta. `esp_coredump info_corefile` zatim je na
+`0xc20000` / `0x10000` pročitao prazno `0xFFFF` zaglavlje, odnosno nijedan dump
+nije nastao.
+
+Ako se povijesni simptom ikada ponovi, dump treba pročitati prije novog testa
+uz ELF točno tog builda. Nakon acceptancea vraćen je poznati potpisani
+produkcijski `M3-22-gd7466ea` u `ota_1`; health gate označio ga je valjanim,
+OTA API je `idle`, produkcijski HTTPS URL i NVS zaporka su očuvani, SoftAP je
+uključen, USB3 library ima 191 track, a service-log, output-late i oba PCM
+underrun brojača ostali su 0. FLX4 je namjerno odspojen.

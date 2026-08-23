@@ -1,6 +1,6 @@
 # Startup Checklist
 
-Status: važeći bench postupak, 2026-08-23.
+Status: važeći bench postupak, 2026-08-24.
 
 ## Priprema
 
@@ -81,6 +81,10 @@ idf.py -p COM17 flash monitor
 - [ ] Nepostojeći ili prekinuti bundle završava jasnom download greškom, ne
   mijenja boot slot i vraća SoftAP bez reboota.
 - [ ] Namjerno neuspjeli startup health gate vraća prethodni valjani slot.
+- [ ] Test-only coredump build koristi zaseban overlay; produkcijski
+  `sdkconfig.defaults` ne uključuje flash coredump ni prisilni rollback.
+- [ ] Ako se PANIC dogodi, dump iz particije `coredump` pročita se uz ELF istog
+  builda prije novog testa ili brisanja particije.
 - [ ] APSTA/OTA posjet ne deinitializira ESP-Hosted dok je microSD montiran na
   drugom slotu zajedničkog SDMMC kontrolera.
 

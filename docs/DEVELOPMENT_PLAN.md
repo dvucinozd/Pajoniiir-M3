@@ -1,7 +1,7 @@
 # Development Plan
 
-Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed pull-OTA
-i download-fault acceptancea, 2026-08-24.
+Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF i dovršenog
+signed P4 OTA acceptance bloka, 2026-08-24.
 
 ## Trenutna baza
 
@@ -14,8 +14,8 @@ i download-fault acceptancea, 2026-08-24.
 
 Wi-Fi programski temelj već postoji: ESP32-C6/ESP-Hosted preko SDIO-a,
 SoftAP `Pajoniiir-M3`, web API, privremeni STA put i potpisani P4 OTA. Prije
-releasea treba dovršiti OTA health-rollback i post-OTA panic dijagnostiku te preostalu
-hardversku/stress validaciju.
+releasea preostaje hardverska/stress validacija; rollback, download fault i
+post-OTA equality dijagnostički acceptance su zatvoreni.
 
 Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
 dodirom je naručen i čeka se njegov dolazak. U dokumentaciji je to ciljana
@@ -29,10 +29,10 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-23 je `M3-22-gd7466ea` u `ota_0` na P4
-ploči. Verzija je instalirana kao potpisani pull OTA s produkcijskog HTTPS
-kanala, startup health gate označio ju je valjanom i nije bilo rollbacka. FLX4
-je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `IDLE`, USB3
+Završni hardverski baseline 2026-08-24 je produkcijski `M3-22-gd7466ea` u
+`ota_1` na P4 ploči. Verzija je vraćena poznatim potpisanim produkcijskim
+bundleom nakon OTA dijagnostike, a startup health gate označio ju je valjanom.
+FLX4 je na zahtjev operatora namjerno odspojen, oba decka su zaustavljena u `IDLE`, USB3
 library sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
 `Pajoniiir-M3` ostavljeni su uključeni. Servisni SSID, zaporka i HTTPS update
 URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
@@ -42,8 +42,11 @@ vratio `round trip complete` i sačuvao SoftAP klijentu valjanu adresu
 preuzet, verificiran i podignut iz `ota_0`. Naknadna provjera jednake verzije
 vratila je `already running this build` bez reseta, uz nepromijenjen boot ID
 175. Jedan raniji, neposredni equality check nakon lokalnog web-upload OTA-a
-uzrokovao je izolirani PANIC reset; kontrolirane provjere nisu ga reproducirale
-i ostaje otvoren dijagnostički rizik. Izolirani testni kanal zatim je ponudio
+uzrokovao je izolirani PANIC reset. Nije se ponovio u tri svježa post-OTA
+equality ciklusa uz test-only flash-coredump build; sva tri checka vratila su
+`already running this build`, bez neočekivanog reseta, a coredump particija
+ostala je prazna. Događaj ostaje rezidualna monitoring stavka, ali više ne
+blokira OTA acceptance. Izolirani testni kanal zatim je ponudio
 `M4`, ali namjerno nije sadržavao bundle. Install je završio s
 `bundle not on the server` na 0% bez reboota ili promjene `ota_0`; produkcijski
 URL vraćen je u NVS, a boot ID ostao je 175.
@@ -60,13 +63,11 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. dovršiti OTA firmware-health rollback acceptance i pokušati reproducirati
-   izolirani post-OTA equality-check PANIC s uključenim coredumpom; signed
-   web-upload, produkcijski HTTPS pull i missing-bundle download fault sada su
-   zatvoreni;
-2. zadržati start/seek PCM brojače u sljedećim dugim audio soak provjerama;
+1. zadržati start/seek PCM brojače u sljedećim dugim audio soak provjerama;
    izolirani D1=202 događaj nije se ponovio u 12 kontroliranih ciklusa, uključujući
    pet load → paused seek → simultaneous start → stop ciklusa;
+2. provesti duži dual-USB stress s Rekordbox medijem, aktivnim UI-jem i FLX4
+   reconnectom kada kontroler ponovno bude spojen;
 3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona.
 
@@ -104,7 +105,7 @@ Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
 - [x] potvrditi potpisani P4 OTA preko STA veze, uključujući download, provjeru
   potpisa, boot novog slota, health potvrdu i obnovu SoftAP-a;
 - [x] potvrditi missing-bundle download fault bez reboota ili promjene slota;
-- [ ] potvrditi firmware-health rollback scenarij.
+- [x] potvrditi firmware-health rollback scenarij.
 
 Programsko učvršćivanje sada objavljuje stvarno OFF/STARTING/AP/STA/RESTORING/
 ERROR stanje, AP/STA adresu i broj AP klijenata na Settings ekranu. Asinkrono
@@ -258,11 +259,21 @@ ali je relativna bundle putanja namjerno vraćala HTTP 404. Install je došao do
 `downloading 0%`, zatim ispravno objavio `bundle not on the server`, obnovio AP
 i ostao na `ota_0 / M3-22-gd7466ea` bez reboota; boot ID ostao je 175. FLX4,
 191-track library, NVS i svi audio/service brojači ostali su uredni, a
-produkcijski `/ota/` URL vraćen je u NVS. Firmware-health rollback ostaje
-otvoren.
+produkcijski `/ota/` URL vraćen je u NVS.
+Namjerni health-failure image `M3-24-g3b2dc41` zatim je lokalnim potpisanim
+uploadom podignut iz `ota_1` kao `pending_verify`. Test-only startup gate
+restartao ga je prije potvrde, nakon čega je bootloader automatski vratio
+`ota_0 / M3-22-gd7466ea` u stanju `valid`. SoftAP, produkcijski OTA URL,
+spremljena zaporka i 191-track library ostali su očuvani, a service-log dropped
+ostao je 0. FLX4 je u završnom snapshotu bio namjerno odspojen.
 Jedan neposredni same-version check nakon ranijeg lokalnog upload OTA boota
 uzrokovao je izolirani PANIC reset bez dostupnog coredumpa; ponovljene odgođene
-provjere nisu ga reproducirale, pa ostaje zasebna dijagnostička stavka.
+provjere nisu ga reproducirale. Točno verzionirani test-only flash-coredump
+image zatim je tri puta svježe podignut preko oba OTA slota. Neposredni checkovi
+svaki su put završili s `already running this build`, bez PANIC-a ili dodatnog
+reseta; coredump particija na `0xc20000` ostala je prazna (`0xFFFF` zaglavlje).
+Nakon testa vraćen je potpisani produkcijski `M3-22-gd7466ea` u `ota_1`, health
+gate ga je označio valjanim, a SoftAP, NVS i 191-track library ostali su uredni.
 Probe zahtjev tijekom utišanog dual-deck playbacka zasebno je ispravno odbijen
 s HTTP 400 `a deck is playing`: oba decka nastavila su napredovati, AP je ostao
 na `192.168.4.2`, a output-late, PCM underrun, UAC drop/overflow i service-log

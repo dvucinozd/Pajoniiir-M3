@@ -881,6 +881,27 @@ Assert-FileContains `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/sdkconfig.defaults") `
     -LiteralPatterns @("CONFIG_AUDIO_SCRATCH_ENABLED=y")
 
+Assert-FileDoesNotContain `
+    -Name "p4 production defaults exclude test-only OTA rollback and flash coredump flags" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/sdkconfig.defaults") `
+    -LiteralPatterns @("CONFIG_DDJ_OTA_FORCE_ROLLBACK_TEST=y", "CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH=y")
+
+Assert-FileContains `
+    -Name "p4 rollback diagnostic overlay forces a non-confirming OTA image" `
+    -Path (Join-Path $RepoRoot "firmware/common/sdkconfig.rollback_test.defaults") `
+    -LiteralPatterns @("CONFIG_DDJ_OTA_FORCE_ROLLBACK_TEST=y")
+
+Assert-FileContains `
+    -Name "p4 coredump diagnostic overlay preserves one bounded flash dump" `
+    -Path (Join-Path $RepoRoot "firmware/common/sdkconfig.coredump_test.defaults") `
+    -LiteralPatterns @(
+        "CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH=y",
+        "CONFIG_ESP_COREDUMP_MAX_TASKS_NUM=8",
+        "CONFIG_ESP_COREDUMP_FLASH_NO_OVERWRITE=y",
+        "CONFIG_ESP_COREDUMP_STACK_SIZE=1792",
+        "# CONFIG_ESP_COREDUMP_CAPTURE_DRAM is not set"
+    )
+
 # The decoder runs ~2 s ahead of playback, so a loop wrap must withdraw whatever
 # it already published past the out point. Without the trim the loop's first
 # pass plays that lead - about four beats, off the grid at most tempos.

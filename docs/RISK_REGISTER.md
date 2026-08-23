@@ -1,6 +1,6 @@
 # Risk Register
 
-Status: aktivni rizici single-chip P4 izvedbe, 2026-08-23.
+Status: aktivni rizici single-chip P4 izvedbe, 2026-08-24.
 
 | ID | Rizik | Posljedica | Mitigacija / gate |
 |---|---|---|---|
@@ -16,13 +16,15 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-23.
 | R10 | Dokumentacija ponovno pomiješa povijesnu i važeću topologiju | pogrešan wiring ili razvojni smjer | aktivni docs index; validation/spec mape označene kao povijesne |
 | R11 | Settings gašenje se sudari sa servisnim APSTA/OTA prijelazom | srušen netif, prekinut download ili AP koji se ne vrati | transition lease, host-testirani START/STOP/WAIT policy, APSTA bez gašenja AP/DHCP/HTTP puta te fizički connectivity, HTTPS channel i missing-bundle 404 smoke; fault je obnovio AP bez reboota |
 | R12 | PCM5102A output radi na 48 kHz dok je FLX4 UAC fiksiran na 44,1 kHz | kriva brzina/visina tona ili headphone ring overflow na 48-kHz trakama | implementiran stateful 48→44,1-kHz resampler; host omjer/kontinuitet, 60-s 48-kHz gate, 6-min mixed-rate soak i FLX4 slušni acceptance prošli |
-| R13 | Same-version channel check neposredno nakon OTA boota jednom je izazvao PANIC reset | neočekivani restart u maintenance toku | događaj je dokumentiran; odgođene kontrolirane provjere prolaze bez promjene boot ID-a, a reprodukcija s uključenim coredumpom ostaje otvorena prije zatvaranja rizika |
+| R13 | Same-version channel check neposredno nakon OTA boota jednom je izazvao PANIC reset | neočekivani restart u maintenance toku | tri svježa post-OTA equality ciklusa uz test-only 64-KiB flash coredump vratila su `already running this build` bez PANIC-a; dump particija ostala je prazna, produkcijski image vraćen je i rizik ostaje samo pod monitoringom |
 
 Potpisani noviji signed-bundle install prošao je i lokalnim web uploadom i
 produkcijskim HTTPS pull tokom, a missing-bundle download fault završio je bez
-reboota ili promjene slota. Najveći otvoreni acceptance rizici sada su
-firmware-health rollback i izolirani post-OTA equality-check PANIC, duži
-dual-USB stress s aktivnim UI-jem te bring-up još nedostupnog
+reboota ili promjene slota. Namjerni nepotvrđeni `pending_verify` image također
+je automatski vraćen na prethodni valjani slot. OTA acceptance blok je zatvoren;
+izolirani post-OTA PANIC ostaje rezidualna monitoring stavka nakon tri neuspjela
+pokušaja reprodukcije s coredumpom. Najveći otvoreni acceptance rizici sada su
+duži dual-USB stress s aktivnim UI-jem te bring-up još nedostupnog
 800×480 DSI/FT5426 sklopa. Jednokratni simultani start/seek PCM D1=202 događaj
 nije se ponovio u 12 kontroliranih ciklusa i ostaje telemetrijska soak stavka,
 a ne potvrđeni reproducibilni kvar.
