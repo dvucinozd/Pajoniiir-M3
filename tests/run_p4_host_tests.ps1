@@ -1051,6 +1051,7 @@ Assert-FileContains `
     -LiteralPatterns @(
         "complete_eof_drain_if_ready",
         "audio_eof_policy_should_finish",
+        "audio_eof_policy_should_count_source_miss",
         "playback_finished",
         "Decoder EOF is not transport EOF"
     )

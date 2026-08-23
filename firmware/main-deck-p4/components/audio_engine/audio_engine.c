@@ -593,11 +593,17 @@ static bool pop_deck_source(void *ctx, audio_mixer_frame_t *out_frame)
     if (deck >= AUDIO_ENGINE_DECK_COUNT) deck = AE_DECK_0;
     if (timeline_active(deck)) {
         bool ok = audio_pcm_timeline_pop(&s_pcm_timelines[deck], out_frame);
-        if (!ok) s_pcm_underrun_count[deck]++;
+        if (!ok && audio_eof_policy_should_count_source_miss(
+                       atomic_load_bool(&s_engines[deck].eof))) {
+            s_pcm_underrun_count[deck]++;
+        }
         return ok;
     }
     bool ok = audio_pcm_ring_pop(&s_pcm_rings[deck], out_frame);
-    if (!ok) s_pcm_underrun_count[deck]++;
+    if (!ok && audio_eof_policy_should_count_source_miss(
+                   atomic_load_bool(&s_engines[deck].eof))) {
+        s_pcm_underrun_count[deck]++;
+    }
     return ok;
 }
 #endif

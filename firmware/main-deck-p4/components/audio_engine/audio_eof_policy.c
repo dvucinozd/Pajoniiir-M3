@@ -17,3 +17,11 @@ bool audio_eof_policy_play_requires_rewind(bool playback_finished)
 {
     return playback_finished;
 }
+
+bool audio_eof_policy_should_count_source_miss(bool decoder_eof)
+{
+    /* Once the producer has declared EOF, an empty PCM source is the expected
+     * tail of the final, possibly partial output block. Mid-track starvation
+     * still has decoder_eof=false and remains a real underrun. */
+    return !decoder_eof;
+}

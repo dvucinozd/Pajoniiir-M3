@@ -14,3 +14,4 @@ typedef struct {
 
 bool audio_eof_policy_should_finish(const audio_eof_policy_snapshot_t *snapshot);
 bool audio_eof_policy_play_requires_rewind(bool playback_finished);
+bool audio_eof_policy_should_count_source_miss(bool decoder_eof);
