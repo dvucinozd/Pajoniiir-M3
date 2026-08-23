@@ -123,8 +123,33 @@ quality gate.
 
 Nasuprot početnom 20-sekundnom prozoru s 1.245 dropped blokova i 70.846
 overflow frameova, ponovljeni gate nema aktivni UAC gubitak i ring nema neto
-pomak. Time je funkcionalni rate-mismatch counter gate zatvoren. Otvoreni ostaju
-duži mixed-rate soak, slušna provjera brzine/visine tona i cue/master kvalitete.
+pomak. Time je funkcionalni rate-mismatch counter gate zatvoren.
+
+## Mixed-rate produženi acceptance
+
+Naknadni test namjerno je kombinirao Deck 1 izvor od 44,1 kHz (`Evelyn Thomas -
+High Energy`) i Deck 2 izvor od 48 kHz (`Megatron Man`) uz zajednički output na
+48 kHz. Oba channel fadera bila su programski na nuli. Glavni soak trajao je
+300 s, nakon čega je napravljen točno mjeren produžetak od 60,61 s.
+
+| Provjera | Glavni prozor + produžetak |
+| --- | --- |
+| HTTP status/library/firmware | 300/30/20 + 60/6/4, bez greške |
+| napredak u produžetku D1/D2 | 60.672/60.672 ms |
+| PCM underrun D1/D2 | 0/0 |
+| UAC dropped/overflow/aktivni underflow | 0/0/0 |
+| UAC blokovi/frameovi u produžetku | 11.376 / 2.675.576 |
+| UAC ring početak/kraj/high-water | 1.338/1.102/1.475 od 2.048 frameova |
+| clock trim/duplicate u produžetku | 60/1 frame |
+| output late | jedan izolirani događaj u glavnom prozoru, 0 u produžetku |
+| service-log dropped | 0 |
+| heap delta | -32 B |
+
+Nakon zaustavljanja oba decka nije nastao novi output-late, PCM underrun, UAC
+drop ni overflow. Rast idle UAC underflow brojača očekivan je jer endpoint tada
+troši namjerno poslanu tišinu. Ovim su zatvoreni duži mixed-rate counter gate i
+stabilnost 44,1→48→44,1-kHz puta. Slušni cue/master i level acceptance dovršen
+je zasebno u `P4_FLX4_HEADPHONE_LEVEL_20260823.md`.
 
 ## Dodatna opažanja
 

@@ -49,6 +49,11 @@ LED stanje se računa iz P4 statea i preko registriranog sinka šalje izravno
 
 Svaki deck dekodira u bounded PCM timeline. Output task radi DSP i mixer u
 blokovima, šalje master na PCM5102A te cue/headphone miks u FLX4 UAC1 ring.
+Kanalni PFL tap je post-trim/post-DSP, ali prije channel fadera; kanalni CUE ga
+uključuje, a `HEADPHONES MIX` ga miješa s post-fader master signalom.
+`HEADPHONES LEVEL` mijenja samo monitor izlaz i koristi per-frame gain ramp kako
+14-bitni MIDI skokovi ne bi stvarali klikove na granici output bloka. FLX4 MIDI
+callback ne radi packet-level logiranje iz priority-7 real-time puta.
 PCM5102A prati zajednički output rate od 44,1 ili 48 kHz, dok stateful linearni
 resampler pretvara FLX4 cue/headphone tap u njegov fiksni 44,1-kHz četverokanalni
 format i čuva fazu između proizvoljno podijeljenih output blokova. UAC packetizer

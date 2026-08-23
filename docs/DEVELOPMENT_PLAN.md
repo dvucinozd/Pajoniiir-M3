@@ -1,6 +1,6 @@
 # Development Plan
 
-Status: plan nakon FLX4 48-kHz UAC acceptancea, 2026-08-23.
+Status: plan nakon mixed-rate i FLX4 headphone acceptancea, 2026-08-23.
 
 ## Trenutna baza
 
@@ -28,26 +28,27 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-23 je `M3-8-gffb9f42` na P4 ploči. FLX4 je
-spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `READY`, USB3 library
-sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
-`Pajoniiir-M3` ostavljeni su uključeni. Firmware sadrži dvostupanjski prioritet
+Završni hardverski baseline 2026-08-23 je `M3-10-g638f542` na P4 ploči. FLX4 je
+spojen s MIDI In/Out i UAC-om, Deck 1 je `IDLE`, Deck 2 zaustavljen u `READY`,
+oba channel fadera su na nuli, USB3 library sadrži 191 track, service log nema
+dropova, a SoftAP i Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
+Firmware sadrži dvostupanjski prioritet
 FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
 nakon početnog UAC queue priminga. Stateful linearni UAC resampler sada pretvara
 44,1–48-kHz output u FLX4-ov fiksni 44,1-kHz format uz kontinuitet faze između
-output blokova.
+output blokova. FLX4 MIDI callback više ne radi packet/event logiranje iz
+real-time puta, a `HEADPHONES LEVEL` gain mijenja se kontinuiranim per-frame
+rampom bez skoka na granici 256-frame output bloka.
 
 Prioritetni redoslijed nastavka:
 
-1. proširiti 48-kHz gate na duži mixed-rate soak i napraviti slušni acceptance
-   brzine, visine tona i cue/master kvalitete na FLX4 slušalicama;
-2. izolirati preostali jedan output-deadline događaj na samom fizičkom USB2
+1. izolirati preostali jedan output-deadline događaj na samom fizičkom USB2
    disconnectu te zasebno provjeriti PCM brojače na prirodnom EOF-u i STOP-u;
-3. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
+2. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
    audio promet;
-4. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
+3. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
    servisni SSID, zaporka i update URL;
-5. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+4. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona.
 
 ## Sljedeće faze
@@ -161,8 +162,25 @@ UAC dropped blokova, 0 overflowa i 0 aktivnih underflowa. Oba decka napredovala
 su približno 60 s, ring je počeo i završio na 1.161 frameu, PCM underrun ostao
 je 0/0, service log nije dropao zapise, a 60/60 status, 6/6 library i 4/4
 firmware zahtjeva je prošlo. Jedan izolirani output-late, s maksimumom 11.218 µs,
-nije proizveo PCM ili UAC grešku. Funkcionalni counter gate time je zatvoren;
-duži mixed-rate i slušni quality acceptance ostaju otvoreni.
+nije proizveo PCM ili UAC grešku. Funkcionalni counter gate time je zatvoren.
+
+Naknadni mixed-rate soak koristio je 44,1-kHz traku na Decku 1 i 48-kHz traku
+na Decku 2 uz zajednički output na 48 kHz. Glavni 300-sekundni prozor i točno
+60,61 s produženje završili su bez PCM underruna, UAC dropa, overflowa ili
+aktivnog underflowa; u produženju su oba decka napredovala točno 60.672 ms, a
+UAC ring je ostao stabilan. Jedan izolirani output-late u glavnom prozoru nije
+se ponovio u produženju.
+
+Isti baseline otkrio je da burst 14-bitnih `HEADPHONES LEVEL` MIDI poruka uz
+dvostruko WARN logiranje iz priority-7 callbacka deschedulira audio output:
+okretanje regulatora povećalo je output-late s 1 na 67, do 76.586 µs. Build
+`M3-10-g638f542` uklanja ta dva real-time loga i uvodi kontinuirani gain ramp.
+Ponovljeni 30-sekundni fizički test s višestrukim okretanjem regulatora završio
+je s 0 output-latea, 0 PCM underruna, 0 UAC dropa/overflowa/aktivnog underflowa
+i 30.230 ms neprekinutog napretka. Operator je potvrdio da više nema pucketanja
+ni prekida. Dodatno je potvrđeno da kanalni PFL ostaje čujan sa spuštenim
+faderom kada je kanalni CUE uključen i `HEADPHONES MIX` okrenut prema CUE.
+Detalji su u `docs/validation/P4_FLX4_HEADPHONE_LEVEL_20260823.md`.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni
@@ -205,7 +223,9 @@ Acceptance: svi podržani FLX4 elementi imaju jednoznačan P4 state owner.
 
 ### 6. Audio acceptance
 
-- hardware-verify cue/master routing, headphone level/mix i PCM5102A headroom;
+- [x] hardware-verify PFL prije channel fadera, cue/master routing te
+  `HEADPHONES LEVEL`/`HEADPHONES MIX` bez prekida ili pucketanja;
+- [ ] hardware-verify PCM5102A headroom i završnu limiter marginu;
 - dovršiti scratch/Master Tempo rubne slučajeve uz loop i pitch promjene;
 - postaviti pragove za UAC ring i output timing alarme.
 
