@@ -29,10 +29,15 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-23 je `M3-15-g70a082c` na P4 ploči. FLX4
-je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `READY`, oba
-channel fadera su na nuli, USB3 library sadrži 191 track, service log nema
-dropova, a SoftAP i Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
+Završni hardverski baseline 2026-08-23 je `M3-20-g9f24b19` na P4 ploči. FLX4
+je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `IDLE`, USB3
+library sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
+`Pajoniiir-M3` ostavljeni su uključeni. Servisni SSID, zaporka i HTTPS update
+URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
+zaporku. Fizički APSTA round-trip dobio je servisnu adresu `192.168.0.210`,
+vratio `round trip complete` i sačuvao SoftAP klijentu valjanu adresu
+`192.168.4.2`. HTTPS update check zatim je ispravno odbio stariju objavljenu
+verziju bez downloada ili pisanja u flash.
 Firmware sadrži dvostupanjski prioritet
 FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
 nakon početnog UAC queue priminga. Stateful linearni UAC resampler sada pretvara
@@ -46,8 +51,9 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
-   servisni SSID, zaporka i update URL;
+1. objaviti noviji potpisani M3 testni bundle i dovršiti OTA install,
+   neuspjeli-download i rollback acceptance; osnovni APSTA connectivity i HTTPS
+   channel check sada su zatvoreni;
 2. zadržati start/seek PCM brojače u sljedećim dugim audio soak provjerama;
    izolirani D1=202 događaj nije se ponovio u 12 kontroliranih ciklusa, uključujući
    pet load → paused seek → simultaneous start → stop ciklusa;
@@ -82,6 +88,9 @@ Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
   siguran povratak iz privremenog STA načina u SoftAP;
 - [x] hardverski provjeriti web UI/API, reconnect, više klijenata i paralelni rad
   Wi-Fi prometa s USB2, USB3 i audio putanjama;
+- [x] hardverski potvrditi APSTA servisni round-trip bez gašenja lokalnog AP-a,
+  DHCP-a, HTTP/DNS servisa ili ESP-Hosted/microSD transporta te pročitati HTTPS
+  OTA kanal;
 - [ ] potvrditi potpisani P4 OTA preko STA veze, uključujući neuspjeli download,
   rollback i obnovu SoftAP-a.
 
@@ -95,8 +104,7 @@ testu ispravljeno zadržavanje AP-a preko P4-only reseta: GPIO54 sada drži C6
 isključenim pri bootu i nakon teardowna dok je spremljena postavka OFF.
 Nastavak s umetnutom microSD karticom prošao je tri AP reconnect ciklusa,
 četiri paralelna status zahtjeva te kratki 100× status / 10× library soak bez
-HTTP greške, service-log dropa ili vidljivog heap curenja. Puni AP→STA→AP
-ostaje otvoren jer servisna STA mreža još nije konfigurirana. Stvarni Chromium
+HTTP greške, service-log dropa ili vidljivog heap curenja. Stvarni Chromium
 tok dodatno je potvrdio prikaz 191 tracka, pretragu i HTTP 200 D1 LOAD za
 `Darude - Sandstorm.mp3`; Deck 1 ostao je `READY` i nakon reloadanja stranice,
 bez JavaScript pogrešaka. Wi-Fi je zatim trajno ostavljen uključen uz očuvane
@@ -214,6 +222,19 @@ uključio i kratko fizičko okretanje `HEADPHONES LEVEL`; nije nastala audio
 regresija. Mobitel je zasebno prošao AP disconnect/reconnect i ponovno prikazao
 library i oba PLAY decka. Vizualna provjera Settings broja klijenata ostaje uz
 bring-up novog zaslona.
+
+Servisna mreža konfigurirana je 2026-08-23 kroz web UI i trajno spremljena u
+NVS, bez hardkodiranja ili izlaganja zaporke. Prva implementacija koja je gasila
+AP prije STA posjeta vratila bi beacon, ali ne i SDIO podatkovni put/DHCP; Windows
+je završavao na link-local adresi. Pokušaj punog ESP-Hosted restarta dodatno je
+potvrdio da je teardown zabranjen dok microSD koristi drugi slot istog SDMMC
+kontrolera. `M3-20-g9f24b19` zato koristi APSTA: SoftAP netif, DHCP, HTTP/DNS i
+Hosted ostaju živi, a privremeno se dodaje samo STA netif. Fizički connectivity
+probe završio je s `round trip complete`, STA adresom `192.168.0.210` i očuvanom
+AP adresom klijenta `192.168.4.2`. Zasebni HTTPS OTA check pročitao je kanal i
+ispravno odbio stariju objavljenu verziju bez preuzimanja ili flashanja. FLX4
+MIDI In/Out/UAC, 191-track library i service-log dropped=0 ostali su uredni.
+Puni noviji signed-bundle install, download fault i rollback ostaju otvoreni.
 
 Izolirani predmjerni PCM D1=202 start događaj dodatno je provjeren bez promjene
 firmwarea. Sedam kontroliranih no-seek startova, uključujući tri cold boota i

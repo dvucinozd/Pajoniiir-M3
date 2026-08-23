@@ -12,7 +12,8 @@ DAC i ESP32-C6 Wi-Fi modul, bez računala i bez pomoćnog kontrolnog MCU-a.
 - GPIO1/2/3: PCM5102A I2S master izlaz
 - MIPI-DSI + FT5426: 800×480 landscape UI i kapacitivni dodir
 - ESP32-C6 preko SDIO: Wi-Fi 6 / ESP-Hosted, operatorski SoftAP
-  `Pajoniiir-M3` i privremeni servisni STA za potpisani P4 OTA
+  `Pajoniiir-M3` te privremeni APSTA servisni uplink za potpisani P4 OTA, bez
+  gašenja lokalnog DHCP/HTTP puta
 
 ESP32-P4 je jedini autoritet za playback, deck/mixer state, USB host klijente,
 MIDI mapiranje, LED feedback, audio DSP, biblioteku i UI. `control_link` u P4

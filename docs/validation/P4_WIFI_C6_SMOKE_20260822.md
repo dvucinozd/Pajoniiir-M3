@@ -397,3 +397,47 @@ PCM i output-late telemetrija ostaju obavezni u sljedećem dugom dual-deck soaku
 Završno stanje: oba decka su `READY`, channel faderi su na nuli, PFL je
 isključen, FLX4 ima MIDI In/Out i UAC, library sadrži 191 track, service-log
 dropped je 0, a `Pajoniiir-M3` Wi-Fi ostavljen je uključen.
+
+## Servisni APSTA i HTTPS channel acceptance — `M3-20-g9f24b19`, 2026-08-23
+
+Servisni SSID, zaporka i update URL uneseni su kroz web UI i trajno spremljeni
+u NVS. `GET /api/ota/config` vratio je servisni SSID, HTTPS URL i
+`has_password=true`, bez čitanja ili izlaganja same zaporke.
+
+Prvi fizički probe na starijem AP→STA→AP putu reproducibilno je vratio SoftAP
+beacon, ali ne i klijentski podatkovni put: Windows nije dobio DHCP lease i
+završio je na `169.254.x.x`. Bounded provjera lokalnog DHCP servera nije bila
+dovoljna jer je P4 netif prijavljivao `STARTED` dok remote C6/SDIO put nije
+prenosio klijentske frameove. Pokušaj punog ESP-Hosted restarta na
+`M3-18-g0484fa5` pokazao je i zaseban hardverski uvjet: microSD već koristi drugi
+slot istog SDMMC kontrolera, pa Hosted teardown/reinit završava konfliktom
+registriranog host kontrolera i assertom. `M3-19-g9360ae6` zato je očuvao Hosted,
+ali warm AP stop/start i dalje nije obnovio podatkovni put.
+
+`M3-20-g9f24b19` uklanja taj warm stop/start iz servisnog toka. SoftAP netif,
+DHCP server, HTTP/DNS servisi i ESP-Hosted ostaju cijelo vrijeme aktivni, a za
+servisnu mrežu privremeno se stvara STA netif i koristi `WIFI_MODE_APSTA`.
+Povratak uklanja STA netif i vraća `WIFI_MODE_AP`, bez rušenja zajedničkog SDMMC
+transporta.
+
+Hardware rezultat:
+
+| Provjera | Rezultat |
+| --- | --- |
+| clean firmware | `M3-20-g9f24b19`, `0x240a80`, 44% app particije slobodno |
+| flash | `COM17`, svi hashovi verificirani |
+| početni SoftAP DHCP/API | `192.168.4.2`, firmware API prikazuje točnu verziju |
+| NVS servisna konfiguracija | SSID + HTTPS URL + `has_password=true`; zaporka nije izložena |
+| connectivity probe | PASS, `round trip complete` |
+| privremena STA adresa | `192.168.0.210` |
+| lokalni AP klijent nakon probea | ostao na valjanoj `192.168.4.2`, bez link-local fallbacka |
+| HTTPS OTA channel check | PASS; stariji release ispravno odbijen bez downloada/flashanja |
+| FLX4 nakon dvaju APSTA posjeta | present, MIDI In/Out i UAC true |
+| USB3 library / service log | 191 track / dropped 0, last_error 0 |
+| host regresije / ESP-IDF build | PASS / PASS, ESP-IDF v6.0.2 |
+
+Test je namjerno završio bez OTA instalacije jer kanal nije nudio noviju verziju.
+Preostaju objava novijeg potpisanog M3 testnog bundlea, uspješni install/reboot,
+neuspjeli-download i rollback scenariji te ponavljanje APSTA/OTA prijelaza pod
+aktivnim dual-deck audio opterećenjem. Wi-Fi i Windows profil `Pajoniiir-M3`
+ostavljeni su uključeni.

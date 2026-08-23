@@ -58,12 +58,21 @@ idf.py -p COM17 flash monitor
 - [ ] SoftAP `Pajoniiir-M3` prihvaća najmanje dva istodobna klijenta i broj
   klijenata na Settings ekranu prati connect/disconnect.
 - [ ] Wi-Fi remote može se uključiti i vratiti u AP način nakon OTA probea.
+- [ ] Servisni SSID, zaporka i HTTPS update URL čitaju se iz NVS-a; API i logovi
+  izlažu samo `has_password`, nikada samu zaporku.
+- [ ] Connectivity probe koristi APSTA, dobiva servisnu IPv4 adresu i završava s
+  `round trip complete`; lokalni klijent cijelo vrijeme zadržava valjanu
+  `192.168.4.x` adresu bez link-local fallbacka.
+- [ ] HTTPS update check prihvaća samo usporediv noviji M3 release, a jednaku ili
+  stariju objavu završava bez downloada i bez pisanja u flash.
 - [ ] P4 reset sa spremljenim Wi-Fi OFF stanjem ne ostavlja C6 ni SoftAP
   aktivnim.
 - [ ] Zahtjev za gašenje tijekom probea/OTA-a izvrši se tek nakon obnove AP-a;
   nema racea, srušenog netifa ni izgubljenog ESP-Hosted transporta.
 - [ ] `/api/status` prikazuje FLX4 i USB-headphone dijagnostiku.
 - [ ] P4-only potpisani OTA odbija pogrešan chip, projekt ili potpis.
+- [ ] APSTA/OTA posjet ne deinitializira ESP-Hosted dok je microSD montiran na
+  drugom slotu zajedničkog SDMMC kontrolera.
 
 Svaki hardware smoke zapisuje verziju firmwarea, wiring, COM port, medij,
 rezultat i relevantne dijagnostičke brojače.
