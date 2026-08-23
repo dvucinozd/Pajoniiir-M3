@@ -46,11 +46,11 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. izolirati povremeni simultani dual-deck start/seek tranzijent koji je prije
-   multi-client mjernog prozora jednom dodao PCM D1=202, bez rasta tijekom
-   samog prozora;
-2. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
+1. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
    servisni SSID, zaporka i update URL;
+2. zadržati start/seek PCM brojače u sljedećim dugim audio soak provjerama;
+   izolirani D1=202 događaj nije se ponovio u 12 kontroliranih ciklusa, uključujući
+   pet load → paused seek → simultaneous start → stop ciklusa;
 3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona.
 
@@ -214,6 +214,15 @@ uključio i kratko fizičko okretanje `HEADPHONES LEVEL`; nije nastala audio
 regresija. Mobitel je zasebno prošao AP disconnect/reconnect i ponovno prikazao
 library i oba PLAY decka. Vizualna provjera Settings broja klijenata ostaje uz
 bring-up novog zaslona.
+
+Izolirani predmjerni PCM D1=202 start događaj dodatno je provjeren bez promjene
+firmwarea. Sedam kontroliranih no-seek startova, uključujući tri cold boota i
+četiri dual-deck redoslijeda, te pet zasebnih load → paused seek na 100.000 ms →
+simultaneous start → stop ciklusa završili su s PCM D1/D2=0/0 i bez UAC
+dropped/overflow događaja. U dva od pet seek ciklusa nastao je po jedan
+izolirani output-late pri startu, ali bez PCM ili UAC posljedice. PCM tranzijent
+zato nije potvrđen kao reproducibilan kvar; brojači ostaju dio dužeg soak
+monitoringa.
 
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni

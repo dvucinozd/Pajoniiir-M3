@@ -379,6 +379,21 @@ Settings brojač AP klijenata programski je host-testiran, ali njegova vizualna
 provjera ostaje dio 800×480 zaslonskog bring-upa jer ciljani zaslon još nije
 priključen.
 
+### Naknadna izolacija start/seek tranzijenta
+
+Predmjerni PCM D1=202 događaj iz završnog A/B runa pokušao se ponoviti bez
+promjene `M3-15-g70a082c` firmwarea. Sedam no-seek provjera obuhvatilo je četiri
+redoslijeda dual-deck starta na istom bootu i tri zasebna cold boota. Dodatnih
+pet ciklusa ponovilo je točan sumnjivi slijed: load oba decka, paused seek oba
+decka na 100.000 ms, simultaneous start, šest sekundi reprodukcije i stop.
+
+Svih 12 ciklusa završilo je bez PCM underruna, UAC dropped frameova ili UAC ring
+overflowa. U dva od pet paused-seek ciklusa output-late brojač porastao je za
+jedan pri startu, bez PCM/UAC posljedice; preostala tri ciklusa nisu imala ni
+late događaj. Početni D1=202 rezultat zato ostaje izolirani, nereproducirani
+prijelaz. Nije opravdana promjena audio enginea bez reproducibilnog uzroka, ali
+PCM i output-late telemetrija ostaju obavezni u sljedećem dugom dual-deck soaku.
+
 Završno stanje: oba decka su `READY`, channel faderi su na nuli, PFL je
 isključen, FLX4 ima MIDI In/Out i UAC, library sadrži 191 track, service-log
 dropped je 0, a `Pajoniiir-M3` Wi-Fi ostavljen je uključen.
