@@ -56,6 +56,20 @@ underruna, UAC drop/overflowa ni service-log dropa.
 Kontrolirani check jednake objavljene verzije vratio je
 `already running this build` bez reseta i uz isti boot ID 175. Jedan raniji
 neposredni same-version check nakon lokalnog web-upload OTA boota izazvao je
-izolirani PANIC reset koji se u odgođenim provjerama nije ponovio. Download
-fault, namjerni health-failure rollback i reprodukcija tog panica ostaju
-otvoreni acceptance scenariji.
+izolirani PANIC reset koji se u odgođenim provjerama nije ponovio. Namjerni
+health-failure rollback i reprodukcija tog panica ostaju otvoreni acceptance
+scenariji.
+
+### Missing-bundle fault, 2026-08-24
+
+Odvojeni base URL `https://pajoniiir.zadar.click/ota/ota-test/` poslužio je
+valjani channel dokument koji je nudio `M4`, ali je relativna bundle putanja
+namjerno vraćala HTTP 404. Check je objavio `update available: M4`, install je
+prihvaćen s HTTP 202, prešao u `downloading 0%` i završio s
+`bundle not on the server`.
+
+Uređaj nije rebootao niti promijenio slot: boot ID ostao je 175, a running
+firmware `ota_0 / M3-22-gd7466ea`. SoftAP se obnovio, NVS zaporka ostala je
+spremljena, FLX4 MIDI In/Out/UAC i 191-track library ostali su dostupni, a
+output-late, PCM underrun, UAC drop/overflow i service-log dropped ostali su 0.
+Nakon testa produkcijski `/ota/` base URL vraćen je u NVS.

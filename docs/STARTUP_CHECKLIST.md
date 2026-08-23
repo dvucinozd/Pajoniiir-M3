@@ -78,8 +78,9 @@ idf.py -p COM17 flash monitor
   SoftAP bez output-late, PCM underrun, UAC drop/overflow ili service-log dropa.
 - [ ] Same-version channel check završava s `already running this build` bez
   reseta ili panica; boot ID ostaje nepromijenjen.
-- [ ] Prekinuti download ne mijenja boot slot, a namjerno neuspjeli startup
-  health gate vraća prethodni valjani slot.
+- [ ] Nepostojeći ili prekinuti bundle završava jasnom download greškom, ne
+  mijenja boot slot i vraća SoftAP bez reboota.
+- [ ] Namjerno neuspjeli startup health gate vraća prethodni valjani slot.
 - [ ] APSTA/OTA posjet ne deinitializira ESP-Hosted dok je microSD montiran na
   drugom slotu zajedničkog SDMMC kontrolera.
 

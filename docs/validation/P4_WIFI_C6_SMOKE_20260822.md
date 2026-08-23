@@ -484,5 +484,37 @@ oba decka zaustavljena, NVS servisni SSID/HTTPS URL/`has_password=true`, library
 Kontrolirani same-version check vratio je `already running this build`; boot ID
 ostao je 175 prije i poslije provjere. Wi-Fi `Pajoniiir-M3` ostavljen je
 uključen. Time su potpisani lokalni upload i produkcijski pull happy path
-zatvoreni. Download fault, namjerni firmware-health rollback i reprodukcija
-izoliranog post-OTA panica ostaju otvoreni.
+zatvoreni. Namjerni firmware-health rollback i reprodukcija izoliranog post-OTA
+panica ostaju otvoreni.
+
+## Missing-bundle download fault — `M3-22-gd7466ea`, 2026-08-24
+
+Produkcijski `/ota/latest.json` prvo je potvrđen kao `M3-22-gd7466ea`, s
+postojećim bundleom od 2.362.172 B. Zasebni
+`/ota/ota-test/latest.json` zatim je ponudio sintetički noviji release `M4`,
+veličinu 2.362.172 B i relativnu putanju
+`missing/main-deck-p4.ddjota`; ta bundle putanja namjerno je vraćala HTTP 404.
+
+Uređaj je prije testa bio na `ota_0 / M3-22-gd7466ea`, boot ID 175, s oba
+decka u `IDLE`, FLX4 MIDI In/Out/UAC aktivnim i 191 trackom. OTA base URL
+privremeno je postavljen na `/ota/ota-test/` bez slanja ili čitanja spremljene
+zaporke. Check je završio s `update available: M4`. Install je vratio HTTP 202,
+objavio `downloading 0%` i zatim `bundle not on the server`.
+
+Post-fault rezultat:
+
+| Provjera | Rezultat |
+| --- | --- |
+| reboot / boot ID | nema reboota; ostao 175 |
+| running firmware | `ota_0 / M3-22-gd7466ea`, state `idle` |
+| SoftAP/API | obnovljen; prvi prerani snapshot istekao je tijekom reconnecta, prvi bounded retry vratio je HTTP 200 |
+| NVS | SSID i `has_password=true` očuvani; produkcijski `/ota/` URL vraćen |
+| FLX4 | present, MIDI In/Out i UAC true |
+| USB3 library | 191 track |
+| brojači | output-late 0, PCM 0/0, UAC dropped/overflow 0, service-log dropped 0 |
+
+Time je missing-bundle/download-404 fault zatvoren: nepostojeći bundle ne
+otvara OTA zapisivanje, ne mijenja boot slot i nakon APSTA posjeta vraća lokalni
+servis. Namjerni firmware-health rollback i coredump reprodukcija izoliranog
+post-OTA panica ostaju sljedeći OTA gateovi. Wi-Fi `Pajoniiir-M3` ostavljen je
+uključen.

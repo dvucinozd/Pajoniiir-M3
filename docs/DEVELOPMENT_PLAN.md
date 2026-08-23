@@ -1,7 +1,7 @@
 # Development Plan
 
-Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF i signed pull-OTA
-acceptancea, 2026-08-23.
+Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed pull-OTA
+i download-fault acceptancea, 2026-08-24.
 
 ## Trenutna baza
 
@@ -14,7 +14,7 @@ acceptancea, 2026-08-23.
 
 Wi-Fi programski temelj već postoji: ESP32-C6/ESP-Hosted preko SDIO-a,
 SoftAP `Pajoniiir-M3`, web API, privremeni STA put i potpisani P4 OTA. Prije
-releasea treba dovršiti OTA fault/rollback scenarije i preostalu
+releasea treba dovršiti OTA health-rollback i post-OTA panic dijagnostiku te preostalu
 hardversku/stress validaciju.
 
 Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
@@ -43,7 +43,10 @@ preuzet, verificiran i podignut iz `ota_0`. Naknadna provjera jednake verzije
 vratila je `already running this build` bez reseta, uz nepromijenjen boot ID
 175. Jedan raniji, neposredni equality check nakon lokalnog web-upload OTA-a
 uzrokovao je izolirani PANIC reset; kontrolirane provjere nisu ga reproducirale
-i ostaje otvoren dijagnostički rizik.
+i ostaje otvoren dijagnostički rizik. Izolirani testni kanal zatim je ponudio
+`M4`, ali namjerno nije sadržavao bundle. Install je završio s
+`bundle not on the server` na 0% bez reboota ili promjene `ota_0`; produkcijski
+URL vraćen je u NVS, a boot ID ostao je 175.
 Firmware sadrži dvostupanjski prioritet
 FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
 nakon početnog UAC queue priminga. Stateful linearni UAC resampler sada pretvara
@@ -57,9 +60,10 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. dovršiti OTA neuspjeli-download i rollback acceptance te pokušati
-   reproducirati izolirani post-OTA equality-check PANIC; signed web-upload i
-   produkcijski HTTPS pull install sada su zatvoreni;
+1. dovršiti OTA firmware-health rollback acceptance i pokušati reproducirati
+   izolirani post-OTA equality-check PANIC s uključenim coredumpom; signed
+   web-upload, produkcijski HTTPS pull i missing-bundle download fault sada su
+   zatvoreni;
 2. zadržati start/seek PCM brojače u sljedećim dugim audio soak provjerama;
    izolirani D1=202 događaj nije se ponovio u 12 kontroliranih ciklusa, uključujući
    pet load → paused seek → simultaneous start → stop ciklusa;
@@ -99,7 +103,8 @@ Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
   OTA kanal;
 - [x] potvrditi potpisani P4 OTA preko STA veze, uključujući download, provjeru
   potpisa, boot novog slota, health potvrdu i obnovu SoftAP-a;
-- [ ] potvrditi neuspjeli download i firmware-health rollback scenarije.
+- [x] potvrditi missing-bundle download fault bez reboota ili promjene slota;
+- [ ] potvrditi firmware-health rollback scenarij.
 
 Programsko učvršćivanje sada objavljuje stvarno OFF/STARTING/AP/STA/RESTORING/
 ERROR stanje, AP/STA adresu i broj AP klijenata na Settings ekranu. Asinkrono
@@ -248,7 +253,13 @@ rebootao sa SW razlogom i startup health gate označio ga je valjanim. NVS,
 191-track library, FLX4 MIDI In/Out/UAC i SoftAP ostali su očuvani; output-late,
 PCM underrun, UAC drop/overflow i service-log dropped ostali su 0. Kontrolirani
 same-version check nakon stabilizacije vratio je `already running this build`
-bez promjene boot ID-a 175. Neuspjeli download i rollback ostaju otvoreni.
+bez promjene boot ID-a 175. Zasebni `/ota/ota-test/` kanal ponudio je `M4`,
+ali je relativna bundle putanja namjerno vraćala HTTP 404. Install je došao do
+`downloading 0%`, zatim ispravno objavio `bundle not on the server`, obnovio AP
+i ostao na `ota_0 / M3-22-gd7466ea` bez reboota; boot ID ostao je 175. FLX4,
+191-track library, NVS i svi audio/service brojači ostali su uredni, a
+produkcijski `/ota/` URL vraćen je u NVS. Firmware-health rollback ostaje
+otvoren.
 Jedan neposredni same-version check nakon ranijeg lokalnog upload OTA boota
 uzrokovao je izolirani PANIC reset bez dostupnog coredumpa; ponovljene odgođene
 provjere nisu ga reproducirale, pa ostaje zasebna dijagnostička stavka.
