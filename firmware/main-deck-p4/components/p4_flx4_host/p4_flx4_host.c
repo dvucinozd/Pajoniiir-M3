@@ -232,8 +232,6 @@ static usb_transfer_t          *s_ctrl_xfer = NULL;
 static uint8_t                  s_ctrl_step = 0;
 static bool                     s_audio_claimed = false;
 static uint8_t                  s_audio_ep_addr = 0x01;
-static uint32_t                 s_isoc_total_transfers = 0;
-static uint32_t                 s_audio_total_frames = 0;
 
 static void isoc_transfer_cb(usb_transfer_t *transfer);
 static void ctrl_transfer_cb(usb_transfer_t *transfer);
@@ -261,12 +259,6 @@ static void prepare_and_submit_isoc_transfer(usb_transfer_t *transfer)
     esp_err_t err = usb_host_transfer_submit(transfer);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "Isochronous transfer submit failed: %s", esp_err_to_name(err));
-    } else {
-        s_isoc_total_transfers++;
-        if ((s_isoc_total_transfers % 1000) == 0) {
-            ESP_LOGW(TAG, "FLX4 ISOC audio alive: %" PRIu32 " transfers, %" PRIu32 " frames pushed to ring",
-                     s_isoc_total_transfers, s_audio_total_frames);
-        }
     }
 }
 
@@ -425,8 +417,6 @@ esp_err_t p4_flx4_host_write_audio(const int16_t *master_samples,
                 dropped = true;
             }
         }
-
-        s_audio_total_frames += (uint32_t)output_frames;
         if (master_samples) master_samples += chunk * 2;
         if (hp_samples) hp_samples += chunk * 2;
         frame_count -= chunk;
@@ -632,7 +622,6 @@ static void flx4_client_event_cb(const usb_host_client_event_msg_t *event_msg, v
                     atomic_store_explicit(&s_audio_submitted_blocks, 0u, memory_order_relaxed);
                     atomic_store_explicit(&s_audio_dropped_blocks, 0u, memory_order_relaxed);
                     atomic_store_explicit(&s_audio_submitted_frames, 0u, memory_order_relaxed);
-                    s_audio_total_frames = 0u;
                     portEXIT_CRITICAL(&s_flx4_mux);
 
                     s_out_inflight = false;

@@ -2422,6 +2422,10 @@ Assert-FileDoesNotContain `
     -Name "FLX4 real-time MIDI callback contains no per-packet serial logging" `
     -Path $flx4HostPath `
     -LiteralPatterns @("FLX4 RAW PKT", "FLX4 EVENT RX")
+Assert-FileDoesNotContain `
+    -Name "FLX4 isochronous callback contains no periodic success logging" `
+    -Path $flx4HostPath `
+    -LiteralPatterns @("FLX4 ISOC audio alive")
 
 Assert-FileContains `
     -Name "p4 audio output passes its real clock to the FLX4 converter" `
