@@ -938,6 +938,17 @@ Assert-FileContains `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
     -LiteralPatterns @("wifi_link_restore_ap", "STA_BIT_GOT_IP", "xEventGroupWaitBits")
 
+Assert-FileContains `
+    -Name "p4 AP restore resets the remote data path and verifies DHCP readiness" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `
+    -LiteralPatterns @(
+        "AP_BIT_STARTED",
+        "stop_wifi_stack();",
+        "stop_hosted_transport();",
+        "esp_netif_dhcps_get_status",
+        "dhcp != ESP_NETIF_DHCP_STARTED"
+    )
+
 Assert-FileDoesNotContain `
     -Name "p4 STA switch does not tear down ESP-Hosted" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/wifi_link/wifi_link.c") `

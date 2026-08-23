@@ -127,6 +127,7 @@ static void copy_wifi_bytes(uint8_t *dst, size_t dst_len, const char *src)
  * associating without an address fetches nothing. */
 #define STA_BIT_GOT_IP       BIT0
 #define STA_BIT_DISCONNECTED BIT1
+#define AP_BIT_STARTED        BIT2
 
 static EventGroupHandle_t s_sta_events;
 static esp_netif_t *s_sta_netif;
@@ -146,6 +147,10 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
          * waiter treats it as failure; a drop after we already have an address
          * is handled by the caller finishing and restoring. */
         if (s_sta_events) xEventGroupSetBits(s_sta_events, STA_BIT_DISCONNECTED);
+        return;
+    }
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_START) {
+        if (s_sta_events) xEventGroupSetBits(s_sta_events, AP_BIT_STARTED);
         return;
     }
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
@@ -207,15 +212,20 @@ static esp_err_t start_web_ap(void)
     if (!s_ap_netif) {
         s_ap_netif = esp_netif_create_default_wifi_ap();
     }
-    if (s_ap_netif) {
-        esp_netif_ip_info_t ip_info = {0};
-        ip_info.ip.addr = ESP_IP4TOADDR(192, 168, 4, 1);
-        ip_info.gw.addr = ESP_IP4TOADDR(192, 168, 4, 1);
-        ip_info.netmask.addr = ESP_IP4TOADDR(255, 255, 255, 0);
-        esp_netif_dhcps_stop(s_ap_netif);
-        esp_netif_set_ip_info(s_ap_netif, &ip_info);
+    if (!s_ap_netif) return ESP_ERR_NO_MEM;
 
-        /* Hand out an address, but do not claim to be the way to the internet.
+    esp_netif_ip_info_t ip_info = {0};
+    ip_info.ip.addr = ESP_IP4TOADDR(192, 168, 4, 1);
+    ip_info.gw.addr = ESP_IP4TOADDR(192, 168, 4, 1);
+    ip_info.netmask.addr = ESP_IP4TOADDR(255, 255, 255, 0);
+    esp_err_t rc = esp_netif_dhcps_stop(s_ap_netif);
+    if (rc != ESP_OK && rc != ESP_ERR_ESP_NETIF_DHCP_ALREADY_STOPPED) {
+        ESP_RETURN_ON_ERROR(rc, TAG, "stop AP DHCP server");
+    }
+    ESP_RETURN_ON_ERROR(esp_netif_set_ip_info(s_ap_netif, &ip_info),
+                        TAG, "set AP address");
+
+    /* Hand out an address, but do not claim to be the way to the internet.
          *
          * Offering ourselves as router and DNS made every client install a
          * default route through a deck that leads nowhere, so joining this AP
@@ -227,16 +237,23 @@ static esp_err_t start_web_ap(void)
          * that captive-portal auto-open stops working and the address is typed
          * by hand, which the operator accepted in exchange for keeping
          * internet, and which mDNS will make moot. */
-        uint8_t offer = 0;
+    uint8_t offer = 0;
+    ESP_RETURN_ON_ERROR(
         esp_netif_dhcps_option(s_ap_netif, ESP_NETIF_OP_SET,
                                ESP_NETIF_ROUTER_SOLICITATION_ADDRESS,
-                               &offer, sizeof(offer));
+                               &offer, sizeof(offer)),
+        TAG, "disable AP router offer");
+    ESP_RETURN_ON_ERROR(
         esp_netif_dhcps_option(s_ap_netif, ESP_NETIF_OP_SET,
                                ESP_NETIF_DOMAIN_NAME_SERVER,
-                               &offer, sizeof(offer));
+                               &offer, sizeof(offer)),
+        TAG, "disable AP DNS offer");
 
-        esp_netif_dhcps_start(s_ap_netif);
-    }
+    /* Mark INIT before WIFI_EVENT_AP_START. esp-netif starts DHCPS when its
+     * interface becomes live; after the event we verify that it really did.
+     * This matters on ESP-Hosted, where esp_wifi_start() only confirms that the
+     * command reached the C6, not that the P4 data path is ready. */
+    ESP_RETURN_ON_ERROR(esp_netif_dhcps_start(s_ap_netif), TAG, "arm AP DHCP server");
 
     wifi_config_t cfg = {0};
     copy_wifi_bytes(cfg.ap.ssid, sizeof(cfg.ap.ssid), WIFI_LINK_SOFTAP_SSID);
@@ -254,9 +271,26 @@ static esp_err_t start_web_ap(void)
     cfg.ap.authmode = WIFI_AUTH_WPA2_PSK;
     cfg.ap.pmf_cfg.required = false;
 
+    xEventGroupClearBits(s_sta_events, AP_BIT_STARTED);
     ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_AP), TAG, "set AP mode");
     ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_AP, &cfg), TAG, "set AP config");
     ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "start AP");
+
+    EventBits_t bits = xEventGroupWaitBits(s_sta_events, AP_BIT_STARTED,
+                                           pdFALSE, pdFALSE,
+                                           pdMS_TO_TICKS(5000u));
+    if ((bits & AP_BIT_STARTED) == 0u) {
+        ESP_LOGE(TAG, "AP start event timed out");
+        return ESP_ERR_TIMEOUT;
+    }
+
+    esp_netif_dhcp_status_t dhcp = ESP_NETIF_DHCP_INIT;
+    ESP_RETURN_ON_ERROR(esp_netif_dhcps_get_status(s_ap_netif, &dhcp),
+                        TAG, "read AP DHCP state");
+    if (dhcp != ESP_NETIF_DHCP_STARTED) {
+        ESP_LOGE(TAG, "AP event arrived without DHCP server (state=%d)", (int)dhcp);
+        return ESP_ERR_INVALID_STATE;
+    }
     ESP_LOGI(TAG, "web AP started: ssid=%s", WIFI_LINK_SOFTAP_SSID);
     return ESP_OK;
 }
@@ -440,7 +474,16 @@ esp_err_t wifi_link_restore_ap(void)
     }
     stop_sta_netif();
 
-    esp_err_t rc = start_web_ap();
+    /* A warm AP->STA->AP mode flip on the M3's remote C6 can bring the beacon
+     * back while leaving the SDIO data path unable to carry DHCP/HTTP frames.
+     * Recreate the remote Wi-Fi stack and reset the C6 before announcing the
+     * AP. esp-hosted 2.12.12 safely preserves the other SDMMC slot during this
+     * deinit/init cycle. */
+    stop_wifi_stack();
+    stop_hosted_transport();
+
+    esp_err_t rc = ensure_wifi_stack();
+    if (rc == ESP_OK) rc = start_web_ap();
     if (rc == ESP_OK) rc = web_server_start();
     if (rc == ESP_OK) rc = dns_server_start();
 
