@@ -29,7 +29,7 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-23 je `M3-13-gc95bd4b` na P4 ploči. FLX4
+Završni hardverski baseline 2026-08-23 je `M3-15-g70a082c` na P4 ploči. FLX4
 je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `READY`, oba
 channel fadera su na nuli, USB3 library sadrži 191 track, service log nema
 dropova, a SoftAP i Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
@@ -46,8 +46,9 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. odraditi pravi Wi-Fi test s najmanje dva fizička klijenta uz USB2, USB3 i
-   audio promet;
+1. izolirati povremeni simultani dual-deck start/seek tranzijent koji je prije
+   multi-client mjernog prozora jednom dodao PCM D1=202, bez rasta tijekom
+   samog prozora;
 2. pokrenuti AP→STA→AP i potpisani OTA acceptance čim budu konfigurirani
    servisni SSID, zaporka i update URL;
 3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
@@ -79,7 +80,7 @@ Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
   vjerodajnice, bez ispisa tajni u statusu ili logovima;
 - [x] dovršiti Settings tok za enable/disable, AP/STA stanje, IP adresu, pogreške i
   siguran povratak iz privremenog STA načina u SoftAP;
-- [ ] hardverski provjeriti web UI/API, reconnect, više klijenata i paralelni rad
+- [x] hardverski provjeriti web UI/API, reconnect, više klijenata i paralelni rad
   Wi-Fi prometa s USB2, USB3 i audio putanjama;
 - [ ] potvrditi potpisani P4 OTA preko STA veze, uključujući neuspjeli download,
   rollback i obnovu SoftAP-a.
@@ -201,6 +202,19 @@ utišani mixed-rate dual-deck playback vratio je FLX4 MIDI In/Out i UAC, oba
 decka nastavila su playback, a output-late, PCM underrun, UAC dropped/overflow
 i service-log dropped ostali su 0. Time su disconnect i EOF rubovi zatvoreni.
 
+Fizički multi-client gate zatvoren je na `M3-15-g70a082c` s Windows računalom
+i mobitelom istodobno spojenima na `Pajoniiir-M3`. Početni run otkrio je još
+jedan nepotreban WARN iz priority-7 isochronous callbacka svake 1.000 transfera;
+log i njegova privatna telemetrija uklonjeni su iz real-time puta. Završni
+190,722-sekundni mixed-rate dual-deck prozor prošao je 180/180 status, 18/18
+library i 12/12 firmware zahtjeva, uz neprekinut FLX4 MIDI In/Out i UAC. Oba
+decka napredovala su po 190.832 ms, a output-late, PCM underrun, UAC
+dropped/overflow/underflow i service-log dropped delte ostale su 0. Prozor je
+uključio i kratko fizičko okretanje `HEADPHONES LEVEL`; nije nastala audio
+regresija. Mobitel je zasebno prošao AP disconnect/reconnect i ponovno prikazao
+library i oba PLAY decka. Vizualna provjera Settings broja klijenata ostaje uz
+bring-up novog zaslona.
+
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni
 promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
@@ -244,6 +258,8 @@ Acceptance: svi podržani FLX4 elementi imaju jednoznačan P4 state owner.
 
 - [x] hardware-verify PFL prije channel fadera, cue/master routing te
   `HEADPHONES LEVEL`/`HEADPHONES MIX` bez prekida ili pucketanja;
+- [ ] hardware-verify da simultani dual-deck start i seek/start prijelazi ne
+  povećavaju PCM underrun brojače nakon prebuffera;
 - [ ] hardware-verify PCM5102A headroom i završnu limiter marginu;
 - dovršiti scratch/Master Tempo rubne slučajeve uz loop i pitch promjene;
 - postaviti pragove za UAC ring i output timing alarme.

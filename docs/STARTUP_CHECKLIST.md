@@ -44,6 +44,8 @@ idf.py -p COM17 flash monitor
   trakama; promjena source ratea ne mijenja brzinu ni visinu tona.
 - [ ] Prirodni EOF i STOP/reload na mixed-rate deckovima ne povećavaju PCM
   underrun brojače.
+- [ ] Simultani start oba spremna decka i seek/start nakon prebuffera ne
+  povećavaju PCM underrun brojače.
 - [ ] Fizički USB2 unplug/replug tijekom utišanog dual-deck playbacka vraća
   MIDI In/Out i UAC, playback nastavlja, a output-late i PCM underrun ostaju 0.
 - [ ] Dual-deck playback, pitch/Master Tempo i scratch ostaju stabilni.

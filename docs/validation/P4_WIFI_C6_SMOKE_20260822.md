@@ -324,3 +324,61 @@ output deadlinea tijekom samog prijelaza. Nakon toga slijede fizički AP
 multi-client te AP→STA→AP/potpisani OTA test kada servisna mreža bude
 konfigurirana. Generirani lokalni browser artefakti nisu dio izvornog koda ni
 release dokumentacije.
+
+## Fizički multi-client acceptance — `M3-15-g70a082c`, 2026-08-23
+
+Završni multi-client gate koristio je dva stvarna SoftAP klijenta: Windows
+računalo i mobitel. Na USB2 je cijelo vrijeme bio DDJ-FLX4 s MIDI In/Out i
+UAC-om, na USB3 Rekordbox medij s 191 trackom, a oba channel fadera i oba PFL-a
+bili su ugašeni. Deck 1 je reproducirao 44,1-kHz `Evelyn Thomas - High Energy`,
+Deck 2 48-kHz `Megatron Man`, uz zajednički PCM5102A output na 48 kHz.
+
+Mobitel je otvorio `http://192.168.4.1`, prikazao biblioteku od 191 tracka i oba
+decka u PLAY stanju dok je računalo istodobno slalo status, library i firmware
+zahtjeve. Zasebni fizički disconnect/reconnect mobitela vratio je isti web
+controller bez prekida API-ja prvog klijenta, FLX4-a ili playbacka.
+
+Početni `M3-13-gc95bd4b` prozor funkcionalno je prošao, ali serijski trag je
+otkrio da priority-7 FLX4 isochronous callback još svake 1.000 uspješnih
+transfera emitira WARN `FLX4 ISOC audio alive`. U kontrolnom 127,061-sekundnom
+prozoru svi 120 status, 12 library i 8 firmware zahtjeva prošli su bez greške,
+PCM/UAC brojači nisu rasli, a output-late delta bila je 0. U zasebnom
+75-uzoračnom phone reconnect prozoru nastao je jedan izolirani output-late od
+11.494 µs, bez PCM ili UAC posljedice. Periodični success log i njegova dva
+privatna brojača zato su uklonjeni iz real-time puta; submit-failure log ostaje.
+Statički host gate sprječava povratak tog loga.
+
+Točan commit `70a082c` izgrađen je s ESP-IDF v6.0.2 kao
+`M3-15-g70a082c`, veličine `0x240700`, uz 44% slobodne app particije. Puni
+`tests/run_p4_host_tests.ps1`, clean commit build i flash na `COM17` prošli su;
+svi flash hashovi su verificirani.
+
+Završni A/B prozor trajao je 190,722 s. Početni start tranzijenti (output-late
+1 / 10.925 µs i PCM D1=202) nastali su prije mjernog prozora i ostali
+nepromijenjeni do kraja. Rezultat prozora:
+
+| Provjera | Rezultat |
+| --- | --- |
+| `GET /api/status` | 180/180 |
+| `GET /api/library` | 18/18, svaki 191 track |
+| `GET /api/firmware` | 12/12, svaki `M3-15-g70a082c` |
+| FLX4 missing uzorci | 0/180 |
+| napredak D1/D2 | +190.832 / +190.832 ms |
+| output-late delta | 0 |
+| PCM underrun delta D1/D2 | 0/0 |
+| UAC dropped/overflow/aktivni underflow delta | 0/0/0 |
+| UAC ring početak/kraj/opaženi maksimum | 1.141/1.338/1.338 od 2.048 frameova |
+| UAC clock trim/duplicate delta | +158/+2 framea |
+| service-log dropped delta | 0 |
+| heap/internal/PSRAM delta | -2.968/+104/-3.072 B |
+
+Korisnik je tijekom prozora kratko fizički pomaknuo `HEADPHONES LEVEL`; gain
+ramp je ostao bez output-latea, PCM/UAC gubitka ili prekida playbacka. Time je
+funkcionalni fizički two-client + USB2 + USB3 + mixed-rate audio gate zatvoren.
+Settings brojač AP klijenata programski je host-testiran, ali njegova vizualna
+provjera ostaje dio 800×480 zaslonskog bring-upa jer ciljani zaslon još nije
+priključen.
+
+Završno stanje: oba decka su `READY`, channel faderi su na nuli, PFL je
+isključen, FLX4 ima MIDI In/Out i UAC, library sadrži 191 track, service-log
+dropped je 0, a `Pajoniiir-M3` Wi-Fi ostavljen je uključen.
