@@ -73,6 +73,13 @@ idf.py -p COM17 flash monitor
   nema racea, srušenog netifa ni izgubljenog ESP-Hosted transporta.
 - [ ] `/api/status` prikazuje FLX4 i USB-headphone dijagnostiku.
 - [ ] P4-only potpisani OTA odbija pogrešan chip, projekt ili potpis.
+- [ ] Pull OTA sa zaustavljenim deckovima preuzima ponuđeni noviji release,
+  podiže novi slot, prolazi startup health gate, čuva NVS/library/FLX4 i vraća
+  SoftAP bez output-late, PCM underrun, UAC drop/overflow ili service-log dropa.
+- [ ] Same-version channel check završava s `already running this build` bez
+  reseta ili panica; boot ID ostaje nepromijenjen.
+- [ ] Prekinuti download ne mijenja boot slot, a namjerno neuspjeli startup
+  health gate vraća prethodni valjani slot.
 - [ ] APSTA/OTA posjet ne deinitializira ESP-Hosted dok je microSD montiran na
   drugom slotu zajedničkog SDMMC kontrolera.
 

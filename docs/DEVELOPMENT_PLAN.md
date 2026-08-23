@@ -1,7 +1,7 @@
 # Development Plan
 
-Status: plan nakon mixed-rate, FLX4 headphone i disconnect/EOF acceptancea,
-2026-08-23.
+Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF i signed pull-OTA
+acceptancea, 2026-08-23.
 
 ## Trenutna baza
 
@@ -14,8 +14,8 @@ Status: plan nakon mixed-rate, FLX4 headphone i disconnect/EOF acceptancea,
 
 Wi-Fi programski temelj već postoji: ESP32-C6/ESP-Hosted preko SDIO-a,
 SoftAP `Pajoniiir-M3`, web API, privremeni STA put i potpisani P4 OTA. Prije
-releasea treba dovršiti konfiguraciju, operatorski tok i hardversku/stress
-validaciju.
+releasea treba dovršiti OTA fault/rollback scenarije i preostalu
+hardversku/stress validaciju.
 
 Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
 dodirom je naručen i čeka se njegov dolazak. U dokumentaciji je to ciljana
@@ -29,15 +29,21 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-23 je `M3-20-g9f24b19` na P4 ploči. FLX4
+Završni hardverski baseline 2026-08-23 je `M3-22-gd7466ea` u `ota_0` na P4
+ploči. Verzija je instalirana kao potpisani pull OTA s produkcijskog HTTPS
+kanala, startup health gate označio ju je valjanom i nije bilo rollbacka. FLX4
 je spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u `IDLE`, USB3
 library sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
 `Pajoniiir-M3` ostavljeni su uključeni. Servisni SSID, zaporka i HTTPS update
 URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
 zaporku. Fizički APSTA round-trip dobio je servisnu adresu `192.168.0.210`,
 vratio `round trip complete` i sačuvao SoftAP klijentu valjanu adresu
-`192.168.4.2`. HTTPS update check zatim je ispravno odbio stariju objavljenu
-verziju bez downloada ili pisanja u flash.
+`192.168.4.2`. HTTPS kanal zatim je objavio `M3-22-gd7466ea`; bundle je
+preuzet, verificiran i podignut iz `ota_0`. Naknadna provjera jednake verzije
+vratila je `already running this build` bez reseta, uz nepromijenjen boot ID
+175. Jedan raniji, neposredni equality check nakon lokalnog web-upload OTA-a
+uzrokovao je izolirani PANIC reset; kontrolirane provjere nisu ga reproducirale
+i ostaje otvoren dijagnostički rizik.
 Firmware sadrži dvostupanjski prioritet
 FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
 nakon početnog UAC queue priminga. Stateful linearni UAC resampler sada pretvara
@@ -51,9 +57,9 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. objaviti noviji potpisani M3 testni bundle i dovršiti OTA install,
-   neuspjeli-download i rollback acceptance; osnovni APSTA connectivity i HTTPS
-   channel check sada su zatvoreni;
+1. dovršiti OTA neuspjeli-download i rollback acceptance te pokušati
+   reproducirati izolirani post-OTA equality-check PANIC; signed web-upload i
+   produkcijski HTTPS pull install sada su zatvoreni;
 2. zadržati start/seek PCM brojače u sljedećim dugim audio soak provjerama;
    izolirani D1=202 događaj nije se ponovio u 12 kontroliranih ciklusa, uključujući
    pet load → paused seek → simultaneous start → stop ciklusa;
@@ -91,8 +97,9 @@ Acceptance: bez stale događaja, LED mismatcha ili kontinuiranih UAC dropova.
 - [x] hardverski potvrditi APSTA servisni round-trip bez gašenja lokalnog AP-a,
   DHCP-a, HTTP/DNS servisa ili ESP-Hosted/microSD transporta te pročitati HTTPS
   OTA kanal;
-- [ ] potvrditi potpisani P4 OTA preko STA veze, uključujući neuspjeli download,
-  rollback i obnovu SoftAP-a.
+- [x] potvrditi potpisani P4 OTA preko STA veze, uključujući download, provjeru
+  potpisa, boot novog slota, health potvrdu i obnovu SoftAP-a;
+- [ ] potvrditi neuspjeli download i firmware-health rollback scenarije.
 
 Programsko učvršćivanje sada objavljuje stvarno OFF/STARTING/AP/STA/RESTORING/
 ERROR stanje, AP/STA adresu i broj AP klijenata na Settings ekranu. Asinkrono
@@ -234,7 +241,17 @@ probe završio je s `round trip complete`, STA adresom `192.168.0.210` i očuvan
 AP adresom klijenta `192.168.4.2`. Zasebni HTTPS OTA check pročitao je kanal i
 ispravno odbio stariju objavljenu verziju bez preuzimanja ili flashanja. FLX4
 MIDI In/Out/UAC, 191-track library i service-log dropped=0 ostali su uredni.
-Puni noviji signed-bundle install, download fault i rollback ostaju otvoreni.
+Potpisani `M3-22-gd7466ea` (`rel-001`) verificiran je prvo izravnim dohvatom s
+VPS-a, zatim lokalnim web uploadom i konačno pravim pull installom iz factory
+`M3-20-g9f24b19` u `ota_0`. Pull je preuzeo 2.361.984 B imagea, verificirao ga,
+rebootao sa SW razlogom i startup health gate označio ga je valjanim. NVS,
+191-track library, FLX4 MIDI In/Out/UAC i SoftAP ostali su očuvani; output-late,
+PCM underrun, UAC drop/overflow i service-log dropped ostali su 0. Kontrolirani
+same-version check nakon stabilizacije vratio je `already running this build`
+bez promjene boot ID-a 175. Neuspjeli download i rollback ostaju otvoreni.
+Jedan neposredni same-version check nakon ranijeg lokalnog upload OTA boota
+uzrokovao je izolirani PANIC reset bez dostupnog coredumpa; ponovljene odgođene
+provjere nisu ga reproducirale, pa ostaje zasebna dijagnostička stavka.
 Probe zahtjev tijekom utišanog dual-deck playbacka zasebno je ispravno odbijen
 s HTTP 400 `a deck is playing`: oba decka nastavila su napredovati, AP je ostao
 na `192.168.4.2`, a output-late, PCM underrun, UAC drop/overflow i service-log

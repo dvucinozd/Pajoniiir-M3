@@ -446,3 +446,43 @@ drop/overflow i service-log dropped ostali su 0, FLX4 MIDI In/Out/UAC ostao je
 spojen, a AP klijent na `192.168.4.2`. Nakon provjere oba decka vraćena su u
 `READY`, crossfader na sredinu i channel faderi na početne vrijednosti. Wi-Fi i
 Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
+
+## Potpisani upload i produkcijski pull OTA — `M3-22-gd7466ea`, 2026-08-23
+
+Clean ESP-IDF v6.0.2 build aktualnog HEAD-a zapakiran je ECDSA P-256 release
+ključem `rel-001`. Bundle `main-deck-p4.ddjota` imao je 2.362.172 B i SHA-256
+`96cfc7048e7452dc6f5c0a8b25b09ba5714f2db7e730556a4b2e09b404c22130`;
+unutarnji P4 image imao je 2.361.984 B i SHA-256
+`c74296c1a4c9702c7272107c92e60c8a9579beb5c6ca13a787cdf2ee6368d57b`.
+Lokalni package verify i ponovno preuzimanje s produkcijskog VPS-a potvrdili su
+manifest, hash i potpis bez čitanja privatnog ključa.
+
+Prvo je isti bundle instaliran lokalnim `POST /api/ota/p4` uploadom. P4 je
+podigao `ota_0 / M3-22-gd7466ea`, prošao health gate i sačuvao NVS. Neposredni
+channel equality check nakon tog boota jednom je uzrokovao PANIC reset (boot
+170). Coredump nije bio uključen, pa uzrok nije potvrđen. Naknadne kontrolirane
+provjere na stabilnom bootu vraćale su `already running this build` bez reseta.
+
+Za pravi pull acceptance `otadata` je obrisan IDF `otatool.py` alatom, bez
+brisanja NVS-a ili aplikacijskih particija. Uređaj je zatim podigao factory
+`M3-20-g9f24b19`, sa zaustavljenim deckovima, 191-track bibliotekom i potpuno
+aktivnim FLX4 MIDI In/Out/UAC putem. HTTPS check pronašao je objavljeni
+`M3-22-gd7466ea`, a install je vratio HTTP 202 i započeo preuzimanje.
+
+Serijski monitor zabilježio je:
+
+- primitak točno 2.361.984 B u `ota_0`;
+- uspješnu provjeru imagea i izbor `ota_0` za sljedeći boot;
+- očekivani SW reset, bez panica ili rollbacka;
+- `pending_verify` boot i uspješnu startup health potvrdu;
+- početni FLX4 endpoint claim konflikt, zatim automatsku ponovnu enumeraciju i
+  puni MIDI In/Out/UAC oporavak.
+
+Završni API rezultat bio je `ota_0 / M3-22-gd7466ea`, firmware state `idle`,
+oba decka zaustavljena, NVS servisni SSID/HTTPS URL/`has_password=true`, library
+191, service-log dropped 0 te output-late, PCM underrun i UAC drop/overflow 0.
+Kontrolirani same-version check vratio je `already running this build`; boot ID
+ostao je 175 prije i poslije provjere. Wi-Fi `Pajoniiir-M3` ostavljen je
+uključen. Time su potpisani lokalni upload i produkcijski pull happy path
+zatvoreni. Download fault, namjerni firmware-health rollback i reprodukcija
+izoliranog post-OTA panica ostaju otvoreni.
