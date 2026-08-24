@@ -47,9 +47,10 @@ idf.py -p COM17 flash monitor
   kratki Sync na drugom decku prati master, dok kraći hold ne glumi long press.
 - [ ] `SHIFT + RELOOP/EXIT` zaustavlja i zaboravlja aktivnu petlju; naknadni
   obični Reloop/Exit ne obnavlja zaboravljenu petlju.
-- [ ] `SHIFT + PLAY/PAUSE` drži Censor state i LED samo do otpuštanja. Trenutačni
-  MVP čujno ponavlja dio oko 1 s unatrag i zatim se vraća na napredovalu
-  vremensku liniju; nije pravi reverse.
+- [ ] `SHIFT + PLAY/PAUSE` tijekom aktivnog playbacka drži Censor state i LED,
+  čujno reproducira zadržani PCM unatrag te se na otpuštanje 10-ms crossfadeom
+  vraća na napredovalu slip vremensku liniju bez seeka. Na pauziranom decku
+  pritisak je siguran no-op.
 - [ ] `SHIFT + BEAT < / >` mijenja Beat FX veličinu za dva enum koraka i
   saturira na `1/4` odnosno `4 beats`; FLANGER ima čujan sweep, DELAY jedan
   full-band tap, a `SHIFT + BEAT FX ON/OFF` vraća `FILTER / 1 beat / 1&2 /
@@ -77,6 +78,12 @@ prošli, uz poznatu MVP dijagnostičku cijenu: press i release seek dodali su po
 jedan output-late događaj i 256 PCM-underrun frameova. Kontrolni osamsekundni
 start/stop bez Censora nije dodao nijedan brojač, a UAC dropped/overflow ostali
 su 0.
+
+Ta hardverski potvrđena seek-based izvedba više nije aktualni source. Novi
+gapless Censor koristi postojeći četverosekundni kanonski PCM timeline bez
+dodatnog buffera, drži forward playhead aktivnim u pozadini i otpušta ga bez
+seeka. Host regresije i ESP-IDF 6.0.2 build prolaze; gornja checkbox stavka
+ostaje otvorena dok se novi image ne instalira i izmjere audio/UAC brojači.
 
 Beat FX acceptance na istom `M3-34-gafee129` imageu potvrdio je shifted
 `1→4`, gornju saturaciju, `4→1→1/4`, donju saturaciju i završni povratak na

@@ -71,10 +71,14 @@ Na hardveru je D1 Sync Master postavljen držanjem BEAT SYNC najmanje 3 s, a
 obični D2 Sync zatim je pratio D1 master. D1 `SHIFT + RELOOP/EXIT` zaustavio je
 i zaboravio aktivnu petlju. D1 Censor state, LED i čujno kratko ponavljanje
 prošli su, a release se vratio na kontinuirano napredujuću vremensku liniju.
-Trenutačni seek-based Censor nije gapless: press i release dodali su po jedan
+Ta tadašnja seek-based Censor izvedba nije bila gapless: press i release dodali su po jedan
 output-late događaj i 256 D1 PCM-underrun frameova. Kontrolni start, 8 s
 playbacka i stop bez Censora dodali su 0/0; UAC dropped/overflow i service-log
 dropped ostali su 0.
+
+Aktualni source zamjenjuje taj MVP gapless slip-reverse DSP-om bez transport
+seeka. Puni host suite i ESP-IDF 6.0.2 build prolaze; novi image još nije
+instaliran pa D1/D2 reverse/release counter acceptance ostaje otvoren.
 
 Na istom imageu naknadno je hardverski zatvoren shifted Beat FX blok. Beat-size
 je prošao dvostruke korake i obje saturacije od `1/4` do `4 beats`. FLANGER

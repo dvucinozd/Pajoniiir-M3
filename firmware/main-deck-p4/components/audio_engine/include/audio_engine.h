@@ -111,6 +111,11 @@ void audio_engine_deck_set_hold(uint8_t deck, bool held);
 bool audio_engine_deck_scratch_begin(uint8_t deck);
 void audio_engine_deck_scratch_move(uint8_t deck, int16_t delta);
 void audio_engine_deck_scratch_end(uint8_t deck);
+/* Gapless slip-censor. begin() is accepted only for an actively playing deck
+ * with retained canonical PCM history. Reverse audio is heard while the normal
+ * timeline advances silently; end() cross-fades back without a transport seek. */
+bool audio_engine_deck_censor_begin(uint8_t deck);
+void audio_engine_deck_censor_end(uint8_t deck);
 uint32_t audio_engine_deck_position_ms(uint8_t deck);
 bool audio_engine_deck_is_playing(uint8_t deck);
 uint16_t audio_engine_get_deck_peak(uint8_t deck);

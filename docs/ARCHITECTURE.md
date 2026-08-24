@@ -65,7 +65,15 @@ reproducibilni.
 
 ## Audio put
 
-Svaki deck dekodira u bounded PCM timeline. Output task radi DSP i mixer u
+Svaki deck dekodira u bounded PCM timeline. Isti četverosekundni timeline daje
+i povijest za gapless Censor: output task čita reverse read-headom dok normalni
+resampler ili Master Tempo renderer napreduje autoritativni playhead u pozadini.
+Otpuštanje Censora linearno ukršta reverse i već poravnati forward signal kroz
+10 ms, bez transport seeka, refill prekida ili druge PCM alokacije. Kada reverse
+dođe do izbačenog ruba bounded povijesti, zadnji uzorak se kratko gasi prema
+tišini, dok slip timeline nastavlja naprijed.
+
+Output task radi DSP i mixer u
 blokovima, šalje master na PCM5102A te cue/headphone miks u FLX4 UAC1 ring.
 Kanalni PFL tap je post-trim/post-DSP, ali prije channel fadera; kanalni CUE ga
 uključuje, a `HEADPHONES MIX` ga miješa s post-fader master signalom.

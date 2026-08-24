@@ -28,7 +28,6 @@ static const char *TAG = "deck";
 #define BEAT_SYNC_MAX_PERCENT 20u
 #define BROWSE_SHIFT_LIBRARY_MULTIPLIER 10
 #define BROWSE_SHIFT_OVERVIEW_MULTIPLIER 4
-#define CENSOR_REPEAT_BACK_MS 1000u
 #define LOOP_ADJUST_MS_PER_TICK 1
 #define DECK_TASK_STACK_BYTES 8192u
 #define DECK_UI_COMMAND_QUEUE_LEN 16
@@ -224,9 +223,6 @@ static deck_beat_loop_led_state_t s_beat_loop_led[DECK_CORE_DECK_COUNT];
 
 typedef struct {
     bool active;
-    bool was_playing;
-    uint32_t origin_ms;
-    TickType_t press_tick;
 } deck_censor_shadow_t;
 
 static deck_censor_shadow_t s_censor_shadow[DECK_CORE_DECK_COUNT];
@@ -1125,17 +1121,9 @@ static bool adjust_loop_boundary_from_jog(uint8_t deck,
     return true;
 }
 
-/*
- * Censor approximation. Real Pioneer censor plays the track in reverse while
- * held and, on release, resumes exactly where the untouched timeline would be
- * (so beat alignment is preserved). We approximate that without a reverse
- * decoder: on press we seek back CENSOR_REPEAT_BACK_MS and keep playing
- * FORWARD, and on release we snap to the "real" position (origin + time held)
- * so sync is not lost. Consequences of the approximation: playback is forward,
- * not reversed; the CENSOR_REPEAT_BACK_MS window plays once and does not loop;
- * and if held longer than that window the audible content diverges from a true
- * censor even though the release position stays correct.
- */
+/* Censor is implemented by the audio engine as a reverse reader over retained
+ * canonical PCM while the ordinary timeline advances silently underneath it.
+ * Release cross-fades to that slip playhead, so this control path never seeks. */
 static void handle_censor(uint8_t deck, bool pressed, deck_state_t *state)
 {
     if (deck >= DECK_CORE_DECK_COUNT || !state) {
@@ -1147,19 +1135,13 @@ static void handle_censor(uint8_t deck, bool pressed, deck_state_t *state)
         if (shadow->active) {
             return;
         }
-        uint32_t origin = current_deck_position_ms(deck, state);
-        uint32_t repeat = origin > CENSOR_REPEAT_BACK_MS ? origin - CENSOR_REPEAT_BACK_MS : 0u;
-        shadow->active = true;
-        shadow->was_playing = audio_engine_deck_is_playing(deck);
-        shadow->origin_ms = origin;
-        shadow->press_tick = xTaskGetTickCount();
-        state->censor_active = true;
-        if (audio_engine_deck_seek(deck, repeat) == ESP_OK) {
-            state->position_ms = repeat;
+        if (!audio_engine_deck_censor_begin(deck)) {
+            ESP_LOGW(TAG, "deck %u censor unavailable", (unsigned)deck + 1u);
+            return;
         }
-        ESP_LOGI(TAG, "deck %u censor press -> %lu ms",
-                 (unsigned)deck + 1,
-                 (unsigned long)repeat);
+        shadow->active = true;
+        state->censor_active = true;
+        ESP_LOGI(TAG, "deck %u censor reverse begin", (unsigned)deck + 1u);
         publish_flx4_led_snapshot(false);
         return;
     }
@@ -1168,20 +1150,10 @@ static void handle_censor(uint8_t deck, bool pressed, deck_state_t *state)
         return;
     }
 
-    uint32_t target = shadow->origin_ms;
-    if (shadow->was_playing) {
-        TickType_t elapsed_ticks = xTaskGetTickCount() - shadow->press_tick;
-        uint32_t elapsed_ms = (uint32_t)(elapsed_ticks * portTICK_PERIOD_MS);
-        target += elapsed_ms;
-    }
-    if (audio_engine_deck_seek(deck, target) == ESP_OK) {
-        state->position_ms = target;
-    }
+    audio_engine_deck_censor_end(deck);
     state->censor_active = false;
     memset(shadow, 0, sizeof(*shadow));
-    ESP_LOGI(TAG, "deck %u censor release -> %lu ms",
-             (unsigned)deck + 1,
-             (unsigned long)target);
+    ESP_LOGI(TAG, "deck %u censor slip release", (unsigned)deck + 1u);
     publish_flx4_led_snapshot(false);
 }
 

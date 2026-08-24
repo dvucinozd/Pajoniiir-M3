@@ -65,11 +65,11 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+1. instalirati i hardverski potvrditi novi gapless slip-reverse Censor na D1 i
+   D2, uključujući release bez output-late/PCM/UAC delte;
+2. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona, pa na istom UI-u odraditi Master Tempo hardware gate;
-2. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a;
-3. ako se razvoj nastavlja bez novog hardvera, zamijeniti seek-based Censor
-   pravim gapless reverse DSP putem.
+3. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a.
 
 ## Sljedeće faze
 
@@ -385,6 +385,11 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   adrese te izložiti `sync_master` i `censor_active` kroz status API;
 - [x] hardware-verify D1 Sync Master long press, obični D2 Sync prema masteru,
   D1 Reloop Stop/Forget te D1 Censor state, LED i čujni MVP repeat;
+- [x] zamijeniti seek-based Censor bounded gapless slip-reverse čitačem nad
+  kanonskim PCM timelineom, uz 10-ms release crossfade, mixed-rate interpolaciju
+  i host ugovor da `deck_core` ne radi seek;
+- [ ] hardware-verify novi Censor na D1/D2: čujni reverse tijekom držanja,
+  nastavak s napredovale slip pozicije i nulta output-late/PCM/UAC delta;
 - [x] hardware-verify shifted Beat FX beat-size dvostruke korake i saturaciju,
   FLANGER/DELAY DSP te potpuni shifted reset statea i ON/OFF LED-ice;
 - [x] hardware-verify D1 ANLZ-grid ponašanje shifted CUE/LOOP CALL back/forward
@@ -402,9 +407,14 @@ Master zahtijevao je najmanje 3 s držanja; potom je normalni D2 Sync pratio D1
 master. D1 Reloop Stop/Forget ugasio je petlju i obični Reloop/Exit je nije
 vratio. Censor state, LED i čujno kratko ponavljanje prošli su, ali postojeći
 seek-based MVP pri pressu i releaseu dodaje po jedan output-late događaj i 256
-PCM-underrun frameova. Kontrolni start/stop bez Censora imao je nultu deltu, pa
-se gapless true-reverse Censor vodi kao budući DSP quality korak; tadašnji
-sljedeći parity blok bile su shifted Beat FX kontrole.
+PCM-underrun frameova. Kontrolni start/stop bez Censora imao je nultu deltu.
+Ta je implementacija sada zamijenjena gapless slip-reverse DSP-om bez seeka:
+postojeći četverosekundni timeline daje reverse povijest, forward renderer
+istodobno pomiče autoritativni playhead, a release ih linearno ukršta tijekom
+10 ms. Novi modul pokriva unity/mixed-rate reverse, interpolaciju, bounded rub i
+release; deck-core regresija potvrđuje nula seekova. Puni host suite i ESP-IDF
+6.0.2 P4 build prošli su 2026-08-24, dok hardware acceptance ostaje sljedeći
+screen-independent gate.
 
 Shifted Beat FX hardverski slice zatim je na istom imageu prošao `1→4`, gornju
 saturaciju, `4→1→1/4`, donju saturaciju i povratak na `1 beat`, bez promjene
@@ -454,6 +464,10 @@ underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
 - [ ] hardware-verify PCM5102A headroom i završnu limiter marginu nakon što
   korisnik fizički spoji DAC modul;
 - [x] hardware-verify active-loop scratch i pitch-fader handoff;
+- [x] implementirati i host-testirati gapless slip-reverse Censor bez transport
+  seeka ili drugog PCM buffera;
+- [ ] hardware-verify Censor reverse/release na oba decka uz nulte output-late,
+  PCM-underrun i UAC drop/overflow delte;
 - [ ] nakon dolaska zaslona uključiti Master Tempo kroz UI i izmjeriti stvarni
   dual-deck keylock/PSRAM deadline uz suprotne pitch vrijednosti;
 - [x] postaviti pragove za UAC ring i output timing alarme, uz idle suppression,

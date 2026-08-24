@@ -73,6 +73,9 @@ int audio_engine_stub_scratch_move_count[DECK_CORE_DECK_COUNT];
 int audio_engine_stub_scratch_move_last_delta[DECK_CORE_DECK_COUNT];
 int audio_engine_stub_scratch_end_count[DECK_CORE_DECK_COUNT];
 bool audio_engine_stub_scratch_available[DECK_CORE_DECK_COUNT];
+int audio_engine_stub_censor_begin_count[DECK_CORE_DECK_COUNT];
+int audio_engine_stub_censor_end_count[DECK_CORE_DECK_COUNT];
+bool audio_engine_stub_censor_available[DECK_CORE_DECK_COUNT];
 extern int control_link_stub_led_count;
 extern led_id_t control_link_stub_led[128];
 extern uint8_t control_link_stub_state[128];
@@ -307,6 +310,9 @@ static void reset_audio_engine_stub(void)
         audio_engine_stub_scratch_move_last_delta[deck] = 0;
         audio_engine_stub_scratch_end_count[deck] = 0;
         audio_engine_stub_scratch_available[deck] = true;
+        audio_engine_stub_censor_begin_count[deck] = 0;
+        audio_engine_stub_censor_end_count[deck] = 0;
+        audio_engine_stub_censor_available[deck] = true;
         audio_engine_stub_pregain[deck] = -1;
         audio_engine_stub_filter_raw[deck] = -1;
         audio_engine_stub_filter_set_count[deck] = 0;
@@ -1610,7 +1616,7 @@ static void test_quantized_loop_in_out_snaps_to_nearest_beat(void)
     assert(audio_engine_stub_loop_end_ms[CTRL_DECK_1] == 4000);
 }
 
-static void test_censor_press_repeats_previous_audio_window(void)
+static void test_censor_press_and_release_use_gapless_audio_path(void)
 {
     deck_core_test_reset();
     reset_audio_engine_stub();
@@ -1622,12 +1628,20 @@ static void test_censor_press_repeats_previous_audio_window(void)
     deck_core_test_apply_event(&press);
 
     assert(deck_core_test_get_deck_state(CTRL_DECK_1).censor_active);
-    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 1);
-    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 4000);
+    assert(audio_engine_stub_censor_begin_count[CTRL_DECK_1] == 1);
+    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 0);
+    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 5000);
     assert(control_link_stub_last_led_state(LED_CENSOR, CTRL_DECK_1) == 1);
+
+    ctrl_event_t release = deck_ext_action(CTRL_DECK_1, CTRL_DECK_EXT_ACTION_CENSOR, false);
+    deck_core_test_apply_event(&release);
+    assert(!deck_core_test_get_deck_state(CTRL_DECK_1).censor_active);
+    assert(audio_engine_stub_censor_end_count[CTRL_DECK_1] == 1);
+    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 0);
+    assert(control_link_stub_last_led_state(LED_CENSOR, CTRL_DECK_1) == 0);
 }
 
-static void test_censor_release_returns_to_stored_position_when_paused(void)
+static void test_censor_is_rejected_for_paused_deck(void)
 {
     deck_core_test_reset();
     reset_audio_engine_stub();
@@ -1636,13 +1650,14 @@ static void test_censor_release_returns_to_stored_position_when_paused(void)
     audio_engine_stub_deck_position_ms[CTRL_DECK_2] = 3000;
 
     ctrl_event_t press = deck_ext_action(CTRL_DECK_2, CTRL_DECK_EXT_ACTION_CENSOR, true);
-    ctrl_event_t release = deck_ext_action(CTRL_DECK_2, CTRL_DECK_EXT_ACTION_CENSOR, false);
     deck_core_test_apply_event(&press);
-    deck_core_test_apply_event(&release);
 
     assert(!deck_core_test_get_deck_state(CTRL_DECK_2).censor_active);
+    assert(audio_engine_stub_censor_begin_count[CTRL_DECK_2] == 1);
+    assert(audio_engine_stub_censor_end_count[CTRL_DECK_2] == 0);
+    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_2] == 0);
     assert(audio_engine_stub_deck_position_ms[CTRL_DECK_2] == 3000);
-    assert(control_link_stub_last_led_state(LED_CENSOR, CTRL_DECK_2) == 0);
+    assert(control_link_stub_last_led_state(LED_CENSOR, CTRL_DECK_2) != 1);
 }
 
 static void test_smart_buttons_toggle_audio_state_and_leds(void)
@@ -2852,8 +2867,8 @@ int main(void)
     test_loop_adjust_requires_active_loop_and_ignores_touch();
     test_loop_adjust_clamps_boundaries_and_loop_clear_exits_mode();
     test_quantized_loop_in_out_snaps_to_nearest_beat();
-    test_censor_press_repeats_previous_audio_window();
-    test_censor_release_returns_to_stored_position_when_paused();
+    test_censor_press_and_release_use_gapless_audio_path();
+    test_censor_is_rejected_for_paused_deck();
     test_loop_in_marker_publishes_loop_in_led_before_loop_out();
     test_reloop_exit_clears_and_restores_last_requested_deck_loop();
     test_loop_halve_and_double_resize_active_loop();

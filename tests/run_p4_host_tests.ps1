@@ -269,7 +269,7 @@ function Invoke-SinglePrecisionContract {
     $sources = @(
         "audio_keylock.c", "audio_filter.c", "audio_eq.c", "audio_resampler.c",
         "audio_smart_cfx.c", "audio_delay_fx.c", "audio_flanger_fx.c",
-        "audio_pad_fx.c", "audio_mixer.c", "audio_scratch.c"
+        "audio_pad_fx.c", "audio_mixer.c", "audio_scratch.c", "audio_censor.c"
     )
     foreach ($source in $sources) {
         if (-not (Test-Path -LiteralPath (Join-Path $dir $source))) {
@@ -1447,6 +1447,7 @@ $tests = @(
             "../../firmware/main-deck-p4/components/audio_engine/audio_flac_decoder.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_diag.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_keylock.c",
+            "../../firmware/main-deck-p4/components/audio_engine/audio_censor.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_eq.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_filter.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_smart_cfx.c",
@@ -1661,6 +1662,19 @@ $tests = @(
             "test_audio_scratch.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_scratch.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_scratch_buffer.c",
+            "-lm"
+        )
+    },
+    @{
+        Name = "audio_censor"
+        Dir = "tests/audio_censor"
+        Target = "test_audio_censor.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror=implicit-function-declaration", "-std=c99",
+            "-I../../firmware/main-deck-p4/components/audio_engine/include",
+            "-o", "test_audio_censor.exe",
+            "test_audio_censor.c",
+            "../../firmware/main-deck-p4/components/audio_engine/audio_censor.c",
             "-lm"
         )
     },

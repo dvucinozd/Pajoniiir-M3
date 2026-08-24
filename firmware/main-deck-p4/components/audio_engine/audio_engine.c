@@ -32,6 +32,7 @@
 #include "audio_fw_runtime.h"
 #include "audio_fw_task_context.h"
 #include "audio_fw_task_plan.h"
+#include "audio_censor.h"
 #include "audio_keylock.h"
 #include "audio_mixer.h"
 #include "audio_output_mixer.h"
@@ -165,6 +166,15 @@ static audio_scratch_buffer_t s_scratch_buf[AUDIO_ENGINE_DECK_COUNT];
 static audio_scratch_t   s_scratch_engine[AUDIO_ENGINE_DECK_COUNT];
 static bool              s_scratch_playing[AUDIO_ENGINE_DECK_COUNT];
 static uint8_t           s_scratch_ctx_deck[AUDIO_ENGINE_DECK_COUNT];
+/* Censor owns only a reverse read head over the same canonical timeline.
+ * requested/epoch are control-task commands; the DSP object and playing flag
+ * are mutated only by the real-time output task. */
+static audio_censor_t    s_censor_engine[AUDIO_ENGINE_DECK_COUNT];
+static bool              s_censor_requested[AUDIO_ENGINE_DECK_COUNT];
+static bool              s_censor_playing[AUDIO_ENGINE_DECK_COUNT];
+static uint32_t          s_censor_command_epoch[AUDIO_ENGINE_DECK_COUNT];
+static uint32_t          s_censor_applied_epoch[AUDIO_ENGINE_DECK_COUNT];
+static uint32_t          s_censor_timeline_generation[AUDIO_ENGINE_DECK_COUNT];
 /* Capture coordination is shared by the decoder, control and output tasks. */
 static bool              s_scratch_capture_freeze[AUDIO_ENGINE_DECK_COUNT];
 static bool              s_scratch_capture_writing[AUDIO_ENGINE_DECK_COUNT];
@@ -1443,6 +1453,55 @@ static bool deck_output_active(uint8_t deck)
     }
     return true;
 }
+
+#if AE_FW
+#define AE_CENSOR_RELEASE_MS 10u
+
+static void censor_publish_request(uint8_t deck, bool active)
+{
+    if (deck >= AUDIO_ENGINE_DECK_COUNT) return;
+    atomic_store_bool(&s_censor_requested[deck], active);
+    (void)__atomic_add_fetch(&s_censor_command_epoch[deck], 1u,
+                             __ATOMIC_RELEASE);
+}
+
+/* Control commands are applied only at output-block boundaries. This keeps the
+ * reverse read head single-owner just like the resampler and key-lock state. */
+static void audio_output_apply_censor_commands(void)
+{
+    for (uint8_t deck = 0u; deck < AUDIO_ENGINE_DECK_COUNT; deck++) {
+        uint32_t epoch = __atomic_load_n(&s_censor_command_epoch[deck],
+                                         __ATOMIC_ACQUIRE);
+        if (epoch == s_censor_applied_epoch[deck]) continue;
+
+        bool requested = atomic_load_bool(&s_censor_requested[deck]);
+        if (requested && !atomic_load_bool(&s_scratch_playing[deck]) &&
+            deck_output_active(deck) && timeline_active(deck)) {
+            audio_pcm_timeline_t *timeline = &s_pcm_timelines[deck];
+            uint64_t oldest = audio_pcm_timeline_oldest_seq(timeline);
+            uint64_t play = audio_pcm_timeline_play_seq(timeline);
+            uint64_t write = audio_pcm_timeline_write_seq(timeline);
+            uint32_t release_frames =
+                (s_output_sample_rate * AE_CENSOR_RELEASE_MS) / 1000u;
+            if (release_frames == 0u) release_frames = 1u;
+            float speed = engine_pitch_load(deck) * (1.0f + jog_bend_load(deck));
+            if (play > oldest && play <= write &&
+                audio_censor_begin(&s_censor_engine[deck], play - 1u,
+                                   s_engines[deck].sample_rate,
+                                   s_output_sample_rate, speed,
+                                   release_frames)) {
+                s_censor_timeline_generation[deck] =
+                    audio_pcm_timeline_generation(timeline);
+                atomic_store_bool(&s_censor_playing[deck], true);
+            }
+        } else if (!requested &&
+                   atomic_load_bool(&s_censor_playing[deck])) {
+            audio_censor_release(&s_censor_engine[deck]);
+        }
+        s_censor_applied_epoch[deck] = epoch;
+    }
+}
+#endif
 
 static void update_deck_output_position(uint8_t deck, uint32_t consumed)
 {
@@ -2924,6 +2983,62 @@ cleanup:
 /* Keep real-time audio producer/output work off the LVGL core. */
 #define AE_AUDIO_TASK_CORE 0
 
+static audio_mixer_frame_t ae_render_forward_frame(uint8_t deck,
+                                                    uint32_t *out_consumed)
+{
+    audio_mixer_frame_t forward = {0};
+    if (out_consumed) *out_consumed = 0u;
+    if (deck >= AUDIO_ENGINE_DECK_COUNT) return forward;
+
+    const float speed = engine_pitch_load(deck) * (1.0f + jog_bend_load(deck));
+    if (atomic_load_bool(&s_master_tempo_enabled[deck]) && timeline_active(deck)) {
+        const float ratio = audio_output_mixer_rate_ratio(
+            s_engines[deck].sample_rate, s_output_sample_rate);
+        if (ae_keylock_render_cb(&s_scratch_ctx_deck[deck], speed, ratio,
+                                 &forward, out_consumed)) {
+            return forward;
+        }
+    }
+
+    const float factor = audio_output_mixer_resample_factor(
+        speed, s_engines[deck].sample_rate, s_output_sample_rate);
+    return audio_resampler_next(resampler_for_deck(deck), factor,
+                                pop_deck_source,
+                                &s_scratch_ctx_deck[deck], out_consumed);
+}
+
+/* Gapless slip-censor callback. Reverse is a random-access view over retained
+ * canonical history, while the ordinary forward renderer runs every sample and
+ * advances the real playhead. Release mixes reverse down and that already
+ * aligned forward stream up, so no seek/refill discontinuity is possible. */
+static bool ae_censor_render_cb(void *ctx, audio_mixer_frame_t *out)
+{
+    uint8_t deck = ctx ? *(const uint8_t *)ctx : AE_DECK_0;
+    if (out) *out = (audio_mixer_frame_t){0};
+    if (deck >= AUDIO_ENGINE_DECK_COUNT || !out || !timeline_active(deck)) {
+        return false;
+    }
+
+    audio_mixer_frame_t reverse = {0};
+    float reverse_gain = 0.0f;
+    bool reverse_active = audio_censor_render(
+        &s_censor_engine[deck], keylock_timeline_read,
+        &s_scratch_ctx_deck[deck], &reverse, &reverse_gain);
+
+    uint32_t consumed = 0u;
+    audio_mixer_frame_t forward = ae_render_forward_frame(deck, &consumed);
+    s_scratch_handoff_consumed[deck] += consumed;
+
+    const float forward_gain = 1.0f - reverse_gain;
+    *out = audio_mixer_pcm_from_dsp((audio_dsp_frame_t) {
+        .left = (float)reverse.left * reverse_gain +
+                (float)forward.left * forward_gain,
+        .right = (float)reverse.right * reverse_gain +
+                 (float)forward.right * forward_gain,
+    });
+    return reverse_active || consumed > 0u;
+}
+
 /* Mixer scratch source callback (vinyl mode Phase 4): renders one output-rate
  * frame for the deck named by `ctx`. Steady state reads the scratch engine; the
  * release handoff (4b) cross-fades scratch -> forward per sample. Returns true if
@@ -3206,6 +3321,28 @@ static void ae_output_task(void *arg)
         }
 
         audio_output_apply_master_tempo_commands();
+        for (uint8_t d = 0u; d < AUDIO_ENGINE_DECK_COUNT; d++) {
+            bool censor_playing = atomic_load_bool(&s_censor_playing[d]);
+            bool generation_changed = censor_playing && timeline_active(d) &&
+                s_censor_timeline_generation[d] !=
+                    audio_pcm_timeline_generation(&s_pcm_timelines[d]);
+            if (censor_playing &&
+                (generation_changed || !deck_output_active(d) ||
+                 !audio_censor_is_active(&s_censor_engine[d]))) {
+                audio_censor_reset(&s_censor_engine[d]);
+                atomic_store_bool(&s_censor_playing[d], false);
+            }
+        }
+        audio_output_apply_censor_commands();
+        for (uint8_t d = 0u; d < AUDIO_ENGINE_DECK_COUNT; d++) {
+            if (atomic_load_bool(&s_censor_playing[d])) {
+                const float speed = engine_pitch_load(d) *
+                                    (1.0f + jog_bend_load(d));
+                audio_censor_set_rate(&s_censor_engine[d],
+                                      s_engines[d].sample_rate,
+                                      s_output_sample_rate, speed);
+            }
+        }
         audio_output_apply_pending_fx_commands();
 
         float deck0_pre = 1.0f;
@@ -3269,8 +3406,10 @@ static void ae_output_task(void *arg)
                               timeline_active(deck0_index),
             .keylock_render = ae_keylock_render_cb,
             .keylock_ctx = &s_scratch_ctx_deck[deck0_index],
-            .scratch_active = atomic_load_bool(&s_scratch_playing[deck0_index]),
-            .scratch_render = ae_scratch_render_cb,
+            .scratch_active = atomic_load_bool(&s_scratch_playing[deck0_index]) ||
+                              atomic_load_bool(&s_censor_playing[deck0_index]),
+            .scratch_render = atomic_load_bool(&s_censor_playing[deck0_index])
+                ? ae_censor_render_cb : ae_scratch_render_cb,
             .scratch_ctx = &s_scratch_ctx_deck[deck0_index],
         };
         audio_output_mixer_deck_t deck1 = {
@@ -3303,8 +3442,10 @@ static void ae_output_task(void *arg)
                               timeline_active(deck1_index),
             .keylock_render = ae_keylock_render_cb,
             .keylock_ctx = &s_scratch_ctx_deck[deck1_index],
-            .scratch_active = atomic_load_bool(&s_scratch_playing[deck1_index]),
-            .scratch_render = ae_scratch_render_cb,
+            .scratch_active = atomic_load_bool(&s_scratch_playing[deck1_index]) ||
+                              atomic_load_bool(&s_censor_playing[deck1_index]),
+            .scratch_render = atomic_load_bool(&s_censor_playing[deck1_index])
+                ? ae_censor_render_cb : ae_scratch_render_cb,
             .scratch_ctx = &s_scratch_ctx_deck[deck1_index],
         };
 
@@ -3573,6 +3714,10 @@ static esp_err_t audio_output_service_stop(void)
 static void clear_scratch_playback_state(uint8_t deck)
 {
     if (deck >= AUDIO_ENGINE_DECK_COUNT) return;
+#if AE_FW
+    censor_publish_request(deck, false);
+#endif
+    atomic_store_bool(&s_censor_playing[deck], false);
     audio_scratch_end(&s_scratch_engine[deck]);
     /* The control/lifecycle task never writes the handoff gain or phase.
      * Publish a reset command; the output owner applies it on its next block
@@ -4560,6 +4705,14 @@ void audio_engine_deck_set_hold(uint8_t deck, bool held)
 bool audio_engine_deck_scratch_begin(uint8_t deck)
 {
     if (!deck_is_valid(deck)) return false;
+#if AE_FW
+    if (atomic_load_bool(&s_censor_requested[deck]) ||
+        atomic_load_bool(&s_censor_playing[deck])) {
+        ESP_LOGW(TAG, "scratch begin D%u rejected: censor active",
+                 (unsigned)deck);
+        return false;
+    }
+#endif
     if (!timeline_active(deck)) {
         ESP_LOGW(TAG,
                  "scratch begin D%u unavailable: canonical timeline not allocated -> platter hold",
@@ -4742,6 +4895,38 @@ void audio_engine_deck_scratch_end(uint8_t deck)
      * once the fade-in reaches full gain (AE_SCRATCH_HANDOFF_RING). */
 }
 
+bool audio_engine_deck_censor_begin(uint8_t deck)
+{
+    if (!deck_is_valid(deck)) return false;
+#if AE_FW
+    audio_engine_state_t *eng = &s_engines[deck];
+    if (!timeline_active(deck) ||
+        !atomic_load_bool(&eng->playing) || atomic_load_bool(&eng->paused) ||
+        atomic_load_bool(&s_start_waiting[deck]) ||
+        atomic_load_bool(&s_deck_hold[deck]) ||
+        atomic_load_bool(&s_scratch_playing[deck])) {
+        return false;
+    }
+    audio_pcm_timeline_t *timeline = &s_pcm_timelines[deck];
+    if (audio_pcm_timeline_play_seq(timeline) <=
+        audio_pcm_timeline_oldest_seq(timeline)) {
+        return false;
+    }
+    censor_publish_request(deck, true);
+    return true;
+#else
+    return false;
+#endif
+}
+
+void audio_engine_deck_censor_end(uint8_t deck)
+{
+    if (!deck_is_valid(deck)) return;
+#if AE_FW
+    censor_publish_request(deck, false);
+#endif
+}
+
 uint32_t audio_engine_deck_position_ms(uint8_t deck)
 {
     if (!deck_is_valid(deck)) return 0;
@@ -4900,7 +5085,13 @@ static void init_scratch_buffers(void)
                  (unsigned)(timeline_active(deck)
                      ? AE_TIMELINE_CAPACITY_FRAMES : AUDIO_PCM_RING_FRAMES));
         audio_scratch_init(&s_scratch_engine[deck]);
+        audio_censor_init(&s_censor_engine[deck]);
         atomic_store_bool(&s_scratch_playing[deck], false);
+        atomic_store_bool(&s_censor_requested[deck], false);
+        atomic_store_bool(&s_censor_playing[deck], false);
+        s_censor_command_epoch[deck] = 0u;
+        s_censor_applied_epoch[deck] = 0u;
+        s_censor_timeline_generation[deck] = 0u;
         atomic_store_bool(&s_scratch_capture_freeze[deck], false);
         atomic_store_bool(&s_scratch_capture_writing[deck], false);
         atomic_store_bool(&s_scratch_abort_seek_requested[deck], false);

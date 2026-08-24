@@ -29,6 +29,8 @@ Najveći otvoreni hardverski gateovi sada su PCM5102A headroom/limiter rubovi i
 bring-up još nedostupnog 800×480 DSI/FT5426 sklopa. Jednokratni simultani
 start/seek PCM D1=202 događaj nije se
 ponovio u ukupno 25 kontroliranih startova i ostaje telemetrijska stavka, a ne
-potvrđeni reproducibilni kvar. Censor MVP zasebno radi dva playing seeka; svaki
-je u prihvatnom testu dodao jedan output-late događaj i 256 PCM-underrun
-frameova, pa gapless true-reverse DSP ostaje otvorena kvalitativna nadogradnja.
+potvrđeni reproducibilni kvar. Povijesni Censor MVP radio je dva playing seeka;
+svaki je u prihvatnom testu dodao jedan output-late događaj i 256 PCM-underrun
+frameova. Source ga sada zamjenjuje bounded gapless slip-reverse DSP-om bez
+seeka ili dodatnog PCM buffera; puni host suite i P4 build prolaze, a zatvaranje
+tog rizika čeka D1/D2 hardware smoke i potvrdu nultih audio/UAC delti.

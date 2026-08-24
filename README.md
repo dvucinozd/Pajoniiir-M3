@@ -25,8 +25,15 @@ LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
 Wi-Fi remote događaj nakon screensavera te shifted Censor, Sync Master i
 Reloop Stop/Forget potvrđeni su na stvarnom uređaju. Shifted Beat FX beat-size,
 FLANGER, DELAY i reset, jednobeatni CUE/LOOP CALL skokovi te inertni shifted
-Smart helperi također su prošli hardverski acceptance. Censor je još MVP
-seek-izvedba, ne pravi gapless reverse.
+Smart helperi također su prošli hardverski acceptance. Taj instalirani baseline
+još koristi povijesni seek-based Censor.
+
+Sljedeći source kandidat zamjenjuje ga pravim gapless slip-reverse DSP-om:
+reverse čita zadržanu povijest iz postojećeg četverosekundnog PCM timelinea,
+normalni playhead i dekoder nastavljaju naprijed u pozadini, a otpuštanje radi
+10-ms crossfade bez seeka ili dodatnog PCM buffera. Reverse, mixed-rate
+interpolacija, bounded-history rub, release i deck-core no-seek ugovor prošli su
+puni host suite i ESP-IDF 6.0.2 P4 build; hardverski acceptance još slijedi.
 
 Screen-independent release hardening sada uključuje testirani UAC health
 monitor: tijekom aktivnog playbacka alarmira izlazak FLX4 headphone ringa iz
