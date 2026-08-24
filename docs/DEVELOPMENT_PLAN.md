@@ -29,7 +29,7 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-24 je produkcijski `M3-26-g620409e` u
+Završni hardverski baseline 2026-08-24 je produkcijski `M3-29-g2b0ad21` u
 `ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle, podigao novi
 image softverskim resetom i vratio OTA API u `idle`. FLX4 je spojen s MIDI
 In/Out i UAC-om, oba decka imaju učitane trake i zaustavljena su u `READY`, USB3
@@ -313,6 +313,24 @@ Service journal potvrdio je `USB_UNMOUNTED`, `USB_MOUNTED` i `LIBRARY_LOADED`
 unutar istog boot ID-a 192. Time je dual-USB/storage blok za testirani profil
 zatvoren.
 
+Kasniji clean build `M3-28-g809c203` razotkrio je da je per-controller DWC FIFO
+raspodjela ranije živjela samo kao ignored izmjena u `managed_components`:
+FLX4 USB2 MIDI/UAC radio je nakon OTA-a, ali USB3 disk nije proizveo ni attach
+događaj. `M3-29-g2b0ad21` preselio je istu HS/FS raspodjelu u verzionirani
+CMake overlay koji iz netaknute `espressif/usb 1.5.0` datoteke generira patched
+source pod `build/`. Puni `idf.py fullclean` + 1865-step build prošao je,
+originalni HCD zadržao je očekivani SHA-256
+`de0471a749547c7d295af0fe2e3e5b61d1eedf46d88c5b57cf20cec202d6c749`, a
+post-commit OTA odmah je montirao USB3 i učitao svih 191 track.
+
+Na istom imageu hardverski je zatvoren shifted Beat Jump blok. D1 zadani `+1`
+slijedio je stvarni grid (`0→731→1201 ms`), velika stranica dala je D1 `+16`
+skok `1201→8724 ms`, a D2 ju je bez lokalnog odabira naslijedio i skočio na
+7931 ms. Frakcijski D1 `+1/16` pomak bio je 30 ms pri 128 BPM. Operator je
+potvrdio shifted mirror 1-6 te helper granice: default oba helpera ON, large
+pad 8 OFF i fractional pad 7 OFF. Globalna stranica na kraju je vraćena na
+default; output-late, oba PCM underruna te UAC dropped/overflow ostali su 0.
+
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni
 promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
@@ -355,7 +373,7 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
 - [x] uskladiti normalni Beat Jump raspored s XML/Mixxx mapom te host-testirati
   globalne frakcijsku, zadanu i veliku stranicu (`SHIFT` + pad 7/8),
   saturaciju, frakcijske seekove i granične helper LED-ice;
-- [ ] hardware-verify ispravljeni Beat Jump redoslijed, zajedničku stranicu na
+- [x] hardware-verify ispravljeni Beat Jump redoslijed, zajedničku stranicu na
   oba decka, shifted mirror LED-ice padova 1-6 i granično gašenje helpera 7/8;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;

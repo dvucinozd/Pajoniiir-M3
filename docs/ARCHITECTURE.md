@@ -45,6 +45,18 @@ FLX4 MIDI paket prolazi kroz `p4_flx4_map`, zatim se lokalno ubrizgava u
 LED stanje se računa iz P4 statea i preko registriranog sinka šalje izravno
 `p4_flx4_host` komponenti. Reconnect ponovno šalje kompletan LED snapshot.
 
+## Dual-USB host
+
+ESP32-P4 istodobno koristi oba DWC host kontrolera. USB3/HS MSC treba RX i
+non-periodic TX prostor za 512-B bulk pakete, dok USB2/FS FLX4 treba periodic
+TX prostor za UAC1 pakete do 384 B te manji MIDI bulk prostor. Pinani
+`espressif/usb 1.5.0` nudi samo jednu globalnu FIFO bias postavku, pa
+`cmake/apply_espressif_usb_fifo_patch.cmake` tijekom konfiguracije stvara
+fail-closed patched kopiju `hcd_dwc.c` pod `build/pajoniiir_usb` i zamjenjuje
+samo taj source u component targetu. Originalni `managed_components` ostaje
+hash-ispravan, zbog čega clean build i Component Manager provjera ostaju
+reproducibilni.
+
 ## Audio put
 
 Svaki deck dekodira u bounded PCM timeline. Output task radi DSP i mixer u

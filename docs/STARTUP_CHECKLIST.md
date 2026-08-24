@@ -27,6 +27,9 @@ idf.py -p COM17 flash monitor
 ## USB i kontrola
 
 - [ ] FLX4 se enumerira na P4 kao MIDI/UAC uređaj.
+- [ ] Nakon clean dependency builda istodobno se enumeriraju USB2 FLX4 i USB3
+  MSC; build koristi generirani `build/pajoniiir_usb/hcd_dwc.c`, a
+  `managed_components/espressif__usb` prolazi Component Manager hash provjeru.
 - [ ] Play, Cue, jog, tempo, faderi, EQ i browse daju očekivani P4 state.
 - [ ] LED feedback prati state i potpuno se obnovi nakon reconnecta.
 - [ ] Hot Cue, Pad FX1, Pad FX2 i Beat Loop pad state jednako se prikazuje na
@@ -35,6 +38,12 @@ idf.py -p COM17 flash monitor
   `−8/+8`; `SHIFT` + pad 7/8 globalno bira frakcijsku/zadanu/veliku stranicu
   na oba decka, padovi 1-6 imaju SHIFT LED mirror, a helper 7/8 se ugasi na
   donjoj/gornjoj granici.
+
+Posljednji Beat Jump hardware acceptance na `M3-29-g2b0ad21` potvrdio je
+zadani `+1` grid skok, `+16` veliku stranicu podijeljenu između D1/D2,
+frakcijski `+1/16` skok od 30 ms pri 128 BPM te očekivane helper LED granice.
+Test je završio vraćanjem globalne zadane stranice.
+
 - [ ] Rekordbox medij se mounta, library se učita i track se može loadati na oba
   decka.
 - [ ] USB3 remove/reinsert sa zaustavljenim deckovima invalidira stari library,

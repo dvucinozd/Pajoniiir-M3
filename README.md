@@ -51,6 +51,11 @@ $env:Path = "$env:Path;C:\msys64\ucrt64\bin"
 .\tests\run_p4_host_tests.ps1
 ```
 
+Build automatski stvara patched kopiju pinanog `espressif/usb 1.5.0` HCD-a
+unutar `build/pajoniiir_usb`. Ona daje različitu FIFO raspodjelu USB3/HS MSC i
+USB2/FS FLX4 MIDI/UAC kontrolerima; `managed_components` ostaje netaknut i ne
+smije se ručno uređivati.
+
 Dugi Master Tempo soak i headless UI screenshot gate:
 
 ```powershell

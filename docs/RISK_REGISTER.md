@@ -4,7 +4,7 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-24.
 
 | ID | Rizik | Posljedica | Mitigacija / gate |
 |---|---|---|---|
-| R1 | P4 USB host istodobno nosi FLX4 FS i MSC HS | disconnect, starvation ili audio drop | odvojeni portovi, bounded queue/ring; 600-s mixed-rate USB2/USB3/Wi-Fi soak, FLX4 hot-plug i USB3 media remove/reinsert prošli bez PCM/UAC gubitka |
+| R1 | P4 USB host istodobno nosi FLX4 FS i MSC HS | disconnect, starvation ili audio drop | odvojeni portovi i fail-closed per-controller FIFO patch nad pinanim `espressif/usb 1.5.0`, bez izmjene `managed_components`; clean-build OTA, 600-s mixed-rate USB2/USB3/Wi-Fi soak, FLX4 hot-plug i USB3 media remove/reinsert prošli bez PCM/UAC gubitka |
 | R2 | FLX4 UAC1 descriptor/alternate-setting odstupa od pretpostavke | nema slušalica ili krivi format | descriptor testovi, hardware enumeration smoke, fail-closed endpoint izbor |
 | R3 | Audio output task probije blok deadline | čujni klik/underrun | single-precision DSP, bounded I/O, bez real-time success logiranja, rano spuštanje USB prioriteta i phase telemetry; 600-s soak imao je četiri izolirana 10,732–11,659-ms događaja bez PCM/UAC posljedice, a hot-plug delta bila je 0 |
 | R4 | USB storage read blokira decode/output | dropout pri library/load aktivnostima | compressed cache i SD/USB I/O gate; 600-s soak s 64 library čitanja, 13 reload/seek ciklusa i fizički 191→0→191 media replacement prošli su bez PCM/UAC gubitka |

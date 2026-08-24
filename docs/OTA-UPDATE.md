@@ -114,3 +114,21 @@ produkcijski `M3-22-gd7466ea` u `ota_1`; health gate označio ga je valjanim,
 OTA API je `idle`, produkcijski HTTPS URL i NVS zaporka su očuvani, SoftAP je
 uključen, USB3 library ima 191 track, a service-log, output-late i oba PCM
 underrun brojača ostali su 0. FLX4 je namjerno odspojen.
+
+### Dual-USB clean-build acceptance, 2026-08-24
+
+Lokalni potpisani `M3-28-g809c203` OTA uredno je podignut u `ota_1`, vratio
+SoftAP i FLX4 MIDI In/Out/UAC, ali USB3 nije proizveo attach događaj ni nakon
+dva fizička remove/reinsert ciklusa. Uzrok nije bio OTA: clean build je uklonio
+raniju ignored izmjenu `espressif__usb/src/hcd_dwc.c` koja je HS MSC i FS FLX4
+kontrolerima davala različite FIFO raspodjele.
+
+Popravak `M3-29-g2b0ad21` verzionira fail-closed CMake transformaciju. Ona
+čita pinani, hash-ispravni `espressif/usb 1.5.0`, stvara patched HCD isključivo
+pod `build/pajoniiir_usb` i njega dodaje component targetu; više ne mijenja
+`managed_components`. Puni ESP-IDF 6.0.2 `fullclean` build i cijeli P4 host
+suite prošli su. Potpisani image od 2.362.832 B (`rel-001`, SHA-256
+`182f49d6f60dde12c25e957222ec620b95f527d541f21ad138b6ea156b156088`)
+zatim je podignut u `ota_0`. Na istom bootu vratili su se SoftAP, FLX4
+MIDI In/Out/UAC, USB3 mount i svih 191 track; OTA API ostao je `idle`, bez
+rollbacka ili prijavljene greške.
