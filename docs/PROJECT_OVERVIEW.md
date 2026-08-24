@@ -1,6 +1,6 @@
 # Project Overview
 
-Status: važeći opis projekta, 2026-08-22.
+Status: važeći opis projekta i ciljne topologije, 2026-08-24.
 
 Pajoniiir-M3 je standalone dual-deck DJ uređaj bez računala. Jedan ESP32-P4
 obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
@@ -15,6 +15,18 @@ obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
 6. Cue/headphone miks ide izravno preko FLX4 UAC1 OUT endpointa.
 7. Rekordbox medij na USB3 puni library, ANLZ i audio decode put.
 8. LVGL prikazuje state na 800×480 DSI panelu; Wi-Fi remote koristi C6.
+
+## Trenutno stanje
+
+`M3-41-g133f399 / ota_0` hardverski potvrđuje tokove FLX4 MIDI/UAC, USB3
+library/decode, Wi-Fi remote/OTA i dual-deck DSP, uključujući gapless Censor.
+Zaslon iz koraka 8 još nije stigao, pa LVGL zasad ima host simulator i screenshot
+regresije, ali ne i fizički DSI/touch acceptance. PCM5102A iz koraka 5 još nije
+spojen; I2S put se gradi i otvara u firmwareu, ali RCA master, headroom, limiter
+i noise gate čekaju fizički modul.
+
+Bench ostaje na uključenom Wi-Fi SoftAP-u s oba decka zaustavljena. Nastavak
+počinje zaslonom ili PCM5102A modulom, ovisno što prvo postane dostupno.
 
 ## Granice sustava
 

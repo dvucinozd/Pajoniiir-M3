@@ -22,6 +22,19 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 - **Wi-Fi 6** je osiguran preko integriranog **ESP32-C6** modula (ESP-Hosted preko SDIO).
 - **Neaktivne periferije**: Ugrađeni mikrofon, NS4150 mono zvučničko pojačalo i RJ45 Ethernet su namjerno isključeni u softveru radi nultog šuma i oslobađanja GPIO pinova.
 
+## Trenutni handoff
+
+Hardverski prihvaćeni baseline 2026-08-24 je `M3-41-g133f399` u `ota_0`.
+FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi SoftAP/web kontrola i
+potpisani OTA rade. Oba decka su zaustavljena, a Wi-Fi treba ostati uključen
+dok se sustav razvija bez zaslona.
+
+5,0-inčni DSI/FT5426 zaslon još nije stigao i PCM5102A još nije fizički spojen.
+Ne nagađaj panel timing/controller naredbe niti tvrdi da je master DAC
+hardverski prihvaćen. Nastavak počinje prvim dostupnim sklopom: zaslon znači
+DSI/touch/UI/Master Tempo gate, a PCM5102A znači I2S master-output,
+headroom/limiter i noise gate.
+
 ## Najvažnije putanje
 
 ```text

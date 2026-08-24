@@ -20,7 +20,21 @@ MIDI mapiranje, LED feedback, audio DSP, biblioteku i UI. `control_link` u P4
 izvoru više nije serijski link: to je samo lokalni red semantičkih događaja i
 LED callback prema izravnom FLX4 USB hostu.
 
-Hardverski prihvaćeni baseline 2026-08-24 je `M3-41-g133f399`: FLX4 MIDI,
+## Trenutni bench status
+
+Instalirani i hardverski prihvaćeni baseline 2026-08-24 je
+`M3-41-g133f399` u `ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake,
+SoftAP `Pajoniiir-M3`, web kontrola i potpisani OTA rade; oba decka su nakon
+završnog smokea zaustavljena, a Wi-Fi ostaje uključen radi lakšeg učitavanja
+traka bez zaslona.
+
+5,0-inčni DSI/FT5426 zaslon još nije stigao, a PCM5102A modul još nije fizički
+spojen. Zato postojeći LVGL/UI i I2S master put imaju host/build pokrivanje, ali
+njihov završni hardverski acceptance nije zatvoren. Razvoj se nastavlja kada
+stigne bilo koji od ta dva sklopa: zaslon otvara DSI/touch/Master Tempo/UI gate,
+a PCM5102A otvara master-output headroom/limiter gate.
+
+Aktualni baseline potvrđuje FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
 Wi-Fi remote događaj nakon screensavera te shifted Censor, Sync Master i
 Reloop Stop/Forget potvrđeni su na stvarnom uređaju. Shifted Beat FX beat-size,

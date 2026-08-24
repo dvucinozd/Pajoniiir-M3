@@ -2,12 +2,19 @@
 
 Status: važeći bench postupak, 2026-08-24.
 
+Aktualni handoff je `M3-41-g133f399 / ota_0`, oba decka zaustavljena, FLX4 i
+USB3 spojeni, a Wi-Fi uključen. Zaslon još nije stigao i PCM5102A nije spojen;
+zato se zajedničke stavke uvijek izvode, a display odnosno DAC stavke tek kada
+odgovarajući sklop postane dostupan.
+
 ## Priprema
 
 - [ ] P4 je napajan preko USB1/CH340C.
 - [ ] DDJ-FLX4 je na USB2 FS Host portu.
 - [ ] Rekordbox medij je na USB3 HS Host portu.
-- [ ] PCM5102A je spojen na GPIO1/2/3 i zajednički GND.
+- [ ] Za DAC branch: PCM5102A je spojen na GPIO1/2/3 i zajednički GND.
+- [ ] Za display branch: evidentirani su točan panel/controller, DSI laneovi,
+  napajanje, reset/backlight i FT5426 adresa stvarnog sklopa.
 - [ ] ESP-IDF profil javlja točno `ESP-IDF v6.0.2`.
 
 ## Build i flash
@@ -22,7 +29,7 @@ idf.py -p COM17 flash monitor
 
 - [ ] Build završi exit kodom 0.
 - [ ] Boot nema reset loop, abort ni watchdog.
-- [ ] DSI UI i FT5426 touch rade u 800×480 landscapeu.
+- [ ] Kada je zaslon dostupan, DSI UI i FT5426 touch rade u 800×480 landscapeu.
 
 ## USB i kontrola
 
@@ -110,7 +117,7 @@ oba normalna statea i obje fizičke LED-ice ostali su OFF.
 
 ## Audio
 
-- [ ] Master L/R izlazi preko PCM5102A bez speaker-amp šuma.
+- [ ] Kada je DAC spojen, Master L/R izlazi preko PCM5102A bez speaker-amp šuma.
 - [ ] Kanalni CUE/PFL ostaje čujan sa spuštenim channel faderom kada je
   `HEADPHONES MIX` na CUE; MASTER strana prati post-fader master.
 - [ ] Višestruko okretanje `HEADPHONES LEVEL` ne pucketa, ne prekida playback i

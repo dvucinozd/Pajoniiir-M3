@@ -1,8 +1,8 @@
 # Development Plan
 
 Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
-Beat Jump, Loop Adjust/Quantize, shifted transport/sync, Beat FX te UAC health
-acceptance blokova, 2026-08-24.
+Beat Jump, Loop Adjust/Quantize, shifted transport/sync, Beat FX, UAC health te
+gapless Censor acceptance blokova, 2026-08-24.
 
 ## Trenutna baza
 
@@ -14,13 +14,16 @@ acceptance blokova, 2026-08-24.
   peer debug/OTA i međupanački PCM link.
 
 Wi-Fi programski temelj već postoji: ESP32-C6/ESP-Hosted preko SDIO-a,
-SoftAP `Pajoniiir-M3`, web API, privremeni STA put i potpisani P4 OTA. Prije
-releasea preostaje hardverska/stress validacija; rollback, download fault i
-post-OTA equality dijagnostički acceptance su zatvoreni.
+SoftAP `Pajoniiir-M3`, web API, privremeni STA put i potpisani P4 OTA. APSTA,
+HTTPS pull, rollback, download fault, post-OTA equality dijagnostika i
+dual-USB/audio/Wi-Fi soak hardverski su zatvoreni; Wi-Fi ostaje uključen na
+benchu radi rada bez zaslona.
 
 Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
 dodirom je naručen i čeka se njegov dolazak. U dokumentaciji je to ciljana
-konfiguracija; hardverski bring-up još nije potvrđen.
+konfiguracija; hardverski bring-up još nije potvrđen. PCM5102A I2S put postoji
+u firmwareu, ali modul još nije fizički spojen pa RCA/headroom/limiter/noise
+acceptance također ostaje otvoren.
 
 Prvi korisni firmware nakon `RC2` uvodi release identitet `M3`. Verzija se
 dobiva iz `git describe`, pa je implementacijski commit namijenjen anotiranom
@@ -30,46 +33,28 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-24 je produkcijski `M3-39-g3bc04fd` u
-`ota_1` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
-2.365.872 B, podigao novi image softverskim resetom i vratio OTA API u `idle`.
-FLX4 je spojen s MIDI In/Out i UAC-om, USB3 library sadrži 191 track, oba decka
-imaju učitane trake i zaustavljena su, service log nema dropova, a SoftAP i
-Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
-Servisni SSID, zaporka i HTTPS update
-URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
-zaporku. Fizički APSTA round-trip dobio je servisnu adresu `192.168.0.210`,
-vratio `round trip complete` i sačuvao SoftAP klijentu valjanu adresu
-`192.168.4.2`. HTTPS kanal zatim je objavio `M3-22-gd7466ea`; bundle je
-preuzet, verificiran i podignut iz `ota_0`. Naknadna provjera jednake verzije
-vratila je `already running this build` bez reseta, uz nepromijenjen boot ID
-175. Jedan raniji, neposredni equality check nakon lokalnog web-upload OTA-a
-uzrokovao je izolirani PANIC reset. Nije se ponovio u tri svježa post-OTA
-equality ciklusa uz test-only flash-coredump build; sva tri checka vratila su
-`already running this build`, bez neočekivanog reseta, a coredump particija
-ostala je prazna. Događaj ostaje rezidualna monitoring stavka, ali više ne
-blokira OTA acceptance. Izolirani testni kanal zatim je ponudio
-`M4`, ali namjerno nije sadržavao bundle. Install je završio s
-`bundle not on the server` na 0% bez reboota ili promjene `ota_0`; produkcijski
-URL vraćen je u NVS, a boot ID ostao je 175.
-Firmware sadrži dvostupanjski prioritet
-FLX4 USB taska: transition rad je ispod audio outputa, a prioritet se podiže tek
-nakon početnog UAC queue priminga. Stateful linearni UAC resampler sada pretvara
-44,1–48-kHz output u FLX4-ov fiksni 44,1-kHz format uz kontinuitet faze između
-output blokova. FLX4 MIDI callback više ne radi packet/event logiranje iz
-real-time puta, a `HEADPHONES LEVEL` gain mijenja se kontinuiranim per-frame
-rampom bez skoka na granici 256-frame output bloka. Otkazani USB transferi sada
-spuštaju prioritet već prije `DEV_GONE` događaja i ne predaju novi MIDI/UAC
-transfer. Prirodni decoder EOF više se ne broji kao PCM underrun kada zadnji
-izlazni blok ostane djelomičan.
+Završni hardverski baseline 2026-08-24 je produkcijski `M3-41-g133f399` u
+`ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
+2.369.552 B, podigao novi image, vratio OTA API u `idle` te obnovio FLX4 MIDI
+In/Out/UAC, USB3 knjižnicu od 191 trake i SoftAP `Pajoniiir-M3`. Oba decka su
+nakon završnog smokea zaustavljena, service log nema dropova, a Wi-Fi i Windows
+profil ostavljeni su uključeni radi lakšeg učitavanja traka bez zaslona.
 
-Prioritetni redoslijed nastavka:
+D1 48-kHz i D2 44,1-kHz gapless Censor acceptance potvrdio je reverse,
+napredovalu slip poziciju, gladak release i nulte kontrolirane
+output-late/PCM/UAC/service-log delte. Ostali zatvoreni OTA, APSTA, audio,
+dual-USB i MIDI rezultati ostaju detaljno zapisani u `docs/OTA-UPDATE.md` i
+odgovarajućim validation zapisima. Trenutno nema korisnog hardverskog koraka bez
+novog zaslona ili PCM5102A modula.
 
-1. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
-   zaslona, pa na istom UI-u odraditi Master Tempo hardware gate;
-2. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a;
-3. na novom zaslonu zatvoriti Shift + Browse/Load routing i preostali UI
-   acceptance.
+Nastavak ovisi o prvom dostupnom sklopu:
+
+1. ako prvo stigne zaslon, evidentirati stvarni panel/controller i pokrenuti
+   800×480 DSI/FT5426 bring-up, zatim Master Tempo i Shift + Browse/Load UI gate;
+2. ako se prvo spoji PCM5102A, potvrditi I2S rate switching, L/R polaritet,
+   headroom, limiter marginu i noise floor;
+3. nakon što su oba sklopa dostupna, odraditi zajednički display/touch,
+   master/headphones, dual-deck i Wi-Fi integration soak.
 
 ## Sljedeće faze
 
@@ -427,10 +412,8 @@ audio/USB brojača. FLANGER je imao očekivani sweep i ON LED; live prijelaz na
 DELAY dao je čujan 470-ms one-shot tap. Shifted ON/OFF reset vratio je
 `FILTER / 1 beat / BOTH / depth 64 / OFF`, ugasio DSP i fizičku LED. Jedan
 izolirani 14.714-us output-late tijekom live FX prozora nije imao PCM/UAC
-posljedicu. Sljedeći parity rez su globalni shifted Browse/Load i Smart
-CFX/Fader helperi.
-
-Sljedeći screen-independent smoke zatvorio je D1 shifted CUE/LOOP CALL:
+posljedicu. Nakon toga screen-independent smoke zatvorio je D1 shifted CUE/LOOP
+CALL:
 `30000→29574→30058 ms`, odnosno jedan forward beat od 484 ms pri 124 BPM,
 bez release duplikata ili audio/USB counter delte. Shifted Smart CFX/Fader
 ostali su programski i fizički OFF, u skladu s namjernim no-op dizajnom.

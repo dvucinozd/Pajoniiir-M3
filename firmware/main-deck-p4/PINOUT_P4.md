@@ -1,6 +1,10 @@
 # ESP32-P4 active pinout
 
-Status: 2026-08-22. Autoritativni wiring je `docs/HARDWARE_WIRING.md`.
+Status: 2026-08-24. Autoritativni wiring je `docs/HARDWARE_WIRING.md`.
+
+USB1/2/3 i C6/Wi-Fi trenutno su aktivni na benchu. PCM5102A još nije fizički
+spojen, a DSI/FT5426 zaslon još nije stigao; njihovi redovi ispod rezerviraju
+ciljni put i ne znače da je pripadajući hardware acceptance završen.
 
 | Funkcija | Pin / port |
 |---|---|

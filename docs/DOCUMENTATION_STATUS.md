@@ -2,9 +2,22 @@
 
 Status: 2026-08-24.
 
+## Trenutni handoff
+
+- instalirani baseline: `M3-41-g133f399`, `ota_0`, OTA state `idle`;
+- potvrđeno: FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi
+  SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
+- oba decka su zaustavljena, a Wi-Fi ostaje uključen radi rada bez zaslona;
+- 5,0-inčni DSI/FT5426 zaslon još nije stigao;
+- PCM5102A nije fizički spojen;
+- nastavak: prvi pristigli sklop pokreće svoj hardware gate; zajednički
+  display/master-output integration soak slijedi nakon oba.
+
 ## Aktivni dokumenti
 
+- `AGENTS.md` — obvezne projektne upute i trenutni handoff za sljedeću sesiju
 - `README.md` — ulaz u projekt i build naredbe
+- `docs/README.md` — indeks aktivne dokumentacije
 - `docs/PROJECT_OVERVIEW.md` — scope i glavni tokovi
 - `docs/ARCHITECTURE.md` — ownership i komponente
 - `docs/HARDWARE_WIRING.md` — važeće spajanje

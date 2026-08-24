@@ -1,6 +1,11 @@
 # Hardware Wiring
 
-Status: važeća single-chip topologija, 2026-08-22.
+Status: važeća single-chip topologija i plan spajanja, 2026-08-24.
+
+Trenutni bench ima spojene USB1, USB2/FLX4 i USB3/Rekordbox medij. PCM5102A još
+nije fizički spojen, a 5,0-inčni DSI/FT5426 zaslon još nije stigao. Donje DAC i
+display upute zato su ciljni wiring za njihov zasebni bring-up, ne potvrda da su
+trenutno prisutni.
 
 ## USB
 
@@ -21,7 +26,8 @@ debug/power port.
 | GPIO2 | LRCK / WS |
 | GPIO3 | DIN |
 
-Spoji zajednički GND i napajanje prema specifikaciji konkretnog DAC modula.
+Kada modul stigne, spoji zajednički GND i napajanje prema specifikaciji
+konkretnog DAC modula.
 Master izlaz se ne vodi kroz ugrađeni NS4150.
 
 ## Zaslon, touch i mreža
@@ -39,5 +45,6 @@ Master izlaz se ne vodi kroz ugrađeni NS4150.
 - bilo kakav UART prema pomoćnom kontrolnom MCU-u;
 - međupanački I2S/PCM transport.
 
-Prije prvog uključivanja provjeri GND, 5 V polaritet, DAC pinove i da su USB2 i
-USB3 spojeni na odgovarajuće uređaje.
+Prije uključivanja provjeri GND, 5 V polaritet i da su USB2 i USB3 spojeni na
+odgovarajuće uređaje. DAC pinove provjeri tek prije PCM5102A brancha, a DSI
+konektor/panel identitet prije display brancha.

@@ -12,6 +12,11 @@ Aktualni ulaz:
 - [P4 OTA](OTA-UPDATE.md)
 - [Documentation Status](DOCUMENTATION_STATUS.md)
 
+Trenutni handoff: na uređaju je `M3-41-g133f399 / ota_0`; FLX4, USB3 knjižnica
+od 191 trake i Wi-Fi rade, deckovi su zaustavljeni, a Wi-Fi ostaje uključen.
+Daljnji hardverski rad čeka prvi dostupni sklop: 5,0-inčni DSI/FT5426 zaslon ili
+PCM5102A DAC modul.
+
 `reference/` sadrži izvore za MIDI i Rekordbox format. Svi ostali dokumenti
 koji nisu navedeni u gornjem popisu — uključujući bench bilješke, stare odluke,
 audite te mape `validation/`, `superpowers/specs/` i `migration/` — povijesni su

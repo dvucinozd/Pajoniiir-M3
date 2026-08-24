@@ -14,6 +14,11 @@ ESP32-C6 ── SDIO/ESP-Hosted ───┘       └─> FLX4 MIDI LED + headp
 USB1/CH340C je izvan aplikacijskog data puta i služi za napajanje, flashing i
 serijsku dijagnostiku.
 
+Dijagram prikazuje ciljnu završnu topologiju. Na aktualnom benchu potvrđeni su
+USB1, USB2/FLX4, USB3/Rekordbox i C6/Wi-Fi krakovi. DSI/FT5426 sklop još nije
+stigao, a PCM5102A nije fizički spojen; firmware gradi njihove UI/I2S putove,
+ali to nije zamjena za panel/touch ni analogni master-output acceptance.
+
 ## Ownership
 
 ESP32-P4 jedini posjeduje:
@@ -74,17 +79,19 @@ dođe do izbačenog ruba bounded povijesti, zadnji uzorak se kratko gasi prema
 tišini, dok slip timeline nastavlja naprijed.
 
 Output task radi DSP i mixer u
-blokovima, šalje master na PCM5102A te cue/headphone miks u FLX4 UAC1 ring.
+blokovima, šalje master na I2S/PCM5102A put te cue/headphone miks u FLX4 UAC1
+ring. Trenutno je hardverski potvrđen FLX4 headphone krak; fizički PCM5102A
+RCA/headroom/noise gate čeka spajanje modula.
 Kanalni PFL tap je post-trim/post-DSP, ali prije channel fadera; kanalni CUE ga
 uključuje, a `HEADPHONES MIX` ga miješa s post-fader master signalom.
 `HEADPHONES LEVEL` mijenja samo monitor izlaz i koristi per-frame gain ramp kako
 14-bitni MIDI skokovi ne bi stvarali klikove na granici output bloka. FLX4 MIDI
 callback ne radi packet-level logiranje iz priority-7 real-time puta.
-PCM5102A prati zajednički output rate od 44,1 ili 48 kHz, dok stateful linearni
-resampler pretvara FLX4 cue/headphone tap u njegov fiksni 44,1-kHz četverokanalni
-format i čuva fazu između proizvoljno podijeljenih output blokova. UAC packetizer
-prilagođava broj frameova USB mikroframe ritmu. Brojači predanih i odbačenih
-blokova, ringa i clock korekcija dostupni su u dijagnostici.
+I2S master put prati zajednički output rate od 44,1 ili 48 kHz, dok stateful
+linearni resampler pretvara FLX4 cue/headphone tap u njegov fiksni 44,1-kHz
+četverokanalni format i čuva fazu između proizvoljno podijeljenih output
+blokova. UAC packetizer prilagođava broj frameova USB mikroframe ritmu. Brojači
+predanih i odbačenih blokova, ringa i clock korekcija dostupni su u dijagnostici.
 
 UAC clock korekcija drži normalni rad unutar 3/8–5/8 ringa, dok zasebni health
 monitor koristi širi alarmni omotač 1/4–3/4. Samo aktivni playback može otvoriti

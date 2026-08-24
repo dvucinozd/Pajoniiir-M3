@@ -6,6 +6,10 @@ Projekt proizvodi samo jedan OTA target: `main-deck-p4` za chip ID `0x0012`.
 Bundle mora biti `.ddjota`, potpisan pouzdanim ECDSA P-256 ključem, s ispravnim
 projektom, chip ID-em, verzijom, veličinom i SHA-256 sažetkom.
 
+Trenutno instalirani i prihvaćeni image je `M3-41-g133f399` u `ota_0`; OTA je
+`idle`, FLX4 i USB3 su dostupni, a Wi-Fi ostaje uključen. Zaslon i fizički
+PCM5102A nisu dio ovog OTA acceptancea jer još nisu dostupni na benchu.
+
 ## Pakiranje
 
 Nakon clean P4 builda:
@@ -42,7 +46,9 @@ release ključem. Privatni ključ ne učitava se na uređaj ni u repozitorij.
 
 - odbij krivi potpis, target, chip, projekt, hash i preveliku sliku;
 - potvrdi running version/slot kroz `/api/firmware`;
-- nakon restarta provjeri UI, USB2 FLX4, USB3 storage i oba audio izlaza.
+- nakon restarta uvijek provjeri USB2 FLX4, USB3 storage, Wi-Fi i FLX4
+  headphone izlaz; DSI/touch i PCM5102A master provjeri samo kada su fizički
+  spojeni.
 
 ## Hardware acceptance M3-39, 2026-08-24
 
@@ -84,8 +90,10 @@ seeka. Puni host suite i ESP-IDF 6.0.2 build prolaze.
 Potpisani `M3-41-g133f399` (`rel-001`, 2.369.552 B, SHA-256
 `f8d7e09d1f2ea72677b051c7d0e00ecace02fe252ea2564c70e5d742c218a7eb`)
 instaliran je lokalnim `POST /api/ota/p4` tokom. Uređaj je podigao `ota_0`,
-vratio OTA state u `idle`, FLX4 MIDI In/Out/UAC, PCM izlaz i USB3 biblioteku od
-191 trake. D1 test koristio je 48-kHz, a D2 44,1-kHz izvor uz 48-kHz output.
+vratio OTA state u `idle`, FLX4 MIDI In/Out/UAC, aktivni 48-kHz I2S programski
+put i USB3 biblioteku od 191 trake. PCM5102A modul nije bio fizički spojen, pa
+to nije analogni master-output acceptance. D1 test koristio je 48-kHz, a D2
+44,1-kHz izvor uz 48-kHz output.
 
 Na oba decka `SHIFT + PLAY/PAUSE` dao je čujni reverse tijekom držanja i gladak
 povratak na napredovalu forward slip poziciju bez pucketanja, prekida ili seeka.
