@@ -63,6 +63,7 @@ static deck_loaded_track_store_t s_loaded_tracks;
 static SemaphoreHandle_t s_reset_done_sem;
 static flx4_led_publisher_t s_flx4_led_publisher;
 static deck_core_beat_fx_state_t s_beat_fx;
+static deck_core_beat_jump_page_t s_beat_jump_page = DECK_CORE_BEAT_JUMP_PAGE_DEFAULT;
 static bool              s_track_load_led_valid[DECK_CORE_DECK_COUNT];
 static uint8_t           s_track_load_led_state[DECK_CORE_DECK_COUNT];
 static bool              s_loaded_hot_cue_mask_valid[DECK_CORE_DECK_COUNT];
@@ -792,8 +793,25 @@ static void handle_hot_cue_pad_action(uint8_t deck, uint8_t pad, bool shifted, d
     }
 }
 
-static const int s_beat_jump_pad_shifts[8] = {
-    -32, -16, -8, -4, 4, 8, 16, 32,
+typedef struct {
+    int16_t numerator;
+    uint16_t denominator;
+} beat_jump_size_t;
+
+static const beat_jump_size_t
+s_beat_jump_pad_sizes[DECK_CORE_BEAT_JUMP_PAGE_COUNT][8] = {
+    [DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL] = {
+        {-1, 16}, {1, 16}, {-1, 8}, {1, 8},
+        {-1, 4}, {1, 4}, {-1, 2}, {1, 2},
+    },
+    [DECK_CORE_BEAT_JUMP_PAGE_DEFAULT] = {
+        {-1, 1}, {1, 1}, {-2, 1}, {2, 1},
+        {-4, 1}, {4, 1}, {-8, 1}, {8, 1},
+    },
+    [DECK_CORE_BEAT_JUMP_PAGE_LARGE] = {
+        {-16, 1}, {16, 1}, {-32, 1}, {32, 1},
+        {-64, 1}, {64, 1}, {-128, 1}, {128, 1},
+    },
 };
 
 static bool acquire_loaded_track_for_deck(
@@ -810,9 +828,12 @@ static uint16_t loaded_bpm_for_deck(uint8_t deck)
     return deck_base_bpm(deck);
 }
 
-static void handle_beat_jump(uint8_t deck, int beat_shift, deck_state_t *state)
+static void handle_beat_jump(uint8_t deck,
+                             int beat_numerator,
+                             uint16_t beat_denominator,
+                             deck_state_t *state)
 {
-    if (deck >= DECK_CORE_DECK_COUNT || !state || beat_shift == 0) {
+    if (deck >= DECK_CORE_DECK_COUNT || !state || beat_numerator == 0) {
         return;
     }
 
@@ -827,31 +848,53 @@ static void handle_beat_jump(uint8_t deck, int beat_shift, deck_state_t *state)
                        : loaded_bpm_for_deck(deck);
     const anlz_metadata_t *meta_ptr =
         has_loaded && loaded.has_anlz ? meta : NULL;
-    uint32_t target_ms = beat_jump_calculate_target_ms(
-        position_ms, bpm, beat_shift, meta_ptr);
+    uint32_t target_ms = beat_jump_calculate_fractional_target_ms(
+        position_ms, bpm, beat_numerator, beat_denominator, meta_ptr);
     anlz_snapshot_release(snapshot);
 
     esp_err_t rc = audio_engine_deck_seek(deck, target_ms);
     if (rc == ESP_OK) {
         state->position_ms = target_ms;
-        ESP_LOGI(TAG, "deck %u beat jump %+d -> %lu ms",
+        ESP_LOGI(TAG, "deck %u beat jump %+d/%u -> %lu ms",
                  (unsigned)deck + 1,
-                 beat_shift,
+                 beat_numerator,
+                 (unsigned)beat_denominator,
                  (unsigned long)target_ms);
     } else {
-        ESP_LOGW(TAG, "deck %u beat jump %+d failed: %s",
+        ESP_LOGW(TAG, "deck %u beat jump %+d/%u failed: %s",
                  (unsigned)deck + 1,
-                 beat_shift,
+                 beat_numerator,
+                 (unsigned)beat_denominator,
                  esp_err_to_name(rc));
     }
 }
 
-static bool beat_jump_shift_for_pad(uint8_t pad, int *out_shift)
+static bool beat_jump_size_for_pad(uint8_t pad, beat_jump_size_t *out_size)
 {
-    if (!out_shift || pad >= 8) {
+    const deck_core_beat_jump_page_t page = deck_core_get_beat_jump_page();
+    if (!out_size || pad >= 8 || page >= DECK_CORE_BEAT_JUMP_PAGE_COUNT) {
         return false;
     }
-    *out_shift = s_beat_jump_pad_shifts[pad];
+    *out_size = s_beat_jump_pad_sizes[page][pad];
+    return true;
+}
+
+static bool change_beat_jump_page(int delta)
+{
+    int next = (int)deck_core_get_beat_jump_page() + delta;
+    if (next < DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL) {
+        next = DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL;
+    }
+    if (next > DECK_CORE_BEAT_JUMP_PAGE_LARGE) {
+        next = DECK_CORE_BEAT_JUMP_PAGE_LARGE;
+    }
+    if (next == (int)deck_core_get_beat_jump_page()) {
+        return false;
+    }
+    __atomic_store_n(&s_beat_jump_page,
+                     (deck_core_beat_jump_page_t)next,
+                     __ATOMIC_RELEASE);
+    ESP_LOGI(TAG, "beat jump page -> %d", next);
     return true;
 }
 
@@ -1277,7 +1320,15 @@ static void deck_send_led(led_id_t led, uint8_t state, uint8_t deck)
             state = beat_jump_mode && loaded ? 1u : 0u;
         } else if (led >= LED_BEAT_JUMP_SHIFT_HELPER_7 &&
                    led <= LED_BEAT_JUMP_SHIFT_HELPER_8) {
-            state = beat_jump_mode && s_deck_shift_held[deck] && loaded ? 1u : 0u;
+            const bool decrease = led == LED_BEAT_JUMP_SHIFT_HELPER_7;
+            const deck_core_beat_jump_page_t page = deck_core_get_beat_jump_page();
+            const bool page_available = decrease
+                                            ? page > DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL
+                                            : page < DECK_CORE_BEAT_JUMP_PAGE_LARGE;
+            state = beat_jump_mode && s_deck_shift_held[deck] && loaded &&
+                            page_available
+                        ? 1u
+                        : 0u;
         }
     }
     control_link_send_led_deck(led, state, deck);
@@ -1379,11 +1430,15 @@ static void publish_beat_jump_pad_leds(bool force)
 static void publish_beat_jump_shift_helper_leds_for_deck(uint8_t deck, bool force)
 {
     if (deck >= DECK_CORE_DECK_COUNT) return;
-    deck_state_t state = deck_core_get_deck_state(deck);
-    uint8_t value = (state.pad_mode == CTRL_PAD_MODE_BEAT_JUMP &&
-                     s_deck_shift_held[deck] &&
-                     deck_has_loaded_track(deck)) ? 1u : 0u;
+    const bool active = s_decks[deck].pad_mode == CTRL_PAD_MODE_BEAT_JUMP &&
+                        s_deck_shift_held[deck] &&
+                        deck_has_loaded_track(deck);
+    const deck_core_beat_jump_page_t page = deck_core_get_beat_jump_page();
     for (uint8_t pad = 0; pad < 2; pad++) {
+        const bool page_available = pad == 0u
+                                        ? page > DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL
+                                        : page < DECK_CORE_BEAT_JUMP_PAGE_LARGE;
+        const uint8_t value = active && page_available ? 1u : 0u;
         if (force ||
             !s_beat_jump_shift_helper_led_valid[deck][pad] ||
             s_beat_jump_shift_helper_led_state[deck][pad] != value) {
@@ -2195,6 +2250,7 @@ static bool on_deck_extension_button(const ctrl_event_t *ev)
         if (pressed) {
             handle_beat_jump(deck,
                              control_link_id_control(ev->id) == CTRL_DECK_CTL_BEAT_JUMP_BACK ? -1 : 1,
+                             1u,
                              state);
         }
         return true;
@@ -2275,9 +2331,17 @@ static bool on_deck_extension_button(const ctrl_event_t *ev)
         } else if (CTRL_PAD_ACTION_PRESSED(ev->value) &&
                    CTRL_PAD_ACTION_MODE(ev->value) == CTRL_PAD_MODE_BEAT_JUMP &&
                    !CTRL_PAD_ACTION_SHIFTED(ev->value)) {
-            int beat_shift = 0;
-            if (beat_jump_shift_for_pad(CTRL_PAD_ACTION_PAD(ev->value), &beat_shift)) {
-                handle_beat_jump(deck, beat_shift, state);
+            beat_jump_size_t size = {0};
+            if (beat_jump_size_for_pad(CTRL_PAD_ACTION_PAD(ev->value), &size)) {
+                handle_beat_jump(deck, size.numerator, size.denominator, state);
+            }
+        } else if (CTRL_PAD_ACTION_PRESSED(ev->value) &&
+                   CTRL_PAD_ACTION_MODE(ev->value) == CTRL_PAD_MODE_BEAT_JUMP &&
+                   CTRL_PAD_ACTION_SHIFTED(ev->value)) {
+            const uint8_t pad = CTRL_PAD_ACTION_PAD(ev->value);
+            if ((pad == 6u && change_beat_jump_page(-1)) ||
+                (pad == 7u && change_beat_jump_page(1))) {
+                publish_beat_jump_shift_helper_leds(false);
             }
         } else if (CTRL_PAD_ACTION_PRESSED(ev->value) &&
                    CTRL_PAD_ACTION_MODE(ev->value) == CTRL_PAD_MODE_BEAT_LOOP &&
@@ -2743,6 +2807,9 @@ esp_err_t deck_core_init(QueueHandle_t *ctrl_event_queue_out)
         init_deck_state(&s_decks[i]);
     }
     init_beat_fx_state();
+    __atomic_store_n(&s_beat_jump_page,
+                     DECK_CORE_BEAT_JUMP_PAGE_DEFAULT,
+                     __ATOMIC_RELEASE);
     flx4_led_publisher_init(&s_flx4_led_publisher);
 
     s_mutex = xSemaphoreCreateMutex();
@@ -2914,6 +2981,11 @@ deck_core_beat_fx_state_t deck_core_get_beat_fx_state(void)
     return snap;
 }
 
+deck_core_beat_jump_page_t deck_core_get_beat_jump_page(void)
+{
+    return __atomic_load_n(&s_beat_jump_page, __ATOMIC_ACQUIRE);
+}
+
 deck_core_loop_display_t deck_core_get_loop_display(uint8_t deck)
 {
     deck_core_loop_display_t out = {0};
@@ -3036,6 +3108,9 @@ void deck_core_test_reset(void)
     }
     s_sync_master_deck = CTRL_DECK_NONE;
     init_beat_fx_state();
+    __atomic_store_n(&s_beat_jump_page,
+                     DECK_CORE_BEAT_JUMP_PAGE_DEFAULT,
+                     __ATOMIC_RELEASE);
     memset(s_loop_shadow, 0, sizeof(s_loop_shadow));
     memset(s_shifted_loop_roll, 0, sizeof(s_shifted_loop_roll));
     memset(s_pad_fx_led, 0, sizeof(s_pad_fx_led));

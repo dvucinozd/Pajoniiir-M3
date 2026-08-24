@@ -166,6 +166,7 @@ bool flx4_led_midi_build_shifted_mirror_packet(uint8_t led,
 {
     const bool is_mirrored_pad =
         (led >= LED_BEAT_LOOP_PAD_1 && led <= LED_BEAT_LOOP_PAD_8) ||
+        (led >= LED_BEAT_JUMP_PAD_1 && led <= LED_BEAT_JUMP_PAD_6) ||
         (led >= LED_HOT_CUE_PAD_1 && led <= LED_HOT_CUE_PAD_8) ||
         (led >= LED_PAD_FX1_PAD_1 && led <= LED_PAD_FX1_PAD_8) ||
         (led >= LED_PAD_FX2_PAD_1 && led <= LED_PAD_FX2_PAD_8);

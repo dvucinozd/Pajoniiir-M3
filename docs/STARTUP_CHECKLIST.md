@@ -31,6 +31,10 @@ idf.py -p COM17 flash monitor
 - [ ] LED feedback prati state i potpuno se obnovi nakon reconnecta.
 - [ ] Hot Cue, Pad FX1, Pad FX2 i Beat Loop pad state jednako se prikazuje na
   normalnim i SHIFT LED adresama na oba decka.
+- [ ] Beat Jump zadana stranica slijedi redoslijed `−1/+1`, `−2/+2`, `−4/+4`,
+  `−8/+8`; `SHIFT` + pad 7/8 globalno bira frakcijsku/zadanu/veliku stranicu
+  na oba decka, padovi 1-6 imaju SHIFT LED mirror, a helper 7/8 se ugasi na
+  donjoj/gornjoj granici.
 - [ ] Rekordbox medij se mounta, library se učita i track se može loadati na oba
   decka.
 - [ ] USB3 remove/reinsert sa zaustavljenim deckovima invalidira stari library,

@@ -62,6 +62,13 @@ typedef enum {
     DECK_CORE_BEAT_FX_BEAT_COUNT,
 } deck_core_beat_fx_beat_t;
 
+typedef enum {
+    DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL = 0,
+    DECK_CORE_BEAT_JUMP_PAGE_DEFAULT,
+    DECK_CORE_BEAT_JUMP_PAGE_LARGE,
+    DECK_CORE_BEAT_JUMP_PAGE_COUNT,
+} deck_core_beat_jump_page_t;
+
 typedef struct {
     deck_core_beat_fx_effect_t effect;
     deck_core_beat_fx_beat_t beat;
@@ -92,6 +99,9 @@ void deck_core_toggle_master_tempo(uint8_t deck);
 // Snapshot of the global Beat FX state. Beat FX DSP is not applied yet; this is
 // exposed for low-rate diagnostics and controller smoke verification.
 deck_core_beat_fx_state_t deck_core_get_beat_fx_state(void);
+
+// FLX4 Beat Jump sizes are global, matching the controller's Mixxx mapping.
+deck_core_beat_jump_page_t deck_core_get_beat_jump_page(void);
 
 // Loop region for waveform display. `active` = a full loop (in+out) is set;
 // `armed` = loop-in pressed and waiting for loop-out (highlight from start_ms to

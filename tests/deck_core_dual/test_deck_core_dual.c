@@ -2488,13 +2488,54 @@ static void test_beat_jump_pad_maps_pad_index_to_jump_size(void)
     pad4.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 3, false, true);
     deck_core_test_apply_event(&pad4);
     assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 1);
-    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 18000);
+    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 21000);
 
     ctrl_event_t pad5 = deck_button(CTRL_ID_DECK1_PAD_ACTION);
     pad5.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 4, false, true);
     deck_core_test_apply_event(&pad5);
     assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 2);
-    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 20000);
+    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 19000);
+}
+
+static void test_shifted_beat_jump_changes_global_size_page(void)
+{
+    deck_core_test_reset();
+    reset_audio_engine_stub();
+    publish_loaded_bpm(CTRL_DECK_1, 120);
+    publish_loaded_bpm(CTRL_DECK_2, 120);
+    audio_engine_stub_deck_position_ms[CTRL_DECK_1] = 10000;
+    audio_engine_stub_deck_position_ms[CTRL_DECK_2] = 20000;
+
+    assert(deck_core_get_beat_jump_page() == DECK_CORE_BEAT_JUMP_PAGE_DEFAULT);
+
+    ctrl_event_t normal_pad2 = deck_button(CTRL_ID_DECK1_PAD_ACTION);
+    normal_pad2.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 1, false, true);
+    deck_core_test_apply_event(&normal_pad2);
+    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 10500);
+
+    ctrl_event_t increase_page = deck_button(CTRL_ID_DECK1_PAD_ACTION);
+    increase_page.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 7, true, true);
+    deck_core_test_apply_event(&increase_page);
+    deck_core_test_apply_event(&increase_page);
+    assert(deck_core_get_beat_jump_page() == DECK_CORE_BEAT_JUMP_PAGE_LARGE);
+    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 1);
+
+    normal_pad2 = deck_button(CTRL_ID_DECK2_PAD_ACTION);
+    normal_pad2.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 1, false, true);
+    deck_core_test_apply_event(&normal_pad2);
+    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_2] == 28000);
+
+    ctrl_event_t decrease_page = deck_button(CTRL_ID_DECK2_PAD_ACTION);
+    decrease_page.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 6, true, true);
+    deck_core_test_apply_event(&decrease_page);
+    deck_core_test_apply_event(&decrease_page);
+    assert(deck_core_get_beat_jump_page() == DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL);
+    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_2] == 1);
+
+    normal_pad2 = deck_button(CTRL_ID_DECK1_PAD_ACTION);
+    normal_pad2.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 1, false, true);
+    deck_core_test_apply_event(&normal_pad2);
+    assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 10532);
 }
 
 static void test_beat_jump_mode_lights_pad_leds_when_track_loaded(void)
@@ -2542,7 +2583,25 @@ static void test_beat_jump_shift_lights_helper_leds_when_track_loaded(void)
     assert(control_link_stub_last_led_state(test_beat_jump_shift_helper_led(7),
                                             CTRL_DECK_1) == 1);
 
-    control_link_stub_reset_leds();
+    ctrl_event_t increase_page = deck_button(CTRL_ID_DECK1_PAD_ACTION);
+    increase_page.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 7, true, true);
+    deck_core_test_apply_event(&increase_page);
+    assert(deck_core_get_beat_jump_page() == DECK_CORE_BEAT_JUMP_PAGE_LARGE);
+    assert(control_link_stub_last_led_state(test_beat_jump_shift_helper_led(6),
+                                            CTRL_DECK_1) == 1);
+    assert(control_link_stub_last_led_state(test_beat_jump_shift_helper_led(7),
+                                            CTRL_DECK_1) == 0);
+
+    ctrl_event_t decrease_page = deck_button(CTRL_ID_DECK1_PAD_ACTION);
+    decrease_page.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 6, true, true);
+    deck_core_test_apply_event(&decrease_page);
+    deck_core_test_apply_event(&decrease_page);
+    assert(deck_core_get_beat_jump_page() == DECK_CORE_BEAT_JUMP_PAGE_FRACTIONAL);
+    assert(control_link_stub_last_led_state(test_beat_jump_shift_helper_led(6),
+                                            CTRL_DECK_1) == 0);
+    assert(control_link_stub_last_led_state(test_beat_jump_shift_helper_led(7),
+                                            CTRL_DECK_1) == 1);
+
     shift.value = 0;
     deck_core_test_apply_event(&shift);
 
@@ -2563,8 +2622,13 @@ static void test_beat_jump_release_event_does_not_seek(void)
     release.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 4, false, false);
     deck_core_test_apply_event(&release);
 
+    ctrl_event_t shifted_release = deck_button(CTRL_ID_DECK1_PAD_ACTION);
+    shifted_release.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_BEAT_JUMP, 7, true, false);
+    deck_core_test_apply_event(&shifted_release);
+
     assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 0);
     assert(audio_engine_stub_deck_position_ms[CTRL_DECK_1] == 20000);
+    assert(deck_core_get_beat_jump_page() == DECK_CORE_BEAT_JUMP_PAGE_DEFAULT);
 }
 
 static void test_beat_jump_clamps_to_beatgrid_edges(void)
@@ -2709,6 +2773,7 @@ int main(void)
     test_shift_hot_cue_pad_clears_requested_slot();
     test_beat_jump_buttons_seek_by_one_beat_on_requested_deck();
     test_beat_jump_pad_maps_pad_index_to_jump_size();
+    test_shifted_beat_jump_changes_global_size_page();
     test_beat_jump_mode_lights_pad_leds_when_track_loaded();
     test_beat_jump_shift_lights_helper_leds_when_track_loaded();
     test_beat_jump_release_event_does_not_seek();

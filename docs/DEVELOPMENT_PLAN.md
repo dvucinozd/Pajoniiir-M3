@@ -352,6 +352,11 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   Pad FX1, Pad FX2 i Beat Loop, uz reconnect queue kapacitet za puni snapshot;
 - [x] hardware-verify shifted mirror LED izlaz za sva četiri moda na oba FLX4
   decka;
+- [x] uskladiti normalni Beat Jump raspored s XML/Mixxx mapom te host-testirati
+  globalne frakcijsku, zadanu i veliku stranicu (`SHIFT` + pad 7/8),
+  saturaciju, frakcijske seekove i granične helper LED-ice;
+- [ ] hardware-verify ispravljeni Beat Jump redoslijed, zajedničku stranicu na
+  oba decka, shifted mirror LED-ice padova 1-6 i granično gašenje helpera 7/8;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.

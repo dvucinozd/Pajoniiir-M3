@@ -91,11 +91,15 @@ static void test_shifted_pad_led_mirrors(void)
                                  0x9A, 0x60, 0x7F);
     expect_shifted_mirror_packet(LED_BEAT_LOOP_PAD_8, 0, CTRL_DECK_1,
                                  0x98, 0x67, 0x00);
+    expect_shifted_mirror_packet(LED_BEAT_JUMP_PAD_1, 1, CTRL_DECK_1,
+                                 0x98, 0x20, 0x7F);
+    expect_shifted_mirror_packet(LED_BEAT_JUMP_PAD_6, 0, CTRL_DECK_2,
+                                 0x9A, 0x25, 0x00);
 
     uint8_t packet[4] = { 0xAA, 0xAA, 0xAA, 0xAA };
     const uint8_t original[4] = { 0xAA, 0xAA, 0xAA, 0xAA };
     CHECK(!flx4_led_midi_build_shifted_mirror_packet(
-        LED_BEAT_JUMP_PAD_1, 1, CTRL_DECK_1, packet));
+        LED_BEAT_JUMP_PAD_7, 1, CTRL_DECK_1, packet));
     CHECK(!flx4_led_midi_build_shifted_mirror_packet(
         LED_PLAY, 1, CTRL_DECK_1, packet));
     CHECK(!flx4_led_midi_build_shifted_mirror_packet(
