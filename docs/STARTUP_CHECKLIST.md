@@ -29,8 +29,12 @@ idf.py -p COM17 flash monitor
 - [ ] FLX4 se enumerira na P4 kao MIDI/UAC uređaj.
 - [ ] Play, Cue, jog, tempo, faderi, EQ i browse daju očekivani P4 state.
 - [ ] LED feedback prati state i potpuno se obnovi nakon reconnecta.
+- [ ] Hot Cue, Pad FX1, Pad FX2 i Beat Loop pad state jednako se prikazuje na
+  normalnim i SHIFT LED adresama na oba decka.
 - [ ] Rekordbox medij se mounta, library se učita i track se može loadati na oba
   decka.
+- [ ] USB3 remove/reinsert sa zaustavljenim deckovima invalidira stari library,
+  povećava media generation i ponovno učita kolekciju bez P4 ili FLX4 reseta.
 
 ## Audio
 

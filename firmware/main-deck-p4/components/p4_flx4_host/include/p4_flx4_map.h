@@ -53,3 +53,7 @@ bool flx4_map_translate_message(flx4_map_state_t *state,
 
 bool flx4_midi_parse_usb_packet(const uint8_t packet[4], flx4_midi_message_t *out);
 bool flx4_led_midi_build_packet(uint8_t led, uint8_t state, uint8_t deck, uint8_t packet[4]);
+bool flx4_led_midi_build_shifted_mirror_packet(uint8_t led,
+                                               uint8_t state,
+                                               uint8_t deck,
+                                               uint8_t packet[4]);

@@ -32,8 +32,9 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 Završni hardverski baseline 2026-08-24 je produkcijski `M3-22-gd7466ea` u
 `ota_1` na P4 ploči. Verzija je vraćena poznatim potpisanim produkcijskim
 bundleom nakon OTA dijagnostike, a startup health gate označio ju je valjanom.
-FLX4 je na zahtjev operatora namjerno odspojen, oba decka su zaustavljena u `IDLE`, USB3
-library sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
+FLX4 je ponovno spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u
+`IDLE`, USB3 library sadrži 191 track, service log nema dropova, a SoftAP i
+Windows profil
 `Pajoniiir-M3` ostavljeni su uključeni. Servisni SSID, zaporka i HTTPS update
 URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
 zaporku. Fizički APSTA round-trip dobio je servisnu adresu `192.168.0.210`,
@@ -63,11 +64,9 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. zadržati start/seek PCM brojače u sljedećim dugim audio soak provjerama;
-   izolirani D1=202 događaj nije se ponovio u 12 kontroliranih ciklusa, uključujući
-   pet load → paused seek → simultaneous start → stop ciklusa;
-2. provesti duži dual-USB stress s Rekordbox medijem, aktivnim UI-jem i FLX4
-   reconnectom kada kontroler ponovno bude spojen;
+1. nastaviti MIDI/LED feature parity iz autoritativnog Mixxx XML-a;
+2. potvrditi PCM5102A headroom/limiter marginu i preostale
+   scratch/Master Tempo/loop/pitch rubove;
 3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona.
 
@@ -290,6 +289,31 @@ izolirani output-late pri startu, ali bez PCM ili UAC posljedice. PCM tranzijent
 zato nije potvrđen kao reproducibilan kvar; brojači ostaju dio dužeg soak
 monitoringa.
 
+Produženi hardware acceptance 2026-08-24 dodao je 600,502-s mixed-rate
+dual-deck prozor uz istodobni USB3 read, FLX4 UAC/MIDI i Wi-Fi web promet.
+Prošlo je 643/643 status, 64/64 library i 42/42 firmware zahtjeva; oba decka
+napredovala su po 600.528 ms. PCM D1/D2, UAC dropped/overflow/aktivni underflow
+i service-log dropped delte ostale su 0. Četiri rijetka output-late događaja
+imala su maksimum 11.659 µs uz prag 10.668 µs, bez audio ili USB posljedice.
+
+Deset novih load → paused seek → dual start → stop ciklusa imalo je 10/10
+čistih aktivnih prozora. Tri dodatna fazna ciklusa pokazala su da marginalni
+late događaji nastaju samo pri gotovo istodobnom dual startu, ne pri loadu,
+seeku, stabilnom playbacku ili stopu; PCM/UAC su ostali 0. Povijesni D1=202
+događaj time se nije ponovio u ukupno 25 kontroliranih startova, od kojih je 18
+uključivalo load i paused seek. Završni FLX4 unplug/replug pod playbackom vratio
+je puni MIDI In/Out i UAC za 5,597 s, bez output-latea ili PCM/UAC greške, a oba
+decka nastavila su napredovati. Detalji su u
+`docs/validation/P4_DUAL_USB_AUDIO_SOAK_20260824.md`.
+
+Završni storage gate fizički je izvadio i vratio USB3 Rekordbox medij sa
+zaustavljenim deckovima. Library je ispravno prošao 191 → 0 → 191 track,
+generation `1→2→3`, a puna obnova trajala je 7,405 s. FLX4, Wi-Fi i firmware
+ostali su aktivni; output-late, PCM, UAC i service-log dropped delte bile su 0.
+Service journal potvrdio je `USB_UNMOUNTED`, `USB_MOUNTED` i `LIBRARY_LOADED`
+unutar istog boot ID-a 192. Time je dual-USB/storage blok za testirani profil
+zatvoren.
+
 Acceptance: Wi-Fi se uključuje samo eksplicitno, SoftAP i privremeni STA rade
 ponovljivo nakon cold boota i reconnecta, OTA se sigurno oporavlja, a mrežni
 promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
@@ -315,14 +339,19 @@ površini, svi postojeći UI tokovi su čitljivi i nema display/audio regresija.
 
 ### 4. Dual-USB stress
 
-- istodobno streamati dva decka s USB3 dok FLX4 MIDI/UAC radi na USB2;
-- mjeriti output deadline, cache miss, USB recovery i headphone drop brojače;
-- ponoviti connect/disconnect i zamjenu medija tijekom sigurnih transport stateova.
+- [x] istodobno streamati dva decka s USB3 dok FLX4 MIDI/UAC radi na USB2;
+- [x] mjeriti output deadline, cache miss, USB recovery i headphone drop brojače;
+- [x] ponoviti FLX4 connect/disconnect tijekom playbacka;
+- [x] potvrditi USB3 zamjenu medija i obnovu libraryja tijekom sigurnog
+  transport stanja.
 
 Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
 
 ### 5. MIDI/LED feature parity
 
+- [x] implementirati i host-testirati shifted mirror LED izlaz za Hot Cue,
+  Pad FX1, Pad FX2 i Beat Loop, uz reconnect queue kapacitet za puni snapshot;
+- [ ] hardware-verify shifted mirror LED izlaz na oba FLX4 decka;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.
@@ -333,7 +362,7 @@ Acceptance: svi podržani FLX4 elementi imaju jednoznačan P4 state owner.
 
 - [x] hardware-verify PFL prije channel fadera, cue/master routing te
   `HEADPHONES LEVEL`/`HEADPHONES MIX` bez prekida ili pucketanja;
-- [ ] hardware-verify da simultani dual-deck start i seek/start prijelazi ne
+- [x] hardware-verify da simultani dual-deck start i seek/start prijelazi ne
   povećavaju PCM underrun brojače nakon prebuffera;
 - [ ] hardware-verify PCM5102A headroom i završnu limiter marginu;
 - dovršiti scratch/Master Tempo rubne slučajeve uz loop i pitch promjene;

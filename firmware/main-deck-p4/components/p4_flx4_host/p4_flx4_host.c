@@ -214,7 +214,15 @@ esp_err_t p4_flx4_host_send_led(uint8_t led, uint8_t state, uint8_t deck)
     if (!flx4_led_midi_build_packet(led, state, deck, packet)) {
         return ESP_ERR_INVALID_ARG;
     }
-    return p4_flx4_host_send_packet(packet);
+    esp_err_t result = p4_flx4_host_send_packet(packet);
+    if (result != ESP_OK) {
+        return result;
+    }
+
+    if (flx4_led_midi_build_shifted_mirror_packet(led, state, deck, packet)) {
+        result = p4_flx4_host_send_packet(packet);
+    }
+    return result;
 }
 
 static esp_err_t flx4_control_link_led_sink(uint8_t led, uint8_t state, uint8_t deck, void *user_ctx)
@@ -716,7 +724,10 @@ esp_err_t p4_flx4_host_init(void)
     if (s_client_handle) return ESP_OK;
 
     if (!s_out_queue) {
-        s_out_queue = xQueueCreate(128, sizeof(p4_flx4_out_item_t));
+        /* A forced reconnect snapshot currently queues 98 primary LED packets
+         * plus 64 shifted performance-pad mirrors. Leave headroom for the
+         * state-driven Beat Jump and track-load updates that follow it. */
+        s_out_queue = xQueueCreate(256, sizeof(p4_flx4_out_item_t));
     }
     control_link_set_led_sink(flx4_control_link_led_sink, NULL);
     p4_flx4_midi_gate_init(&s_midi_gate);

@@ -58,6 +58,53 @@ static void test_pad_led_ranges(void)
     expect_packet(LED_PAD_FX2_PAD_8, 0, CTRL_DECK_2, 0x09, 0x99, 0x57, 0x00);
 }
 
+static void expect_shifted_mirror_packet(uint8_t led,
+                                         uint8_t state,
+                                         uint8_t deck,
+                                         uint8_t status,
+                                         uint8_t note,
+                                         uint8_t value)
+{
+    uint8_t packet[4] = { 0 };
+    CHECK(flx4_led_midi_build_shifted_mirror_packet(led, state, deck, packet));
+    CHECK_EQ(packet[0], 0x09);
+    CHECK_EQ(packet[1], status);
+    CHECK_EQ(packet[2], note);
+    CHECK_EQ(packet[3], value);
+}
+
+static void test_shifted_pad_led_mirrors(void)
+{
+    expect_shifted_mirror_packet(LED_HOT_CUE_PAD_1, 1, CTRL_DECK_1,
+                                 0x98, 0x00, 0x7F);
+    expect_shifted_mirror_packet(LED_HOT_CUE_PAD_8, 0, CTRL_DECK_2,
+                                 0x9A, 0x07, 0x00);
+    expect_shifted_mirror_packet(LED_PAD_FX1_PAD_1, 1, CTRL_DECK_2,
+                                 0x9A, 0x10, 0x7F);
+    expect_shifted_mirror_packet(LED_PAD_FX1_PAD_8, 0, CTRL_DECK_1,
+                                 0x98, 0x17, 0x00);
+    expect_shifted_mirror_packet(LED_PAD_FX2_PAD_1, 1, CTRL_DECK_1,
+                                 0x98, 0x50, 0x7F);
+    expect_shifted_mirror_packet(LED_PAD_FX2_PAD_8, 0, CTRL_DECK_2,
+                                 0x9A, 0x57, 0x00);
+    expect_shifted_mirror_packet(LED_BEAT_LOOP_PAD_1, 1, CTRL_DECK_2,
+                                 0x9A, 0x60, 0x7F);
+    expect_shifted_mirror_packet(LED_BEAT_LOOP_PAD_8, 0, CTRL_DECK_1,
+                                 0x98, 0x67, 0x00);
+
+    uint8_t packet[4] = { 0xAA, 0xAA, 0xAA, 0xAA };
+    const uint8_t original[4] = { 0xAA, 0xAA, 0xAA, 0xAA };
+    CHECK(!flx4_led_midi_build_shifted_mirror_packet(
+        LED_BEAT_JUMP_PAD_1, 1, CTRL_DECK_1, packet));
+    CHECK(!flx4_led_midi_build_shifted_mirror_packet(
+        LED_PLAY, 1, CTRL_DECK_1, packet));
+    CHECK(!flx4_led_midi_build_shifted_mirror_packet(
+        LED_HOT_CUE_PAD_1, 1, CTRL_DECK_NONE, packet));
+    CHECK(!flx4_led_midi_build_shifted_mirror_packet(
+        LED_HOT_CUE_PAD_1, 1, CTRL_DECK_1, NULL));
+    CHECK(memcmp(packet, original, sizeof(packet)) == 0);
+}
+
 static void test_vu_and_invalid_inputs(void)
 {
     expect_packet(LED_VU_METER, 0x40, CTRL_DECK_1, 0x0B, 0xB0, 0x02, 0x40);
@@ -75,6 +122,7 @@ int main(void)
 {
     test_transport_mode_and_global_leds();
     test_pad_led_ranges();
+    test_shifted_pad_led_mirrors();
     test_vu_and_invalid_inputs();
     test_report("p4_flx4_led");
     return 0;
