@@ -8,7 +8,7 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-24.
 | R2 | FLX4 UAC1 descriptor/alternate-setting odstupa od pretpostavke | nema slušalica ili krivi format | descriptor testovi, hardware enumeration smoke, fail-closed endpoint izbor |
 | R3 | Audio output task probije blok deadline | čujni klik/underrun | single-precision DSP, bounded I/O, bez real-time success logiranja, rano spuštanje USB prioriteta i phase telemetry; 600-s soak imao je četiri izolirana 10,732–11,659-ms događaja bez PCM/UAC posljedice, a hot-plug delta bila je 0 |
 | R4 | USB storage read blokira decode/output | dropout pri library/load aktivnostima | compressed cache i SD/USB I/O gate; 600-s soak s 64 library čitanja, 13 reload/seek ciklusa i fizički 191→0→191 media replacement prošli su bez PCM/UAC gubitka |
-| R5 | MIDI mapping ili shift state nije potpun | pogrešna kontrola ili LED | autoritativni Mixxx XML, službeni MIDI popis i map acceptance ledger; shifted Beat Jump, Loop Adjust `0x4C/0x4E` i D1/D2 Quantize hardverski potvrđeni 2026-08-24 |
+| R5 | MIDI mapping ili shift state nije potpun | pogrešna kontrola ili LED | autoritativni Mixxx XML, službeni MIDI popis i map acceptance ledger; shifted Beat Jump, Loop Adjust `0x4C/0x4E`, D1/D2 Quantize, Censor, Sync Master i Reloop Stop/Forget hardverski potvrđeni 2026-08-24; preostaje Beat FX parity |
 | R6 | Reconnect ostavi stale FLX4 state/LED | UI i fizički kontroler se ne slažu | generation gate, connection event i puni LED snapshot nakon reconnecta |
 | R7 | C6 SDIO i microSD dijele resurse na neočekivan način | mreža ili SD ne rade | slot-aware BSP, IDF6 hardware smoke, APSTA servisni posjet koji čuva Hosted i montirani microSD te zabrana Hosted teardowna dok kartica koristi drugi slot istog SDMMC kontrolera |
 | R8 | PCM5102A pinovi kolidiraju s aktivnom periferijom | nema master zvuka | GPIO1/2/3 kao jedini dokumentirani master put; EMAC ugašen |
@@ -29,4 +29,6 @@ Najveći otvoreni hardverski gateovi sada su PCM5102A headroom/limiter rubovi i
 bring-up još nedostupnog 800×480 DSI/FT5426 sklopa. Jednokratni simultani
 start/seek PCM D1=202 događaj nije se
 ponovio u ukupno 25 kontroliranih startova i ostaje telemetrijska stavka, a ne
-potvrđeni reproducibilni kvar.
+potvrđeni reproducibilni kvar. Censor MVP zasebno radi dva playing seeka; svaki
+je u prihvatnom testu dodao jedan output-late događaj i 256 PCM-underrun
+frameova, pa gapless true-reverse DSP ostaje otvorena kvalitativna nadogradnja.

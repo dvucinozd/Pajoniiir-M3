@@ -1,7 +1,8 @@
 # Development Plan
 
 Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
-Beat Jump te Loop Adjust/Quantize acceptance blokova, 2026-08-24.
+Beat Jump, Loop Adjust/Quantize te shifted transport/sync acceptance blokova,
+2026-08-24.
 
 ## Trenutna baza
 
@@ -29,12 +30,12 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-24 je produkcijski `M3-32-g1038234` u
-`ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
-2.363.856 B, podigao novi image softverskim resetom i vratio OTA API u `idle`.
+Završni hardverski baseline 2026-08-24 je produkcijski `M3-34-gafee129` u
+`ota_1` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
+2.364.192 B, podigao novi image softverskim resetom i vratio OTA API u `idle`.
 FLX4 je spojen s MIDI In/Out i UAC-om, USB3 library sadrži 191 track, oba decka
-su nakon završnog boota prazna i zaustavljena u `IDLE`, service log nema
-dropova, a SoftAP i Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
+imaju učitane trake i zaustavljena su, service log nema dropova, a SoftAP i
+Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
 Servisni SSID, zaporka i HTTPS update
 URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
 zaporku. Fizički APSTA round-trip dobio je servisnu adresu `192.168.0.210`,
@@ -65,7 +66,7 @@ izlazni blok ostane djelomičan.
 Prioritetni redoslijed nastavka:
 
 1. nastaviti preostali MIDI/LED feature parity iz autoritativnog Mixxx XML-a,
-   počevši od još nepotvrđenih shifted transport/sync i Beat FX kontrola;
+   počevši od još nepotvrđenih shifted Beat FX kontrola;
 2. potvrditi PCM5102A headroom/limiter marginu i preostale
    scratch/Master Tempo/loop/pitch rubove;
 3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
@@ -381,11 +382,24 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   jog događaje, uređuje samo odabranu granicu i drži odgovarajuću LED-icu;
 - [x] hardware-verify D1 Loop Adjust In/Out, D2 Loop Adjust Out adresu `0x4E`,
   neovisni D1/D2 Quantize toggle i beat-grid snap Loop In/Out granica;
+- [x] host-testirati D1/D2 shifted Censor, Sync Master i Reloop Stop/Forget
+  adrese te izložiti `sync_master` i `censor_active` kroz status API;
+- [x] hardware-verify D1 Sync Master long press, obični D2 Sync prema masteru,
+  D1 Reloop Stop/Forget te D1 Censor state, LED i čujni MVP repeat;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.
 
 Acceptance: svi podržani FLX4 elementi imaju jednoznačan P4 state owner.
+
+`M3-34-gafee129` zatvorio je shifted transport/sync ulazni blok. D1 Sync
+Master zahtijevao je najmanje 3 s držanja; potom je normalni D2 Sync pratio D1
+master. D1 Reloop Stop/Forget ugasio je petlju i obični Reloop/Exit je nije
+vratio. Censor state, LED i čujno kratko ponavljanje prošli su, ali postojeći
+seek-based MVP pri pressu i releaseu dodaje po jedan output-late događaj i 256
+PCM-underrun frameova. Kontrolni start/stop bez Censora imao je nultu deltu, pa
+se gapless true-reverse Censor vodi kao budući DSP quality korak, a sljedeći
+parity blok su shifted Beat FX kontrole.
 
 ### 6. Audio acceptance
 

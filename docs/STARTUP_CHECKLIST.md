@@ -43,6 +43,13 @@ idf.py -p COM17 flash monitor
   a position/scratch/bend se tijekom uređivanja ne pomiču.
 - [ ] `SHIFT + channel CUE` neovisno uključuje Quantize na D1/D2 bez promjene
   PFL-a; normalni Loop In/Out izvan grida poravnava obje granice na ANLZ beatove.
+- [ ] BEAT SYNC hold od najmanje 3 s postavlja deck kao Sync Master; obični
+  kratki Sync na drugom decku prati master, dok kraći hold ne glumi long press.
+- [ ] `SHIFT + RELOOP/EXIT` zaustavlja i zaboravlja aktivnu petlju; naknadni
+  obični Reloop/Exit ne obnavlja zaboravljenu petlju.
+- [ ] `SHIFT + PLAY/PAUSE` drži Censor state i LED samo do otpuštanja. Trenutačni
+  MVP čujno ponavlja dio oko 1 s unatrag i zatim se vraća na napredovalu
+  vremensku liniju; nije pravi reverse.
 
 Posljednji Beat Jump hardware acceptance na `M3-29-g2b0ad21` potvrdio je
 zadani `+1` grid skok, `+16` veliku stranicu podijeljenu između D1/D2,
@@ -54,6 +61,14 @@ persistentne `0x4C/0x4E` LED-ice te nepomičan playhead tijekom jog uređivanja.
 Quantize je na oba decka uključen preko `SHIFT + channel CUE`; namjerne sirove
 D1 granice `1850/4230 ms` poravnate su na `1671/4022 ms`, bez promjene PFL-a,
 output-latea, PCM underruna ili UAC drop/overflowa.
+
+Shifted transport/sync acceptance na `M3-34-gafee129` potvrdio je D1 Sync
+Master nakon najmanje 3 s držanja, obični D2 Sync prema D1 masteru i D1
+Reloop Stop/Forget. D1 Censor state, LED i čujno kratko ponavljanje također su
+prošli, uz poznatu MVP dijagnostičku cijenu: press i release seek dodali su po
+jedan output-late događaj i 256 PCM-underrun frameova. Kontrolni osamsekundni
+start/stop bez Censora nije dodao nijedan brojač, a UAC dropped/overflow ostali
+su 0.
 
 - [ ] Rekordbox medij se mounta, library se učita i track se može loadati na oba
   decka.

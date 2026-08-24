@@ -44,6 +44,25 @@ release ključem. Privatni ključ ne učitava se na uređaj ni u repozitorij.
 - potvrdi running version/slot kroz `/api/firmware`;
 - nakon restarta provjeri UI, USB2 FLX4, USB3 storage i oba audio izlaza.
 
+## Hardware acceptance M3-34, 2026-08-24
+
+Clean ESP-IDF 6.0.2 build `M3-34-gafee129` zapakiran je ključem `rel-001` i
+lokalno instaliran preko `POST /api/ota/p4`. Unutarnji image imao je 2.364.192 B
+i SHA-256 `b4b8a0d375a933586a6264a7a816ba1f3f17a24eb8c351d680208641d7500eb2`.
+Uređaj je podigao `ota_1`, vratio OTA u `idle`, SoftAP `Pajoniiir-M3`, FLX4
+MIDI In/Out/UAC i USB3 biblioteku od 191 trake. Image dodaje statusnu
+observability za `sync_master` i `censor_active` te host pokrivanje shifted
+Censor, Sync Master i Reloop Stop/Forget adresa na oba decka.
+
+Na hardveru je D1 Sync Master postavljen držanjem BEAT SYNC najmanje 3 s, a
+obični D2 Sync zatim je pratio D1 master. D1 `SHIFT + RELOOP/EXIT` zaustavio je
+i zaboravio aktivnu petlju. D1 Censor state, LED i čujno kratko ponavljanje
+prošli su, a release se vratio na kontinuirano napredujuću vremensku liniju.
+Trenutačni seek-based Censor nije gapless: press i release dodali su po jedan
+output-late događaj i 256 D1 PCM-underrun frameova. Kontrolni start, 8 s
+playbacka i stop bez Censora dodali su 0/0; UAC dropped/overflow i service-log
+dropped ostali su 0.
+
 ## Hardware acceptance M3-32, 2026-08-24
 
 Clean ESP-IDF 6.0.2 build `M3-32-g1038234` zapakiran je ključem `rel-001` i
