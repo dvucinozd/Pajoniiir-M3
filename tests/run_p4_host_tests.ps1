@@ -1184,7 +1184,7 @@ Assert-FileContains `
         "api_request_allowed(req, true)",
         "web_api_host_allowed(host, ap_ipv4)",
         '"X-DDJ-Control"',
-        "queue_rc = deck_core_queue_event(&ev);",
+        "queue_rc = deck_core_queue_remote_event(&ev);",
         '"503 Service Unavailable"',
         '.method = HTTP_POST'
     )
@@ -2643,7 +2643,12 @@ Assert-FileContains `
 Assert-FileContains `
     -Name "p4 web loop actions go through deck_core, not straight to the audio engine" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/web_server/web_server.c") `
-    -LiteralPatterns @("web_queue_loop_set", "web_queue_loop_clear", "deck_core_queue_event(&ev)")
+    -LiteralPatterns @("web_queue_loop_set", "web_queue_loop_clear", "deck_core_queue_remote_event(&ev)")
+
+Assert-FileContains `
+    -Name "p4 remote controls wake the screensaver without losing their first command" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/deck_core/deck_core.c") `
+    -LiteralPatterns @("queue_control_event", "consume_wake_event", "deck_core_queue_remote_event", "queue_control_event(ev, false)")
 
 # The symbols exist and are reachable by design - they are simply the wrong
 # call for this component - so no link contract can express it.

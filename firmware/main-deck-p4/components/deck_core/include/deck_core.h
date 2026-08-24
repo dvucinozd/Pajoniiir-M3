@@ -135,6 +135,12 @@ void deck_core_set_activity_cb(deck_core_activity_cb_t cb);
 
 esp_err_t deck_core_queue_event(const ctrl_event_t *ev);
 
+/* Queue an event from a remote control surface. Remote controls still count as
+ * operator activity and dismiss the idle screensaver, but their command must
+ * not be consumed by that wake-up: the remote operator cannot see the local
+ * display state and must not need to send every first command twice. */
+esp_err_t deck_core_queue_remote_event(const ctrl_event_t *ev);
+
 /*
  * Coherent loaded-track ownership.
  *

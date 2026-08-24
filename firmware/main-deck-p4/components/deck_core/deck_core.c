@@ -3002,13 +3002,15 @@ void deck_core_set_activity_cb(deck_core_activity_cb_t cb)
     s_activity_cb = cb;
 }
 
-esp_err_t deck_core_queue_event(const ctrl_event_t *ev)
+static esp_err_t queue_control_event(const ctrl_event_t *ev, bool consume_wake_event)
 {
     if (!s_queue || !ev) return ESP_ERR_INVALID_ARG;
-    /* Single choke point for every FLX4 button, jog, fader and web mutation.
-     * Swallowing the waking event here is what stops a PLAY press that
-     * dismisses the screensaver from also starting the deck. */
-    if (s_activity_cb && s_activity_cb()) return ESP_OK;
+    /* Single choke point for every FLX4 button, jog, fader and UI mutation.
+     * Swallowing a local waking event here is what stops a PLAY press that
+     * dismisses the screensaver from also starting the deck. Remote control
+     * events still wake it, but remain authoritative and continue to queue. */
+    bool woke_screensaver = s_activity_cb && s_activity_cb();
+    if (consume_wake_event && woke_screensaver) return ESP_OK;
     if (xQueueSend(s_queue, ev, 0) != pdTRUE) {
         s_drop_count++;
         TickType_t now = xTaskGetTickCount();
@@ -3020,6 +3022,16 @@ esp_err_t deck_core_queue_event(const ctrl_event_t *ev)
         return ESP_FAIL;
     }
     return ESP_OK;
+}
+
+esp_err_t deck_core_queue_event(const ctrl_event_t *ev)
+{
+    return queue_control_event(ev, true);
+}
+
+esp_err_t deck_core_queue_remote_event(const ctrl_event_t *ev)
+{
+    return queue_control_event(ev, false);
 }
 
 deck_state_t deck_core_get_state(void)

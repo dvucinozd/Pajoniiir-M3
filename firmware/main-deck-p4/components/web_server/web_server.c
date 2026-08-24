@@ -170,7 +170,7 @@ static esp_err_t web_queue_loop_set(uint8_t deck)
         .control = CTRL_DECK_CTL_PAD_ACTION,
         .seq = 0u,
     };
-    return deck_core_queue_event(&ev);
+    return deck_core_queue_remote_event(&ev);
 }
 
 static esp_err_t web_queue_loop_clear(uint8_t deck)
@@ -186,7 +186,7 @@ static esp_err_t web_queue_loop_clear(uint8_t deck)
         .control = CTRL_DECK_CTL_EXT_ACTION,
         .seq = 0u,
     };
-    return deck_core_queue_event(&ev);
+    return deck_core_queue_remote_event(&ev);
 }
 
 /* These strings end up inside a hand-formatted JSON body below. They originate
@@ -1185,7 +1185,7 @@ static esp_err_t api_control_handler(httpd_req_t *req)
             .value = 1,
             .seq   = 0
         };
-        queue_rc = deck_core_queue_event(&ev);
+        queue_rc = deck_core_queue_remote_event(&ev);
     } else if (strcmp(action, "cue") == 0) {
         ctrl_event_t ev = {
             .type  = CTRL_EV_BUTTON,
@@ -1194,7 +1194,7 @@ static esp_err_t api_control_handler(httpd_req_t *req)
             .value = 1,
             .seq   = 0
         };
-        queue_rc = deck_core_queue_event(&ev);
+        queue_rc = deck_core_queue_remote_event(&ev);
     } else if (strcmp(action, "pfl") == 0) {
         ctrl_event_t ev = {
             .type  = CTRL_EV_BUTTON,
@@ -1203,7 +1203,7 @@ static esp_err_t api_control_handler(httpd_req_t *req)
             .value = 1,
             .seq   = 0
         };
-        queue_rc = deck_core_queue_event(&ev);
+        queue_rc = deck_core_queue_remote_event(&ev);
     } else if (strcmp(action, "volume") == 0) {
         ctrl_event_t ev = {
             .type  = CTRL_EV_BUTTON,
@@ -1212,7 +1212,7 @@ static esp_err_t api_control_handler(httpd_req_t *req)
             .value = (int16_t)value,
             .seq   = 0
         };
-        queue_rc = deck_core_queue_event(&ev);
+        queue_rc = deck_core_queue_remote_event(&ev);
     } else if (strcmp(action, "crossfader") == 0) {
         ctrl_event_t ev = {
             .type  = CTRL_EV_BUTTON,
@@ -1221,7 +1221,7 @@ static esp_err_t api_control_handler(httpd_req_t *req)
             .value = (int16_t)value,
             .seq   = 0
         };
-        queue_rc = deck_core_queue_event(&ev);
+        queue_rc = deck_core_queue_remote_event(&ev);
     } else if (strcmp(action, "pitch") == 0) {
         ctrl_event_t ev = {
             .type  = CTRL_EV_PITCH,
@@ -1230,7 +1230,7 @@ static esp_err_t api_control_handler(httpd_req_t *req)
             .value = (int16_t)value,
             .seq   = 0
         };
-        queue_rc = deck_core_queue_event(&ev);
+        queue_rc = deck_core_queue_remote_event(&ev);
     } else if (strcmp(action, "loop_4") == 0) {
         audio_engine_deck_status_t status = {0};
         esp_err_t rc = audio_engine_deck_get_status(deck, &status);
