@@ -27,6 +27,12 @@ typedef enum {
 #define DECK_CORE_DECK_COUNT 2
 #define DECK_CORE_COMPAT_DECK CTRL_DECK_1
 
+typedef enum {
+    DECK_CORE_LOOP_ADJUST_NONE = 0,
+    DECK_CORE_LOOP_ADJUST_IN,
+    DECK_CORE_LOOP_ADJUST_OUT,
+} deck_core_loop_adjust_mode_t;
+
 typedef struct {
     bool          playing;
     uint32_t      position_ms;
@@ -39,6 +45,7 @@ typedef struct {
     bool          sync_enabled;
     bool          sync_master;
     bool          quantize_enabled;
+    deck_core_loop_adjust_mode_t loop_adjust_mode;
     bool          censor_active;
     bool          master_tempo;
     bool          controller_connected;

@@ -1461,7 +1461,7 @@ static void test_reloop_shift_stop_clears_active_and_remembered_loop(void)
     assert(!audio_engine_stub_loop_active[CTRL_DECK_1]);
 }
 
-static void test_loop_adjust_in_and_out_update_active_loop_boundaries(void)
+static void test_loop_adjust_modes_edit_boundaries_with_jog(void)
 {
     deck_core_test_reset();
     reset_audio_engine_stub();
@@ -1473,17 +1473,99 @@ static void test_loop_adjust_in_and_out_update_active_loop_boundaries(void)
     audio_engine_stub_deck_position_ms[CTRL_DECK_2] = 2000;
     ctrl_event_t adjust_in = deck_ext_action(CTRL_DECK_2, CTRL_DECK_EXT_ACTION_LOOP_ADJUST_IN, true);
     deck_core_test_apply_event(&adjust_in);
-    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_2] == 2000);
+    assert(deck_core_test_get_deck_state(CTRL_DECK_2).loop_adjust_mode ==
+           DECK_CORE_LOOP_ADJUST_IN);
+    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_2] == 1000);
     assert(audio_engine_stub_loop_end_ms[CTRL_DECK_2] == 5000);
-    assert_last_led_flash(LED_LOOP_ADJUST_IN, CTRL_DECK_2);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_IN, CTRL_DECK_2) == 1);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_OUT, CTRL_DECK_2) == 0);
 
-    audio_engine_stub_deck_position_ms[CTRL_DECK_2] = 7000;
+    ctrl_event_t jog_scratch = deck_encoder(CTRL_ID_DECK2_JOG_SCRATCH, 4);
+    deck_core_test_apply_event(&jog_scratch);
+    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_2] == 1004);
+    assert(audio_engine_stub_loop_end_ms[CTRL_DECK_2] == 5000);
+    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_2] == 0);
+    assert(audio_engine_stub_jog_nudge_count[CTRL_DECK_2] == 0);
+
     control_link_stub_reset_leds();
     ctrl_event_t adjust_out = deck_ext_action(CTRL_DECK_2, CTRL_DECK_EXT_ACTION_LOOP_ADJUST_OUT, true);
     deck_core_test_apply_event(&adjust_out);
-    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_2] == 2000);
-    assert(audio_engine_stub_loop_end_ms[CTRL_DECK_2] == 7000);
-    assert_last_led_flash(LED_LOOP_ADJUST_OUT, CTRL_DECK_2);
+    assert(deck_core_test_get_deck_state(CTRL_DECK_2).loop_adjust_mode ==
+           DECK_CORE_LOOP_ADJUST_OUT);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_IN, CTRL_DECK_2) == 0);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_OUT, CTRL_DECK_2) == 1);
+
+    ctrl_event_t jog_bend = deck_encoder(CTRL_ID_DECK2_JOG_BEND, -3);
+    deck_core_test_apply_event(&jog_bend);
+    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_2] == 1004);
+    assert(audio_engine_stub_loop_end_ms[CTRL_DECK_2] == 4997);
+
+    deck_core_test_apply_event(&adjust_out);
+    assert(deck_core_test_get_deck_state(CTRL_DECK_2).loop_adjust_mode ==
+           DECK_CORE_LOOP_ADJUST_NONE);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_IN, CTRL_DECK_2) == 0);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_OUT, CTRL_DECK_2) == 0);
+
+    deck_core_test_apply_event(&jog_scratch);
+    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_2] == 1004);
+    assert(audio_engine_stub_loop_end_ms[CTRL_DECK_2] == 4997);
+    assert(audio_engine_stub_deck_seek_count[CTRL_DECK_2] == 1);
+}
+
+static void test_loop_adjust_requires_active_loop_and_ignores_touch(void)
+{
+    deck_core_test_reset();
+    reset_audio_engine_stub();
+    control_link_stub_reset_leds();
+
+    ctrl_event_t adjust_in = deck_ext_action(CTRL_DECK_1, CTRL_DECK_EXT_ACTION_LOOP_ADJUST_IN, true);
+    deck_core_test_apply_event(&adjust_in);
+    assert(deck_core_test_get_deck_state(CTRL_DECK_1).loop_adjust_mode ==
+           DECK_CORE_LOOP_ADJUST_NONE);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_IN, CTRL_DECK_1) == 0);
+
+    audio_engine_stub_loop_active[CTRL_DECK_1] = true;
+    audio_engine_stub_loop_start_ms[CTRL_DECK_1] = 1000;
+    audio_engine_stub_loop_end_ms[CTRL_DECK_1] = 5000;
+    deck_core_test_apply_event(&adjust_in);
+
+    ctrl_event_t play = deck_button(CTRL_ID_DECK1_PLAY);
+    ctrl_event_t touch = deck_button(CTRL_ID_DECK1_JOG_TOUCH);
+    deck_core_test_apply_event(&play);
+    deck_core_test_apply_event(&touch);
+    assert(audio_engine_stub_scratch_begin_count[CTRL_DECK_1] == 0);
+    assert(audio_engine_stub_hold_set_count[CTRL_DECK_1] == 0);
+
+    ctrl_event_t jog = deck_encoder(CTRL_ID_DECK1_JOG_SCRATCH, 2);
+    deck_core_test_apply_event(&jog);
+    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_1] == 1002);
+    assert(audio_engine_stub_scratch_move_count[CTRL_DECK_1] == 0);
+    assert(audio_engine_stub_jog_nudge_count[CTRL_DECK_1] == 0);
+}
+
+static void test_loop_adjust_clamps_boundaries_and_loop_clear_exits_mode(void)
+{
+    deck_core_test_reset();
+    reset_audio_engine_stub();
+    control_link_stub_reset_leds();
+    audio_engine_stub_loop_active[CTRL_DECK_1] = true;
+    audio_engine_stub_loop_start_ms[CTRL_DECK_1] = 1000;
+    audio_engine_stub_loop_end_ms[CTRL_DECK_1] = 1005;
+
+    ctrl_event_t adjust_in = deck_ext_action(CTRL_DECK_1, CTRL_DECK_EXT_ACTION_LOOP_ADJUST_IN, true);
+    deck_core_test_apply_event(&adjust_in);
+    ctrl_event_t forward = deck_encoder(CTRL_ID_DECK1_JOG_SCRATCH, 20);
+    deck_core_test_apply_event(&forward);
+    assert(audio_engine_stub_loop_start_ms[CTRL_DECK_1] == 1004);
+    assert(audio_engine_stub_loop_end_ms[CTRL_DECK_1] == 1005);
+
+    ctrl_event_t stop = deck_ext_action(CTRL_DECK_1, CTRL_DECK_EXT_ACTION_RELOOP_STOP, true);
+    deck_core_test_apply_event(&stop);
+    assert(!audio_engine_stub_loop_active[CTRL_DECK_1]);
+    assert(deck_core_test_get_deck_state(CTRL_DECK_1).loop_adjust_mode ==
+           DECK_CORE_LOOP_ADJUST_NONE);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_IN, CTRL_DECK_1) == 0);
+    assert(control_link_stub_last_led_state(LED_LOOP_ADJUST_OUT, CTRL_DECK_1) == 0);
 }
 
 static void test_quantized_loop_in_out_snaps_to_nearest_beat(void)
@@ -2747,7 +2829,9 @@ int main(void)
     test_loop_in_out_sets_requested_deck_loop_from_audio_position();
     test_quantize_toggle_updates_requested_deck_only();
     test_reloop_shift_stop_clears_active_and_remembered_loop();
-    test_loop_adjust_in_and_out_update_active_loop_boundaries();
+    test_loop_adjust_modes_edit_boundaries_with_jog();
+    test_loop_adjust_requires_active_loop_and_ignores_touch();
+    test_loop_adjust_clamps_boundaries_and_loop_clear_exits_mode();
     test_quantized_loop_in_out_snaps_to_nearest_beat();
     test_censor_press_repeats_previous_audio_window();
     test_censor_release_returns_to_stored_position_when_paused();

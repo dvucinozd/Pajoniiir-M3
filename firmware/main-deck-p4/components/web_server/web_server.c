@@ -755,6 +755,18 @@ static esp_err_t api_status_handler(httpd_req_t *req)
 
     deck_state_t state1 = deck_core_get_deck_state(0);
     deck_state_t state2 = deck_core_get_deck_state(1);
+    bool loop_active1 = false;
+    bool loop_active2 = false;
+    uint32_t loop_start1_ms = 0;
+    uint32_t loop_start2_ms = 0;
+    uint32_t loop_end1_ms = 0;
+    uint32_t loop_end2_ms = 0;
+    (void)audio_engine_deck_get_loop_state(0, &loop_active1, &loop_start1_ms, &loop_end1_ms);
+    (void)audio_engine_deck_get_loop_state(1, &loop_active2, &loop_start2_ms, &loop_end2_ms);
+    const char *loop_adjust1 = state1.loop_adjust_mode == DECK_CORE_LOOP_ADJUST_IN ? "in" :
+                               state1.loop_adjust_mode == DECK_CORE_LOOP_ADJUST_OUT ? "out" : "off";
+    const char *loop_adjust2 = state2.loop_adjust_mode == DECK_CORE_LOOP_ADJUST_IN ? "in" :
+                               state2.loop_adjust_mode == DECK_CORE_LOOP_ADJUST_OUT ? "out" : "off";
     deck_core_beat_fx_state_t beat_fx = deck_core_get_beat_fx_state();
     service_log_status_t service_status = {0};
     (void)service_log_get_status(&service_status);
@@ -809,6 +821,11 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         "\"position_ms\":%u,"
         "\"duration_ms\":%u,"
         "\"playing\":%s,"
+        "\"quantize\":%s,"
+        "\"loop_active\":%s,"
+        "\"loop_start_ms\":%u,"
+        "\"loop_end_ms\":%u,"
+        "\"loop_adjust\":\"%s\","
         "\"state_text\":\"%s\""
         "},"
         "\"deck2\":{"
@@ -820,6 +837,11 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         "\"position_ms\":%u,"
         "\"duration_ms\":%u,"
         "\"playing\":%s,"
+        "\"quantize\":%s,"
+        "\"loop_active\":%s,"
+        "\"loop_start_ms\":%u,"
+        "\"loop_end_ms\":%u,"
+        "\"loop_adjust\":\"%s\","
         "\"state_text\":\"%s\""
         "},"
         "\"mixer\":{"
@@ -899,8 +921,16 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         "\"psram_free\":%u"
         "}"
         "}",
-        title1_esc, artist1_esc, (unsigned)current_bpm1, p1, state1.pitch, (unsigned)state1.position_ms, (unsigned)duration1_ms, state1.playing ? "true" : "false", state_text1,
-        title2_esc, artist2_esc, (unsigned)current_bpm2, p2, state2.pitch, (unsigned)state2.position_ms, (unsigned)duration2_ms, state2.playing ? "true" : "false", state_text2,
+        title1_esc, artist1_esc, (unsigned)current_bpm1, p1, state1.pitch,
+        (unsigned)state1.position_ms, (unsigned)duration1_ms,
+        state1.playing ? "true" : "false", state1.quantize_enabled ? "true" : "false",
+        loop_active1 ? "true" : "false", (unsigned)loop_start1_ms,
+        (unsigned)loop_end1_ms, loop_adjust1, state_text1,
+        title2_esc, artist2_esc, (unsigned)current_bpm2, p2, state2.pitch,
+        (unsigned)state2.position_ms, (unsigned)duration2_ms,
+        state2.playing ? "true" : "false", state2.quantize_enabled ? "true" : "false",
+        loop_active2 ? "true" : "false", (unsigned)loop_start2_ms,
+        (unsigned)loop_end2_ms, loop_adjust2, state_text2,
         mixer.channel_volume[0], mixer.channel_volume[1], mixer.crossfader,
         mixer.master_volume,
         mixer.headphone_mix,
