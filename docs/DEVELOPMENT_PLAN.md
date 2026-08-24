@@ -29,12 +29,11 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-24 je produkcijski `M3-22-gd7466ea` u
-`ota_1` na P4 ploči. Verzija je vraćena poznatim potpisanim produkcijskim
-bundleom nakon OTA dijagnostike, a startup health gate označio ju je valjanom.
-FLX4 je ponovno spojen s MIDI In/Out i UAC-om, oba decka su zaustavljena u
-`IDLE`, USB3 library sadrži 191 track, service log nema dropova, a SoftAP i
-Windows profil
+Završni hardverski baseline 2026-08-24 je produkcijski `M3-26-g620409e` u
+`ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle, podigao novi
+image softverskim resetom i vratio OTA API u `idle`. FLX4 je spojen s MIDI
+In/Out i UAC-om, oba decka imaju učitane trake i zaustavljena su u `READY`, USB3
+library sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
 `Pajoniiir-M3` ostavljeni su uključeni. Servisni SSID, zaporka i HTTPS update
 URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
 zaporku. Fizički APSTA round-trip dobio je servisnu adresu `192.168.0.210`,
@@ -351,7 +350,8 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
 
 - [x] implementirati i host-testirati shifted mirror LED izlaz za Hot Cue,
   Pad FX1, Pad FX2 i Beat Loop, uz reconnect queue kapacitet za puni snapshot;
-- [ ] hardware-verify shifted mirror LED izlaz na oba FLX4 decka;
+- [x] hardware-verify shifted mirror LED izlaz za sva četiri moda na oba FLX4
+  decka;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.
