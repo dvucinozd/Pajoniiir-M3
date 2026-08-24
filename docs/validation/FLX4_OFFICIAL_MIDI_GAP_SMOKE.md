@@ -1,6 +1,6 @@
 # FLX4 Official MIDI Gap-Closure Smoke
 
-Document status: historical acceptance worksheet, reviewed 2026-07-13. Do not
+Document status: historical acceptance worksheet, reviewed 2026-08-24. Do not
 convert a `PENDING` row to pass without new physical evidence and firmware ID.
 
 Date: 2026-07-03
@@ -18,7 +18,7 @@ hardware smoke, to be filled after flashing the new builds.
 
 | Control | Expected behavior | Result |
 | --- | --- | --- |
-| Censor (hold) | Playback jumps back ~1 s and plays forward while held; on release snaps to the untouched-timeline position (sync preserved). Approximation, not a true reverse. | PENDING |
+| Censor (hold) | Playback reads retained canonical PCM backward while the forward playhead advances; release returns to the slip position through a 10-ms crossfade without seek. | PASS — D1 48-kHz and D2 44,1-kHz physical reverse/release on `M3-41-g133f399`, with zero controlled output-late/PCM/UAC/service-log deltas (2026-08-24) |
 | Sync (set master) | Long/again designates the deck as sync master; the other deck's Sync matches this deck's BPM. | PENDING |
 | Quantize toggle | Toggles quantize; subsequent loop set / loop-adjust snaps to the nearest beat. | PENDING |
 | Loop Adjust In | Moves the active loop in-point to the (quantized) play position without dropping the loop. | PENDING |
@@ -37,8 +37,10 @@ hardware smoke, to be filled after flashing the new builds.
 | FLX4 MIDI stays responsive during dual-deck playback | PENDING |
 | USB headphones cue + PCM5102A RCA MAIN still simultaneous | PENDING |
 | No S3 / P4 reboot during the pass | PENDING |
-| Censor LED reflects P4 `censor_active` via the LED snapshot | PENDING |
+| Censor LED reflects P4 `censor_active` via the LED snapshot | PASS — physical LED path verified 2026-07-07; `M3-41-g133f399` status monitor captured `false→true→false` on both deck states 2026-08-24 |
 
 ## Result
 
-PENDING — flashed 2026-07-03, hardware smoke to follow.
+PARTIAL — original build flashed 2026-07-03. Censor control/state/audio and LED
+rows are closed by the evidence above; remaining `PENDING` rows still require
+their own physical acceptance.

@@ -20,20 +20,17 @@ MIDI mapiranje, LED feedback, audio DSP, biblioteku i UI. `control_link` u P4
 izvoru više nije serijski link: to je samo lokalni red semantičkih događaja i
 LED callback prema izravnom FLX4 USB hostu.
 
-Hardverski prihvaćeni baseline 2026-08-24 je `M3-39-g3bc04fd`: FLX4 MIDI,
+Hardverski prihvaćeni baseline 2026-08-24 je `M3-41-g133f399`: FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
 Wi-Fi remote događaj nakon screensavera te shifted Censor, Sync Master i
 Reloop Stop/Forget potvrđeni su na stvarnom uređaju. Shifted Beat FX beat-size,
 FLANGER, DELAY i reset, jednobeatni CUE/LOOP CALL skokovi te inertni shifted
-Smart helperi također su prošli hardverski acceptance. Taj instalirani baseline
-još koristi povijesni seek-based Censor.
-
-Sljedeći source kandidat zamjenjuje ga pravim gapless slip-reverse DSP-om:
-reverse čita zadržanu povijest iz postojećeg četverosekundnog PCM timelinea,
-normalni playhead i dekoder nastavljaju naprijed u pozadini, a otpuštanje radi
-10-ms crossfade bez seeka ili dodatnog PCM buffera. Reverse, mixed-rate
-interpolacija, bounded-history rub, release i deck-core no-seek ugovor prošli su
-puni host suite i ESP-IDF 6.0.2 P4 build; hardverski acceptance još slijedi.
+Smart helperi također su prošli hardverski acceptance. Aktualni baseline koristi
+gapless slip-reverse Censor: D1 48-kHz i D2 44,1-kHz testovi potvrdili su čujni
+reverse, napredovanje forward playheada i gladak 10-ms release bez seeka.
+`censor_active` je na oba decka prošao `false→true→false`, a kontrolirane
+press/release delte za output-late, PCM underrun, UAC drop/overflow i service-log
+drop bile su nula.
 
 Screen-independent release hardening sada uključuje testirani UAC health
 monitor: tijekom aktivnog playbacka alarmira izlazak FLX4 headphone ringa iz

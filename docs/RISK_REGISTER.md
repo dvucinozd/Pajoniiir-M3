@@ -32,5 +32,7 @@ ponovio u ukupno 25 kontroliranih startova i ostaje telemetrijska stavka, a ne
 potvrđeni reproducibilni kvar. Povijesni Censor MVP radio je dva playing seeka;
 svaki je u prihvatnom testu dodao jedan output-late događaj i 256 PCM-underrun
 frameova. Source ga sada zamjenjuje bounded gapless slip-reverse DSP-om bez
-seeka ili dodatnog PCM buffera; puni host suite i P4 build prolaze, a zatvaranje
-tog rizika čeka D1/D2 hardware smoke i potvrdu nultih audio/UAC delti.
+seeka ili dodatnog PCM buffera. Puni host suite i P4 build prolaze, a D1 48-kHz
+i D2 44,1-kHz hardware smoke na `M3-41-g133f399` potvrdio je čujni reverse,
+gladak release i nulte kontrolirane output-late/PCM/UAC/service-log delte; taj je
+Censor rizik zatvoren.

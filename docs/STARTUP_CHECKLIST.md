@@ -79,11 +79,14 @@ jedan output-late događaj i 256 PCM-underrun frameova. Kontrolni osamsekundni
 start/stop bez Censora nije dodao nijedan brojač, a UAC dropped/overflow ostali
 su 0.
 
-Ta hardverski potvrđena seek-based izvedba više nije aktualni source. Novi
-gapless Censor koristi postojeći četverosekundni kanonski PCM timeline bez
-dodatnog buffera, drži forward playhead aktivnim u pozadini i otpušta ga bez
-seeka. Host regresije i ESP-IDF 6.0.2 build prolaze; gornja checkbox stavka
-ostaje otvorena dok se novi image ne instalira i izmjere audio/UAC brojači.
+Seek-based izvedba više nije aktualni source. Potpisani `M3-41-g133f399` s
+gapless Censorom instaliran je 2026-08-24 u `ota_0`. D1 48-kHz i D2 44,1-kHz
+smoke potvrdili su čujni reverse, napredovanje forward playheada i gladak 10-ms
+release bez seeka; status je na oba decka zabilježio
+`censor_active false→true→false`. U oba kontrolirana Censor prozora output-late,
+PCM-underrun, UAC drop/overflow i service-log drop delte bile su nula. Jedan
+raniji output-late iz dugog običnog D1 playbacka ostao je nepromijenjen tijekom
+oba testa.
 
 Beat FX acceptance na istom `M3-34-gafee129` imageu potvrdio je shifted
 `1→4`, gornju saturaciju, `4→1→1/4`, donju saturaciju i završni povratak na

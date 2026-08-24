@@ -65,11 +65,11 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. instalirati i hardverski potvrditi novi gapless slip-reverse Censor na D1 i
-   D2, uključujući release bez output-late/PCM/UAC delte;
-2. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+1. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona, pa na istom UI-u odraditi Master Tempo hardware gate;
-3. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a.
+2. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a;
+3. na novom zaslonu zatvoriti Shift + Browse/Load routing i preostali UI
+   acceptance.
 
 ## Sljedeće faze
 
@@ -388,7 +388,7 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
 - [x] zamijeniti seek-based Censor bounded gapless slip-reverse čitačem nad
   kanonskim PCM timelineom, uz 10-ms release crossfade, mixed-rate interpolaciju
   i host ugovor da `deck_core` ne radi seek;
-- [ ] hardware-verify novi Censor na D1/D2: čujni reverse tijekom držanja,
+- [x] hardware-verify novi Censor na D1/D2: čujni reverse tijekom držanja,
   nastavak s napredovale slip pozicije i nulta output-late/PCM/UAC delta;
 - [x] hardware-verify shifted Beat FX beat-size dvostruke korake i saturaciju,
   FLANGER/DELAY DSP te potpuni shifted reset statea i ON/OFF LED-ice;
@@ -413,8 +413,13 @@ postojeći četverosekundni timeline daje reverse povijest, forward renderer
 istodobno pomiče autoritativni playhead, a release ih linearno ukršta tijekom
 10 ms. Novi modul pokriva unity/mixed-rate reverse, interpolaciju, bounded rub i
 release; deck-core regresija potvrđuje nula seekova. Puni host suite i ESP-IDF
-6.0.2 P4 build prošli su 2026-08-24, dok hardware acceptance ostaje sljedeći
-screen-independent gate.
+6.0.2 P4 build prošli su 2026-08-24. Potpisani `M3-41-g133f399` zatim je
+instaliran u `ota_0`; D1 48-kHz i D2 44,1-kHz smoke potvrdili su čujni reverse,
+napredovalu slip poziciju i gladak release. Status je na oba decka zabilježio
+`censor_active false→true→false`, a kontrolirane output-late, PCM-underrun, UAC
+drop/overflow i service-log drop delte ostale su nula. Jedan output-late nastao
+je ranije tijekom dugog običnog D1 playbacka i nije se povećao ni u jednom
+Censor prozoru.
 
 Shifted Beat FX hardverski slice zatim je na istom imageu prošao `1→4`, gornju
 saturaciju, `4→1→1/4`, donju saturaciju i povratak na `1 beat`, bez promjene
@@ -466,7 +471,7 @@ underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
 - [x] hardware-verify active-loop scratch i pitch-fader handoff;
 - [x] implementirati i host-testirati gapless slip-reverse Censor bez transport
   seeka ili drugog PCM buffera;
-- [ ] hardware-verify Censor reverse/release na oba decka uz nulte output-late,
+- [x] hardware-verify Censor reverse/release na oba decka uz nulte output-late,
   PCM-underrun i UAC drop/overflow delte;
 - [ ] nakon dolaska zaslona uključiti Master Tempo kroz UI i izmjeriti stvarni
   dual-deck keylock/PSRAM deadline uz suprotne pitch vrijednosti;

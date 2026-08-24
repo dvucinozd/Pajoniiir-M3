@@ -77,8 +77,23 @@ playbacka i stop bez Censora dodali su 0/0; UAC dropped/overflow i service-log
 dropped ostali su 0.
 
 Aktualni source zamjenjuje taj MVP gapless slip-reverse DSP-om bez transport
-seeka. Puni host suite i ESP-IDF 6.0.2 build prolaze; novi image još nije
-instaliran pa D1/D2 reverse/release counter acceptance ostaje otvoren.
+seeka. Puni host suite i ESP-IDF 6.0.2 build prolaze.
+
+## Hardware acceptance M3-41, 2026-08-24
+
+Potpisani `M3-41-g133f399` (`rel-001`, 2.369.552 B, SHA-256
+`f8d7e09d1f2ea72677b051c7d0e00ecace02fe252ea2564c70e5d742c218a7eb`)
+instaliran je lokalnim `POST /api/ota/p4` tokom. Uređaj je podigao `ota_0`,
+vratio OTA state u `idle`, FLX4 MIDI In/Out/UAC, PCM izlaz i USB3 biblioteku od
+191 trake. D1 test koristio je 48-kHz, a D2 44,1-kHz izvor uz 48-kHz output.
+
+Na oba decka `SHIFT + PLAY/PAUSE` dao je čujni reverse tijekom držanja i gladak
+povratak na napredovalu forward slip poziciju bez pucketanja, prekida ili seeka.
+Statusni nadzor uhvatio je `censor_active false→true→false` na D1 i D2.
+Kontrolirane press/release delte bile su nula za output-late, oba PCM-underrun
+brojača, UAC dropped/overflow i service-log dropped. Jedan output-late pojavio
+se ranije u dugom običnom D1 playbacku; ostao je bazna vrijednost 1 kroz oba
+Censor prozora i zato nije pripisan Censoru.
 
 Na istom imageu naknadno je hardverski zatvoren shifted Beat FX blok. Beat-size
 je prošao dvostruke korake i obje saturacije od `1/4` do `4 beats`. FLANGER
