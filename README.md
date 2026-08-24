@@ -23,8 +23,9 @@ LED callback prema izravnom FLX4 USB hostu.
 Hardverski prihvaćeni baseline 2026-08-24 je `M3-34-gafee129`: FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
 Wi-Fi remote događaj nakon screensavera te shifted Censor, Sync Master i
-Reloop Stop/Forget potvrđeni su na stvarnom uređaju. Censor je još MVP
-seek-izvedba, ne pravi gapless reverse.
+Reloop Stop/Forget potvrđeni su na stvarnom uređaju. Shifted Beat FX beat-size,
+FLANGER, DELAY i reset također su prošli hardverski acceptance. Censor je još
+MVP seek-izvedba, ne pravi gapless reverse.
 
 ## Struktura
 

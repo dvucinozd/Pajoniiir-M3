@@ -63,6 +63,14 @@ output-late događaj i 256 D1 PCM-underrun frameova. Kontrolni start, 8 s
 playbacka i stop bez Censora dodali su 0/0; UAC dropped/overflow i service-log
 dropped ostali su 0.
 
+Na istom imageu naknadno je hardverski zatvoren shifted Beat FX blok. Beat-size
+je prošao dvostruke korake i obje saturacije od `1/4` do `4 beats`. FLANGER
+state, ON LED i čujan sweep potvrđeni su, a live prijelaz na DELAY proizveo je
+očekivani one-shot tap od 470 ms. `SHIFT + BEAT FX ON/OFF` vratio je točno
+`FILTER / 1 beat / target 1&2 / depth 64 / OFF`, ugasio DELAY DSP i fizičku
+LED. Sam live FX prozor imao je jedan izolirani output-late od 14.714 us bez
+PCM underruna ili UAC drop/overflowa; service-log dropped ostao je 0.
+
 ## Hardware acceptance M3-32, 2026-08-24
 
 Clean ESP-IDF 6.0.2 build `M3-32-g1038234` zapakiran je ključem `rel-001` i

@@ -1,8 +1,8 @@
 # Development Plan
 
 Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
-Beat Jump, Loop Adjust/Quantize te shifted transport/sync acceptance blokova,
-2026-08-24.
+Beat Jump, Loop Adjust/Quantize, shifted transport/sync te Beat FX acceptance
+blokova, 2026-08-24.
 
 ## Trenutna baza
 
@@ -66,7 +66,7 @@ izlazni blok ostane djelomičan.
 Prioritetni redoslijed nastavka:
 
 1. nastaviti preostali MIDI/LED feature parity iz autoritativnog Mixxx XML-a,
-   počevši od još nepotvrđenih shifted Beat FX kontrola;
+   počevši od globalnih shifted Browse/Load i Smart CFX/Fader helpera;
 2. potvrditi PCM5102A headroom/limiter marginu i preostale
    scratch/Master Tempo/loop/pitch rubove;
 3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
@@ -386,6 +386,8 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   adrese te izložiti `sync_master` i `censor_active` kroz status API;
 - [x] hardware-verify D1 Sync Master long press, obični D2 Sync prema masteru,
   D1 Reloop Stop/Forget te D1 Censor state, LED i čujni MVP repeat;
+- [x] hardware-verify shifted Beat FX beat-size dvostruke korake i saturaciju,
+  FLANGER/DELAY DSP te potpuni shifted reset statea i ON/OFF LED-ice;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.
@@ -398,8 +400,17 @@ master. D1 Reloop Stop/Forget ugasio je petlju i obični Reloop/Exit je nije
 vratio. Censor state, LED i čujno kratko ponavljanje prošli su, ali postojeći
 seek-based MVP pri pressu i releaseu dodaje po jedan output-late događaj i 256
 PCM-underrun frameova. Kontrolni start/stop bez Censora imao je nultu deltu, pa
-se gapless true-reverse Censor vodi kao budući DSP quality korak, a sljedeći
-parity blok su shifted Beat FX kontrole.
+se gapless true-reverse Censor vodi kao budući DSP quality korak; tadašnji
+sljedeći parity blok bile su shifted Beat FX kontrole.
+
+Shifted Beat FX hardverski slice zatim je na istom imageu prošao `1→4`, gornju
+saturaciju, `4→1→1/4`, donju saturaciju i povratak na `1 beat`, bez promjene
+audio/USB brojača. FLANGER je imao očekivani sweep i ON LED; live prijelaz na
+DELAY dao je čujan 470-ms one-shot tap. Shifted ON/OFF reset vratio je
+`FILTER / 1 beat / BOTH / depth 64 / OFF`, ugasio DSP i fizičku LED. Jedan
+izolirani 14.714-us output-late tijekom live FX prozora nije imao PCM/UAC
+posljedicu. Sljedeći parity rez su globalni shifted Browse/Load i Smart
+CFX/Fader helperi.
 
 ### 6. Audio acceptance
 

@@ -50,6 +50,10 @@ idf.py -p COM17 flash monitor
 - [ ] `SHIFT + PLAY/PAUSE` drži Censor state i LED samo do otpuštanja. Trenutačni
   MVP čujno ponavlja dio oko 1 s unatrag i zatim se vraća na napredovalu
   vremensku liniju; nije pravi reverse.
+- [ ] `SHIFT + BEAT < / >` mijenja Beat FX veličinu za dva enum koraka i
+  saturira na `1/4` odnosno `4 beats`; FLANGER ima čujan sweep, DELAY jedan
+  full-band tap, a `SHIFT + BEAT FX ON/OFF` vraća `FILTER / 1 beat / 1&2 /
+  depth 64 / OFF` i gasi LED.
 
 Posljednji Beat Jump hardware acceptance na `M3-29-g2b0ad21` potvrdio je
 zadani `+1` grid skok, `+16` veliku stranicu podijeljenu između D1/D2,
@@ -69,6 +73,15 @@ prošli, uz poznatu MVP dijagnostičku cijenu: press i release seek dodali su po
 jedan output-late događaj i 256 PCM-underrun frameova. Kontrolni osamsekundni
 start/stop bez Censora nije dodao nijedan brojač, a UAC dropped/overflow ostali
 su 0.
+
+Beat FX acceptance na istom `M3-34-gafee129` imageu potvrdio je shifted
+`1→4`, gornju saturaciju, `4→1→1/4`, donju saturaciju i završni povratak na
+`1 beat`, bez ijedne dijagnostičke delte. FLANGER state, ON LED i čujan sweep
+prošli su; live prijelaz dao je čujan DELAY s 470-ms one-shot tapom. Shifted
+reset vratio je sva zadana polja, ugasio DSP i fizičku LED. Tijekom live FX
+prozora zabilježen je jedan izolirani output-late od 14.714 us bez PCM ili UAC
+gubitka; odvojeni paused-seek/start prije FX-a dodao je jedan late i 264 D1 PCM
+framea te se ne pripisuje samom efektu.
 
 - [ ] Rekordbox medij se mounta, library se učita i track se može loadati na oba
   decka.
