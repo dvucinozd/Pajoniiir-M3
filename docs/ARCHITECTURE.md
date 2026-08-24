@@ -78,6 +78,13 @@ format i čuva fazu između proizvoljno podijeljenih output blokova. UAC packeti
 prilagođava broj frameova USB mikroframe ritmu. Brojači predanih i odbačenih
 blokova, ringa i clock korekcija dostupni su u dijagnostici.
 
+UAC clock korekcija drži normalni rad unutar 3/8–5/8 ringa, dok zasebni health
+monitor koristi širi alarmni omotač 1/4–3/4. Samo aktivni playback može otvoriti
+`UAC_RING_PRESSURE` ili `UAC_DATA_LOSS`; idle USB zero-fill underflow osvježava
+baseline bez alarma. Trenutni pragovi i klasificirano stanje ringa objavljeni su
+u `diagnostics.usb_headphones` status API-ja. Audio output deadline ostaje dva
+256-frame bloka: 10.668 us na 48 kHz odnosno 11.610 us na 44,1 kHz.
+
 ## Uklonjena arhitektura
 
 Raniji pomoćni USB kontroler, UART control protocol, bulk/profile transfer,

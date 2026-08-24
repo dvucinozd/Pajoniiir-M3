@@ -28,6 +28,13 @@ FLANGER, DELAY i reset, jednobeatni CUE/LOOP CALL skokovi te inertni shifted
 Smart helperi također su prošli hardverski acceptance. Censor je još MVP
 seek-izvedba, ne pravi gapless reverse.
 
+Screen-independent release hardening sada uključuje testirani UAC health
+monitor: tijekom aktivnog playbacka alarmira izlazak FLX4 headphone ringa iz
+1/4–3/4 kapaciteta te nove drop/overflow/underflow delte, dok zaustavljeni
+deckovi samo osvježavaju baseline i ne stvaraju lažne idle-underflow događaje.
+Pragovi i stanje (`idle`, `nominal`, `low`, `high`, `unavailable`) dostupni su
+u `/api/status`, a incidenti ulaze u rate-limitirani servisni log.
+
 ## Struktura
 
 ```text

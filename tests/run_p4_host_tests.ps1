@@ -813,6 +813,19 @@ Assert-FileContains `
     )
 
 Assert-FileContains `
+    -Name "p4 status API exposes bounded UAC ring health" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/web_server/web_server.c") `
+    -LiteralPatterns @(
+        "audio_uac_ring_low_alarm_frames",
+        "audio_uac_ring_high_alarm_frames",
+        "audio_uac_ring_state_name",
+        '\"ring_low_alarm_frames\":%u',
+        '\"ring_high_alarm_frames\":%u',
+        '\"ring_state\":\"%s\"',
+        '\"data_loss\":%s'
+    )
+
+Assert-FileContains `
     -Name "p4 audio_engine exposes a per-deck platter-hold mute (vinyl phase 1)" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/audio_engine/audio_engine.c") `
     -LiteralPatterns @("s_deck_hold", "audio_engine_deck_set_hold", "if (atomic_load_bool(&s_deck_hold[deck])) return false;")
@@ -1721,6 +1734,18 @@ $tests = @(
             "-o", "test_audio_output_timing.exe",
             "test_audio_output_timing.c",
             "../../firmware/main-deck-p4/components/audio_engine/audio_output_timing.c"
+        )
+    },
+    @{
+        Name = "audio_uac_health"
+        Dir = "tests/audio_uac_health"
+        Target = "test_audio_uac_health.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c99",
+            "-I../../firmware/main-deck-p4/components/audio_engine/include",
+            "-o", "test_audio_uac_health.exe",
+            "test_audio_uac_health.c",
+            "../../firmware/main-deck-p4/components/audio_engine/audio_uac_health.c"
         )
     },
     @{

@@ -65,8 +65,9 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. odraditi preostali screen-independent release hardening, počevši od pragova
-   za UAC ring i output timing alarme;
+1. na sljedećem korisnom buildu hardverski potvrditi novi UAC health status:
+   `idle` bez lažnog underflow alarma, `nominal` tijekom mixed-rate playbacka i
+   očekivane pragove 512/1536 za ring kapaciteta 2048 frameova;
 2. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona, pa na istom UI-u odraditi Master Tempo hardware gate;
 3. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a.
@@ -422,6 +423,19 @@ ostali su programski i fizički OFF, u skladu s namjernim no-op dizajnom.
 Browse/Load helperi ne mogu dobiti smislen eyes-on acceptance bez zaslona i
 odgođeni su do display bring-upa.
 
+Screen-independent release hardening zatim je dobio čistu, host-testiranu UAC
+health politiku. Clock-correction deadband ostaje 3/8–5/8 ringa, a upozorenje se
+otvara tek izvan šireg 1/4–3/4 omotača tijekom stvarnog playbacka. Nove
+drop/overflow/underflow delte agregiraju se i zapisuju kao `UAC_DATA_LOSS`, a
+trajni niski ili visoki tlak kao `UAC_RING_PRESSURE`; oba zapisa su ograničena
+na najviše jedan sažetak u minuti nakon prvog događaja. Idle underflow se samo
+upija u baseline, pa zaustavljeni deckovi ne proizvode lažne alarme. Status API
+izlaže pragove, `ring_state` i kumulativni drop/overflow `data_loss` indikator.
+Output-late prag ostaje precizno testiran na dva 256-frame bloka: 10.668 us pri
+48 kHz i 11.610 us pri 44,1 kHz. Novi modul, servisni događaji, API ugovor, puni
+host suite i ESP-IDF 6.0.2 P4 build prošli su 2026-08-24; hardware status smoke
+čeka instalaciju sljedećeg korisnog imagea.
+
 ### 6. Audio acceptance
 
 - [x] hardware-verify PFL prije channel fadera, cue/master routing te
@@ -433,7 +447,8 @@ odgođeni su do display bring-upa.
 - [x] hardware-verify active-loop scratch i pitch-fader handoff;
 - [ ] nakon dolaska zaslona uključiti Master Tempo kroz UI i izmjeriti stvarni
   dual-deck keylock/PSRAM deadline uz suprotne pitch vrijednosti;
-- postaviti pragove za UAC ring i output timing alarme.
+- [x] postaviti pragove za UAC ring i output timing alarme, uz idle suppression,
+  rate-limitirani servisni log i status API observability;
 
 ### 7. Release hardening
 

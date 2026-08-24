@@ -106,6 +106,9 @@ oba normalna statea i obje fizičke LED-ice ostali su OFF.
 - [ ] Višestruko okretanje `HEADPHONES LEVEL` ne pucketa, ne prekida playback i
   ne povećava output-late, PCM underrun ni UAC drop/overflow brojače.
 - [ ] Nema kontinuiranih UAC dropova, underruna ili clippinga.
+- [ ] `/api/status` za ring kapaciteta 2048 prikazuje pragove 512/1536;
+  zaustavljeni deckovi daju `ring_state=idle` bez novog `UAC_DATA_LOSS` ili
+  `UAC_RING_PRESSURE` zapisa, a stabilni playback daje `ring_state=nominal`.
 - [ ] UAC je bez aktivnog dropa/overflowa i s 44,1-kHz i s 48-kHz izvornim
   trakama; promjena source ratea ne mijenja brzinu ni visinu tona.
 - [ ] Prirodni EOF i STOP/reload na mixed-rate deckovima ne povećavaju PCM

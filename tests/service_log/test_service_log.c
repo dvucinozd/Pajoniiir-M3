@@ -27,6 +27,8 @@ static void test_names_and_severity(void)
     CHECK(strcmp(service_log_event_name(SERVICE_LOG_TRACK_LOAD_DONE), "TRACK_LOAD_DONE") == 0);
     CHECK(strcmp(service_log_event_name(SERVICE_LOG_WEB_LOAD_REQ_FAILED), "WEB_LOAD_REQUEST_FAILED") == 0);
     CHECK(strcmp(service_log_event_name(SERVICE_LOG_CONTROLLER_DISCONNECTED), "CONTROLLER_DISCONNECTED") == 0);
+    CHECK(strcmp(service_log_event_name(SERVICE_LOG_UAC_DATA_LOSS), "UAC_DATA_LOSS") == 0);
+    CHECK(strcmp(service_log_event_name(SERVICE_LOG_UAC_RING_PRESSURE), "UAC_RING_PRESSURE") == 0);
     CHECK(strcmp(service_log_event_name(SERVICE_LOG_EVENT_COUNT), "UNKNOWN") == 0);
     /* every id resolves to a non-empty, non-UNKNOWN name */
     for (int e = 0; e < SERVICE_LOG_EVENT_COUNT; e++) {
