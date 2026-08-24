@@ -1,8 +1,8 @@
 # Development Plan
 
 Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
-Beat Jump, Loop Adjust/Quantize, shifted transport/sync te Beat FX acceptance
-blokova, 2026-08-24.
+Beat Jump, Loop Adjust/Quantize, shifted transport/sync, Beat FX te UAC health
+acceptance blokova, 2026-08-24.
 
 ## Trenutna baza
 
@@ -30,9 +30,9 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-24 je produkcijski `M3-34-gafee129` u
+Završni hardverski baseline 2026-08-24 je produkcijski `M3-39-g3bc04fd` u
 `ota_1` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
-2.364.192 B, podigao novi image softverskim resetom i vratio OTA API u `idle`.
+2.365.872 B, podigao novi image softverskim resetom i vratio OTA API u `idle`.
 FLX4 je spojen s MIDI In/Out i UAC-om, USB3 library sadrži 191 track, oba decka
 imaju učitane trake i zaustavljena su, service log nema dropova, a SoftAP i
 Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
@@ -65,12 +65,11 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. na sljedećem korisnom buildu hardverski potvrditi novi UAC health status:
-   `idle` bez lažnog underflow alarma, `nominal` tijekom mixed-rate playbacka i
-   očekivane pragove 512/1536 za ring kapaciteta 2048 frameova;
-2. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+1. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
    zaslona, pa na istom UI-u odraditi Master Tempo hardware gate;
-3. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a.
+2. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a;
+3. ako se razvoj nastavlja bez novog hardvera, zamijeniti seek-based Censor
+   pravim gapless reverse DSP putem.
 
 ## Sljedeće faze
 
@@ -434,7 +433,17 @@ izlaže pragove, `ring_state` i kumulativni drop/overflow `data_loss` indikator.
 Output-late prag ostaje precizno testiran na dva 256-frame bloka: 10.668 us pri
 48 kHz i 11.610 us pri 44,1 kHz. Novi modul, servisni događaji, API ugovor, puni
 host suite i ESP-IDF 6.0.2 P4 build prošli su 2026-08-24; hardware status smoke
-čeka instalaciju sljedećeg korisnog imagea.
+zatvoren je na `M3-39-g3bc04fd`.
+
+Prvi `M3-38-gf944ee2` hardware pokušaj potvrdio je pragove 512/1536 i stabilan
+`nominal→idle` status, ali je servisni log otkrio lažni `UAC_DATA_LOSS` od
+13.582 framea: interval između zadnjeg idle uzorka i prvog aktivnog uzorka
+obuhvatio je UAC zero-fill prije ring priminga. `M3-39-g3bc04fd` zato prvi
+aktivni uzorak koristi samo kao novi baseline, dok sve kasnije aktivne delte i
+dalje alarmira. Ponovljeni utišani single-deck test držao je ring 12 s u
+`nominal` rasponu 985–1338, a 48/44,1-kHz dual-deck test 15 s u rasponu
+948–1301. Oba STOP-a vratila su `idle`; UAC drop/overflow, output-late, oba PCM
+underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
 
 ### 6. Audio acceptance
 

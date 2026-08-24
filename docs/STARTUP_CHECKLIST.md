@@ -123,6 +123,12 @@ Master Tempo hardverski gate izvodi se nakon dolaska zaslona jer FLX4 nema
 zasebnu Master Tempo kontrolu, a postojeći firmware je uključuje kroz UI.
 PCM5102A headroom gate ostaje odgođen dok DAC modul nije fizički spojen.
 
+UAC health hardware acceptance na `M3-39-g3bc04fd` potvrdio je pragove
+512/1536, `nominal` tijekom 12-s single-deck i 15-s 48/44,1-kHz dual-deck
+playbacka te `idle` nakon STOP-a. Nije bilo novih UAC incidenata, drop/overflow,
+output-late, PCM underrun ili service-log drop brojača. Prvi `M3-38` pokušaj
+otkrio je i zatim regresijskim testom zatvorio lažni idle→PLAY baseline alarm.
+
 ## Mreža i servis
 
 - [ ] C6/ESP-Hosted se inicijalizira.

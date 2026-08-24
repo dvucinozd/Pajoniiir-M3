@@ -44,6 +44,19 @@ release ključem. Privatni ključ ne učitava se na uređaj ni u repozitorij.
 - potvrdi running version/slot kroz `/api/firmware`;
 - nakon restarta provjeri UI, USB2 FLX4, USB3 storage i oba audio izlaza.
 
+## Hardware acceptance M3-39, 2026-08-24
+
+Potpisani `M3-39-g3bc04fd` bundle (`rel-001`, 2.365.872 B, SHA-256
+`55e1c7e5b6f3f15d15835505285b4f55b662344df45c6d4134fe20fd24ba5cb1`)
+lokalno je instaliran iz `ota_0` u `ota_1`. OTA se vratio u `idle`, SoftAP,
+FLX4 MIDI In/Out/UAC i USB3 biblioteka od 191 trake ostali su dostupni.
+
+Image ispravlja lažni `UAC_DATA_LOSS` koji je `M3-38` jednom zapisao za 13.582
+idle/start framea između monitor ticka i ring priminga. Ponovljeni utišani
+single-deck te 48/44,1-kHz dual-deck PLAY/STOP smoke držali su ring u
+`nominal` rasponu i vratili `idle` nakon STOP-a. Nije nastao novi UAC servisni
+incident, drop/overflow, output-late, PCM underrun ni service-log drop.
+
 ## Hardware acceptance M3-34, 2026-08-24
 
 Clean ESP-IDF 6.0.2 build `M3-34-gafee129` zapakiran je ključem `rel-001` i

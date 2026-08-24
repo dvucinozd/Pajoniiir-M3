@@ -20,7 +20,7 @@ MIDI mapiranje, LED feedback, audio DSP, biblioteku i UI. `control_link` u P4
 izvoru više nije serijski link: to je samo lokalni red semantičkih događaja i
 LED callback prema izravnom FLX4 USB hostu.
 
-Hardverski prihvaćeni baseline 2026-08-24 je `M3-34-gafee129`: FLX4 MIDI,
+Hardverski prihvaćeni baseline 2026-08-24 je `M3-39-g3bc04fd`: FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
 Wi-Fi remote događaj nakon screensavera te shifted Censor, Sync Master i
 Reloop Stop/Forget potvrđeni su na stvarnom uređaju. Shifted Beat FX beat-size,
@@ -34,6 +34,8 @@ monitor: tijekom aktivnog playbacka alarmira izlazak FLX4 headphone ringa iz
 deckovi samo osvježavaju baseline i ne stvaraju lažne idle-underflow događaje.
 Pragovi i stanje (`idle`, `nominal`, `low`, `high`, `unavailable`) dostupni su
 u `/api/status`, a incidenti ulaze u rate-limitirani servisni log.
+Utišani single-deck i 48/44,1-kHz dual-deck hardware smoke potvrdili su
+`nominal→idle` prijelaze bez novih audio/UAC brojača ili servisnih incidenata.
 
 ## Struktura
 
