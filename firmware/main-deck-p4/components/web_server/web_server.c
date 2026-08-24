@@ -821,6 +821,8 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         "\"position_ms\":%u,"
         "\"duration_ms\":%u,"
         "\"playing\":%s,"
+        "\"sync_master\":%s,"
+        "\"censor_active\":%s,"
         "\"quantize\":%s,"
         "\"loop_active\":%s,"
         "\"loop_start_ms\":%u,"
@@ -837,6 +839,8 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         "\"position_ms\":%u,"
         "\"duration_ms\":%u,"
         "\"playing\":%s,"
+        "\"sync_master\":%s,"
+        "\"censor_active\":%s,"
         "\"quantize\":%s,"
         "\"loop_active\":%s,"
         "\"loop_start_ms\":%u,"
@@ -923,12 +927,18 @@ static esp_err_t api_status_handler(httpd_req_t *req)
         "}",
         title1_esc, artist1_esc, (unsigned)current_bpm1, p1, state1.pitch,
         (unsigned)state1.position_ms, (unsigned)duration1_ms,
-        state1.playing ? "true" : "false", state1.quantize_enabled ? "true" : "false",
+        state1.playing ? "true" : "false",
+        state1.sync_master ? "true" : "false",
+        state1.censor_active ? "true" : "false",
+        state1.quantize_enabled ? "true" : "false",
         loop_active1 ? "true" : "false", (unsigned)loop_start1_ms,
         (unsigned)loop_end1_ms, loop_adjust1, state_text1,
         title2_esc, artist2_esc, (unsigned)current_bpm2, p2, state2.pitch,
         (unsigned)state2.position_ms, (unsigned)duration2_ms,
-        state2.playing ? "true" : "false", state2.quantize_enabled ? "true" : "false",
+        state2.playing ? "true" : "false",
+        state2.sync_master ? "true" : "false",
+        state2.censor_active ? "true" : "false",
+        state2.quantize_enabled ? "true" : "false",
         loop_active2 ? "true" : "false", (unsigned)loop_start2_ms,
         (unsigned)loop_end2_ms, loop_adjust2, state_text2,
         mixer.channel_volume[0], mixer.channel_volume[1], mixer.crossfader,

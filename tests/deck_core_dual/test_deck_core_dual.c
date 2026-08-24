@@ -1173,6 +1173,20 @@ static void test_sync_master_marks_requested_deck_as_reference(void)
     assert(deck_core_test_get_deck_state(CTRL_DECK_1).sync_master);
     assert(!deck_core_test_get_deck_state(CTRL_DECK_2).sync_master);
     assert(!deck_core_test_get_deck_state(CTRL_DECK_1).sync_enabled);
+
+    ctrl_event_t deck2_release = deck_ext_action(CTRL_DECK_2,
+                                                  CTRL_DECK_EXT_ACTION_SYNC_MASTER,
+                                                  false);
+    deck_core_test_apply_event(&deck2_release);
+    assert(deck_core_test_get_deck_state(CTRL_DECK_1).sync_master);
+    assert(!deck_core_test_get_deck_state(CTRL_DECK_2).sync_master);
+
+    ctrl_event_t deck2_press = deck_ext_action(CTRL_DECK_2,
+                                                CTRL_DECK_EXT_ACTION_SYNC_MASTER,
+                                                true);
+    deck_core_test_apply_event(&deck2_press);
+    assert(!deck_core_test_get_deck_state(CTRL_DECK_1).sync_master);
+    assert(deck_core_test_get_deck_state(CTRL_DECK_2).sync_master);
 }
 
 static void test_sync_uses_selected_master_deck_as_reference(void)
@@ -1445,6 +1459,7 @@ static void test_reloop_shift_stop_clears_active_and_remembered_loop(void)
 
     ctrl_event_t loop_in = deck_button(CTRL_ID_DECK1_LOOP_IN);
     ctrl_event_t loop_out = deck_button(CTRL_ID_DECK1_LOOP_OUT);
+    ctrl_event_t release = deck_ext_action(CTRL_DECK_1, CTRL_DECK_EXT_ACTION_RELOOP_STOP, false);
     ctrl_event_t stop = deck_ext_action(CTRL_DECK_1, CTRL_DECK_EXT_ACTION_RELOOP_STOP, true);
     ctrl_event_t reloop = deck_button(CTRL_ID_DECK1_RELOOP_EXIT);
 
@@ -1452,6 +1467,10 @@ static void test_reloop_shift_stop_clears_active_and_remembered_loop(void)
     audio_engine_stub_deck_position_ms[CTRL_DECK_1] = 4000;
     deck_core_test_apply_event(&loop_out);
     assert(audio_engine_stub_loop_active[CTRL_DECK_1]);
+
+    deck_core_test_apply_event(&release);
+    assert(audio_engine_stub_loop_active[CTRL_DECK_1]);
+    assert(audio_engine_stub_loop_clear_count[CTRL_DECK_1] == 0);
 
     deck_core_test_apply_event(&stop);
     assert(!audio_engine_stub_loop_active[CTRL_DECK_1]);

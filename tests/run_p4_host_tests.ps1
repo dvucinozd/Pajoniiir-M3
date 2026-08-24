@@ -807,7 +807,9 @@ Assert-FileContains `
     -LiteralPatterns @(
         "service_log_get_status",
         "web_api_format_controller_json",
-        "web_api_format_service_log_json"
+        "web_api_format_service_log_json",
+        '\"sync_master\":%s',
+        '\"censor_active\":%s'
     )
 
 Assert-FileContains `

@@ -89,6 +89,27 @@ static void test_extended_deck_and_pad_actions(void)
     CHECK(flx4_map_translate_message(&state, MSG(0x90, 0x0E, 0x7F), &event));
     expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK1_EXT_ACTION,
                  CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_CENSOR, true));
+    CHECK(flx4_map_translate_message(&state, MSG(0x90, 0x0E, 0x00), &event));
+    expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK1_EXT_ACTION,
+                 CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_CENSOR, false));
+    CHECK(flx4_map_translate_message(&state, MSG(0x91, 0x0E, 0x7F), &event));
+    expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK2_EXT_ACTION,
+                 CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_CENSOR, true));
+
+    CHECK(flx4_map_translate_message(&state, MSG(0x90, 0x5C, 0x7F), &event));
+    expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK1_EXT_ACTION,
+                 CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_SYNC_MASTER, true));
+    CHECK(flx4_map_translate_message(&state, MSG(0x91, 0x5C, 0x00), &event));
+    expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK2_EXT_ACTION,
+                 CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_SYNC_MASTER, false));
+
+    CHECK(flx4_map_translate_message(&state, MSG(0x90, 0x50, 0x7F), &event));
+    expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK1_EXT_ACTION,
+                 CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_RELOOP_STOP, true));
+    CHECK(flx4_map_translate_message(&state, MSG(0x91, 0x50, 0x00), &event));
+    expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK2_EXT_ACTION,
+                 CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_RELOOP_STOP, false));
+
     CHECK(flx4_map_translate_message(&state, MSG(0x91, 0x4C, 0x7F), &event));
     expect_event(&event, CTRL_TYPE_BUTTON, CTRL_ID_DECK2_EXT_ACTION,
                  CTRL_DECK_EXT_VALUE(CTRL_DECK_EXT_ACTION_LOOP_ADJUST_IN, true));
