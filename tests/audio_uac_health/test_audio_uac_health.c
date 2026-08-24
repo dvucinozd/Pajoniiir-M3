@@ -66,8 +66,22 @@ static void test_idle_counters_are_absorbed(void)
     assert(r.flags == AUDIO_UAC_HEALTH_NONE);
     assert(r.delta_underflow_frames == 0u);
 
-    r = sample(&monitor, true, 11u, 1024u, 1u, 2u, 200000u);
+    /* Counters can continue moving after the last idle monitor tick and before
+     * producer priming. The first active sample must establish a fresh
+     * baseline instead of assigning that whole interval to playback. */
+    r = sample(&monitor, true, 11u, 1024u, 4u, 6u, 213582u);
     assert(r.flags == AUDIO_UAC_HEALTH_NONE);
+    assert(r.delta_dropped_blocks == 0u);
+    assert(r.delta_overflow_frames == 0u);
+    assert(r.delta_underflow_frames == 0u);
+
+    r = sample(&monitor, true, 12u, 1024u, 5u, 8u, 213585u);
+    assert(r.flags == (AUDIO_UAC_HEALTH_DROPPED |
+                       AUDIO_UAC_HEALTH_OVERFLOW |
+                       AUDIO_UAC_HEALTH_UNDERFLOW));
+    assert(r.delta_dropped_blocks == 1u);
+    assert(r.delta_overflow_frames == 2u);
+    assert(r.delta_underflow_frames == 3u);
 }
 
 static void test_counter_reset_does_not_wrap(void)

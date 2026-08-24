@@ -76,6 +76,10 @@ audio_uac_health_result_t audio_uac_health_sample(
         return result;
     }
 
+    const bool playback_started = playback_active &&
+                                  (!monitor->initialized ||
+                                   !monitor->last_playback_active);
+
     if (monitor->initialized) {
         result.delta_dropped_blocks =
             counter_delta(dropped_blocks, monitor->last_dropped_blocks);
@@ -88,6 +92,7 @@ audio_uac_health_result_t audio_uac_health_sample(
     monitor->last_dropped_blocks = dropped_blocks;
     monitor->last_overflow_frames = overflow_frames;
     monitor->last_underflow_frames = underflow_frames;
+    monitor->last_playback_active = playback_active;
     monitor->initialized = true;
 
     if (!playback_active) {
@@ -97,6 +102,15 @@ audio_uac_health_result_t audio_uac_health_sample(
         result.delta_overflow_frames = 0u;
         result.delta_underflow_frames = 0u;
         return result;
+    }
+
+    if (playback_started) {
+        /* The interval since the last idle sample straddles ring priming, so
+         * its counter deltas cannot be attributed to active audio. Establish
+         * an active baseline now; subsequent active intervals are actionable. */
+        result.delta_dropped_blocks = 0u;
+        result.delta_overflow_frames = 0u;
+        result.delta_underflow_frames = 0u;
     }
 
     audio_uac_ring_state_t state = audio_uac_ring_state(

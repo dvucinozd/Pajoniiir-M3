@@ -22,6 +22,7 @@ typedef enum {
 
 typedef struct {
     bool initialized;
+    bool last_playback_active;
     uint32_t last_dropped_blocks;
     uint32_t last_overflow_frames;
     uint32_t last_underflow_frames;
