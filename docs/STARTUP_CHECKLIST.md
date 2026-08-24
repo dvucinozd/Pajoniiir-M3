@@ -54,6 +54,10 @@ idf.py -p COM17 flash monitor
   saturira na `1/4` odnosno `4 beats`; FLANGER ima čujan sweep, DELAY jedan
   full-band tap, a `SHIFT + BEAT FX ON/OFF` vraća `FILTER / 1 beat / 1&2 /
   depth 64 / OFF` i gasi LED.
+- [ ] `SHIFT + CUE/LOOP CALL < / >` pomiče za jednu stvarnu ANLZ beat-grid
+  oznaku, a release ne radi drugi skok.
+- [ ] `SHIFT + SMART CFX/FADER` ostaje namjerni no-op: ne mijenja normalni
+  Smart state, DSP ni LED.
 
 Posljednji Beat Jump hardware acceptance na `M3-29-g2b0ad21` potvrdio je
 zadani `+1` grid skok, `+16` veliku stranicu podijeljenu između D1/D2,
@@ -83,6 +87,12 @@ prozora zabilježen je jedan izolirani output-late od 14.714 us bez PCM ili UAC
 gubitka; odvojeni paused-seek/start prije FX-a dodao je jedan late i 264 D1 PCM
 framea te se ne pripisuje samom efektu.
 
+Na istom imageu D1 `SHIFT + CUE/LOOP CALL < / >` prošao je slijed
+`30000→29574→30058 ms`; forward korak bio je 484 ms pri 124 BPM, oba releasea
+ostavila su položaj stabilnim i svi audio/USB brojači ostali su nepromijenjeni.
+Shifted Smart CFX/Fader zatim su potvrđeni kao inertni safety placeholderi:
+oba normalna statea i obje fizičke LED-ice ostali su OFF.
+
 - [ ] Rekordbox medij se mounta, library se učita i track se može loadati na oba
   decka.
 - [ ] USB3 remove/reinsert sa zaustavljenim deckovima invalidira stari library,
@@ -105,6 +115,10 @@ framea te se ne pripisuje samom efektu.
 - [ ] Fizički USB2 unplug/replug tijekom utišanog dual-deck playbacka vraća
   MIDI In/Out i UAC, playback nastavlja, a output-late i PCM underrun ostaju 0.
 - [ ] Dual-deck playback, pitch/Master Tempo i scratch ostaju stabilni.
+
+Master Tempo hardverski gate izvodi se nakon dolaska zaslona jer FLX4 nema
+zasebnu Master Tempo kontrolu, a postojeći firmware je uključuje kroz UI.
+PCM5102A headroom gate ostaje odgođen dok DAC modul nije fizički spojen.
 
 ## Mreža i servis
 

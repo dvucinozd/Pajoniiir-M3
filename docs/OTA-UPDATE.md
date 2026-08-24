@@ -71,6 +71,12 @@ očekivani one-shot tap od 470 ms. `SHIFT + BEAT FX ON/OFF` vratio je točno
 LED. Sam live FX prozor imao je jedan izolirani output-late od 14.714 us bez
 PCM underruna ili UAC drop/overflowa; service-log dropped ostao je 0.
 
+Dodatni screen-independent MIDI smoke potvrdio je D1 jednobeatne
+`SHIFT + CUE/LOOP CALL < / >` skokove po ANLZ gridu
+(`30000→29574→30058 ms`) bez dvostrukog release skoka ili counter delte.
+`SHIFT + SMART CFX/FADER` ostali su namjerno inertni: normalni state i fizičke
+LED-ice ostali su OFF.
+
 ## Hardware acceptance M3-32, 2026-08-24
 
 Clean ESP-IDF 6.0.2 build `M3-32-g1038234` zapakiran je ključem `rel-001` i

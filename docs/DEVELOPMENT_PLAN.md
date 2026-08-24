@@ -65,12 +65,11 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. nastaviti preostali MIDI/LED feature parity iz autoritativnog Mixxx XML-a,
-   počevši od globalnih shifted Browse/Load i Smart CFX/Fader helpera;
-2. potvrditi PCM5102A headroom/limiter marginu i preostale
-   scratch/Master Tempo/loop/pitch rubove;
-3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
-   zaslona.
+1. odraditi preostali screen-independent release hardening, počevši od pragova
+   za UAC ring i output timing alarme;
+2. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
+   zaslona, pa na istom UI-u odraditi Master Tempo hardware gate;
+3. potvrditi PCM5102A headroom/limiter marginu nakon fizičkog spajanja DAC-a.
 
 ## Sljedeće faze
 
@@ -388,6 +387,10 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   D1 Reloop Stop/Forget te D1 Censor state, LED i čujni MVP repeat;
 - [x] hardware-verify shifted Beat FX beat-size dvostruke korake i saturaciju,
   FLANGER/DELAY DSP te potpuni shifted reset statea i ON/OFF LED-ice;
+- [x] hardware-verify D1 ANLZ-grid ponašanje shifted CUE/LOOP CALL back/forward
+  i inertni safety behavior Shift + Smart CFX/Fader kontrola;
+- [ ] nakon dolaska zaslona hardware-verify Shift + Browse force-open/ubrzano
+  kretanje i Shift + Load D1/D2 routing;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.
@@ -412,14 +415,24 @@ izolirani 14.714-us output-late tijekom live FX prozora nije imao PCM/UAC
 posljedicu. Sljedeći parity rez su globalni shifted Browse/Load i Smart
 CFX/Fader helperi.
 
+Sljedeći screen-independent smoke zatvorio je D1 shifted CUE/LOOP CALL:
+`30000→29574→30058 ms`, odnosno jedan forward beat od 484 ms pri 124 BPM,
+bez release duplikata ili audio/USB counter delte. Shifted Smart CFX/Fader
+ostali su programski i fizički OFF, u skladu s namjernim no-op dizajnom.
+Browse/Load helperi ne mogu dobiti smislen eyes-on acceptance bez zaslona i
+odgođeni su do display bring-upa.
+
 ### 6. Audio acceptance
 
 - [x] hardware-verify PFL prije channel fadera, cue/master routing te
   `HEADPHONES LEVEL`/`HEADPHONES MIX` bez prekida ili pucketanja;
 - [x] hardware-verify da simultani dual-deck start i seek/start prijelazi ne
   povećavaju PCM underrun brojače nakon prebuffera;
-- [ ] hardware-verify PCM5102A headroom i završnu limiter marginu;
-- dovršiti scratch/Master Tempo rubne slučajeve uz loop i pitch promjene;
+- [ ] hardware-verify PCM5102A headroom i završnu limiter marginu nakon što
+  korisnik fizički spoji DAC modul;
+- [x] hardware-verify active-loop scratch i pitch-fader handoff;
+- [ ] nakon dolaska zaslona uključiti Master Tempo kroz UI i izmjeriti stvarni
+  dual-deck keylock/PSRAM deadline uz suprotne pitch vrijednosti;
 - postaviti pragove za UAC ring i output timing alarme.
 
 ### 7. Release hardening
