@@ -38,11 +38,22 @@ idf.py -p COM17 flash monitor
   `−8/+8`; `SHIFT` + pad 7/8 globalno bira frakcijsku/zadanu/veliku stranicu
   na oba decka, padovi 1-6 imaju SHIFT LED mirror, a helper 7/8 se ugasi na
   donjoj/gornjoj granici.
+- [ ] `SHIFT + LOOP IN/OUT` uključuje persistentni deck-local adjust mod;
+  odgovarajuća LED ostaje upaljena, jog mijenja samo odabranu granicu petlje,
+  a position/scratch/bend se tijekom uređivanja ne pomiču.
+- [ ] `SHIFT + channel CUE` neovisno uključuje Quantize na D1/D2 bez promjene
+  PFL-a; normalni Loop In/Out izvan grida poravnava obje granice na ANLZ beatove.
 
 Posljednji Beat Jump hardware acceptance na `M3-29-g2b0ad21` potvrdio je
 zadani `+1` grid skok, `+16` veliku stranicu podijeljenu između D1/D2,
 frakcijski `+1/16` skok od 30 ms pri 128 BPM te očekivane helper LED granice.
 Test je završio vraćanjem globalne zadane stranice.
+
+Loop acceptance na `M3-31-g5565151` potvrdio je D1 In/Out i D2 Out adjust,
+persistentne `0x4C/0x4E` LED-ice te nepomičan playhead tijekom jog uređivanja.
+Quantize je na oba decka uključen preko `SHIFT + channel CUE`; namjerne sirove
+D1 granice `1850/4230 ms` poravnate su na `1671/4022 ms`, bez promjene PFL-a,
+output-latea, PCM underruna ili UAC drop/overflowa.
 
 - [ ] Rekordbox medij se mounta, library se učita i track se može loadati na oba
   decka.
@@ -89,6 +100,9 @@ Test je završio vraćanjem globalne zadane stranice.
 - [ ] Zahtjev za gašenje tijekom probea/OTA-a izvrši se tek nakon obnove AP-a;
   nema racea, srušenog netifa ni izgubljenog ESP-Hosted transporta.
 - [ ] `/api/status` prikazuje FLX4 i USB-headphone dijagnostiku.
+- [ ] Prvi web control POST nakon lokalnog screensavera istodobno probudi UI i
+  izvrši naredbu; ne zahtijeva drugi klik. Fizički FLX4 wake pritisak i dalje se
+  samo potroši na buđenje kako ne bi nenamjerno pokrenuo deck.
 - [ ] P4-only potpisani OTA odbija pogrešan chip, projekt ili potpis.
 - [ ] Pull OTA sa zaustavljenim deckovima preuzima ponuđeni noviji release,
   podiže novi slot, prolazi startup health gate, čuva NVS/library/FLX4 i vraća

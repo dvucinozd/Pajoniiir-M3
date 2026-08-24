@@ -1,6 +1,6 @@
 # Architecture
 
-Status: važeća single-chip arhitektura, 2026-08-22.
+Status: važeća single-chip arhitektura, 2026-08-24.
 
 ## Sustav
 
@@ -44,6 +44,12 @@ FLX4 MIDI paket prolazi kroz `p4_flx4_map`, zatim se lokalno ubrizgava u
 `ctrl_event_t` red. `deck_core` obrađuje događaj i publicira novi snapshot.
 LED stanje se računa iz P4 statea i preko registriranog sinka šalje izravno
 `p4_flx4_host` komponenti. Reconnect ponovno šalje kompletan LED snapshot.
+
+Lokalni FLX4/touch događaj koji zatekne screensaver aktivnim troši se samo na
+sigurno buđenje, pa PLAY ne pokreće deck nenamjernim prvim pritiskom. Wi-Fi
+remote koristi zaseban `deck_core_queue_remote_event`: bilježi istu aktivnost i
+probudi UI, ali autoritativnu udaljenu naredbu ipak stavlja u red iz prvog
+zahtjeva jer udaljeni operator ne vidi stanje lokalnog zaslona.
 
 ## Dual-USB host
 

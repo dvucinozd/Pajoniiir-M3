@@ -44,6 +44,21 @@ release ključem. Privatni ključ ne učitava se na uređaj ni u repozitorij.
 - potvrdi running version/slot kroz `/api/firmware`;
 - nakon restarta provjeri UI, USB2 FLX4, USB3 storage i oba audio izlaza.
 
+## Hardware acceptance M3-32, 2026-08-24
+
+Clean ESP-IDF 6.0.2 build `M3-32-g1038234` zapakiran je ključem `rel-001` i
+lokalno instaliran preko `POST /api/ota/p4`. Unutarnji image imao je 2.363.856 B
+i SHA-256 `2e10652122c8137d8b8f6a8d68837d3ef81450ffb0233d217400ebda19d31f2d`.
+Uređaj je podigao `ota_0`, vratio OTA stanje u `idle`, obnovio SoftAP,
+FLX4 MIDI In/Out/UAC i USB3 biblioteku od 191 trake. Output-late, oba PCM
+underruna, UAC dropped/overflow i service-log dropped ostali su 0.
+
+Ovaj build odvaja lokalni screensaver wake od udaljenih web naredbi. Nakon
+više od dvominutnog mirovanja poslan je točno jedan D1 PFL POST: HTTP 200 i
+`pfl1 false→true` potvrđeni su u prvom pokušaju. Web kontrola sada istodobno
+probudi lokalni UI i izvrši udaljenu naredbu; fizički FLX4 wake pritisak i dalje
+se potroši samo na sigurno buđenje.
+
 ## Hardware acceptance 2026-08-23
 
 `M3-22-gd7466ea` (`rel-001`) instaliran je s HTTPS kanala iz factory

@@ -1,7 +1,7 @@
 # Development Plan
 
-Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF i dovršenog
-signed P4 OTA acceptance bloka, 2026-08-24.
+Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
+Beat Jump te Loop Adjust/Quantize acceptance blokova, 2026-08-24.
 
 ## Trenutna baza
 
@@ -29,12 +29,13 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-24 je produkcijski `M3-29-g2b0ad21` u
-`ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle, podigao novi
-image softverskim resetom i vratio OTA API u `idle`. FLX4 je spojen s MIDI
-In/Out i UAC-om, oba decka imaju učitane trake i zaustavljena su u `READY`, USB3
-library sadrži 191 track, service log nema dropova, a SoftAP i Windows profil
-`Pajoniiir-M3` ostavljeni su uključeni. Servisni SSID, zaporka i HTTPS update
+Završni hardverski baseline 2026-08-24 je produkcijski `M3-32-g1038234` u
+`ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
+2.363.856 B, podigao novi image softverskim resetom i vratio OTA API u `idle`.
+FLX4 je spojen s MIDI In/Out i UAC-om, USB3 library sadrži 191 track, oba decka
+su nakon završnog boota prazna i zaustavljena u `IDLE`, service log nema
+dropova, a SoftAP i Windows profil `Pajoniiir-M3` ostavljeni su uključeni.
+Servisni SSID, zaporka i HTTPS update
 URL spremljeni su u NVS-u; status izlaže samo SSID, URL i `has_password`, ne
 zaporku. Fizički APSTA round-trip dobio je servisnu adresu `192.168.0.210`,
 vratio `round trip complete` i sačuvao SoftAP klijentu valjanu adresu
@@ -63,7 +64,8 @@ izlazni blok ostane djelomičan.
 
 Prioritetni redoslijed nastavka:
 
-1. nastaviti MIDI/LED feature parity iz autoritativnog Mixxx XML-a;
+1. nastaviti preostali MIDI/LED feature parity iz autoritativnog Mixxx XML-a,
+   počevši od još nepotvrđenih shifted transport/sync i Beat FX kontrola;
 2. potvrditi PCM5102A headroom/limiter marginu i preostale
    scratch/Master Tempo/loop/pitch rubove;
 3. započeti 800×480 DSI/FT5426 bring-up tek nakon dolaska i identifikacije novog
@@ -375,6 +377,10 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   saturaciju, frakcijske seekove i granične helper LED-ice;
 - [x] hardware-verify ispravljeni Beat Jump redoslijed, zajedničku stranicu na
   oba decka, shifted mirror LED-ice padova 1-6 i granično gašenje helpera 7/8;
+- [x] implementirati persistentni `SHIFT + LOOP IN/OUT` adjust mod koji troši
+  jog događaje, uređuje samo odabranu granicu i drži odgovarajuću LED-icu;
+- [x] hardware-verify D1 Loop Adjust In/Out, D2 Loop Adjust Out adresu `0x4E`,
+  neovisni D1/D2 Quantize toggle i beat-grid snap Loop In/Out granica;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.
