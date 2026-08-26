@@ -1,14 +1,14 @@
 # P4 OTA Update
 
-Status: važeći P4-only postupak, hardverski potvrđen 2026-08-24.
+Status: važeći P4-only postupak, hardverski potvrđen 2026-08-26.
 
 Projekt proizvodi samo jedan OTA target: `main-deck-p4` za chip ID `0x0012`.
 Bundle mora biti `.ddjota`, potpisan pouzdanim ECDSA P-256 ključem, s ispravnim
 projektom, chip ID-em, verzijom, veličinom i SHA-256 sažetkom.
 
 Trenutno instalirani i prihvaćeni image je `M3-41-g133f399` u `ota_0`; OTA je
-`idle`, FLX4 i USB3 su dostupni, a Wi-Fi ostaje uključen. Zaslon i fizički
-PCM5102A nisu dio ovog OTA acceptancea jer još nisu dostupni na benchu.
+`idle`, FLX4, USB3 i PCM5102A master dostupni su, a Wi-Fi ostaje uključen.
+Zaslon nije dio ovog OTA acceptancea jer još nije dostupan na benchu.
 
 ## Pakiranje
 
@@ -91,9 +91,9 @@ Potpisani `M3-41-g133f399` (`rel-001`, 2.369.552 B, SHA-256
 `f8d7e09d1f2ea72677b051c7d0e00ecace02fe252ea2564c70e5d742c218a7eb`)
 instaliran je lokalnim `POST /api/ota/p4` tokom. Uređaj je podigao `ota_0`,
 vratio OTA state u `idle`, FLX4 MIDI In/Out/UAC, aktivni 48-kHz I2S programski
-put i USB3 biblioteku od 191 trake. PCM5102A modul nije bio fizički spojen, pa
-to nije analogni master-output acceptance. D1 test koristio je 48-kHz, a D2
-44,1-kHz izvor uz 48-kHz output.
+put i USB3 biblioteku od 191 trake. PCM5102A modul tada nije bio fizički spojen,
+pa izvorni OTA smoke nije bio analogni master-output acceptance. D1 test
+koristio je 48-kHz, a D2 44,1-kHz izvor uz 48-kHz output.
 
 Na oba decka `SHIFT + PLAY/PAUSE` dao je čujni reverse tijekom držanja i gladak
 povratak na napredovalu forward slip poziciju bez pucketanja, prekida ili seeka.
@@ -116,6 +116,14 @@ Dodatni screen-independent MIDI smoke potvrdio je D1 jednobeatne
 (`30000→29574→30058 ms`) bez dvostrukog release skoka ili counter delte.
 `SHIFT + SMART CFX/FADER` ostali su namjerno inertni: normalni state i fizičke
 LED-ice ostali su OFF.
+
+Na istom `M3-41-g133f399` imageu PCM5102A je naknadno fizički spojen i prihvaćen
+2026-08-26. Potvrđeni su stereo L/R, tihi idle, 48-kHz i 44,1-kHz single-deck,
+mixed-rate dual-deck te puni master. Dual-deck limiter zahvatio je 4.090 od
+približno 1.323.000 stereo sampleova (oko 0,31 %, peak 48.584), a single-deck
+212 (oko 0,016 %). Nije bilo PCM underruna ni UAC drop/overflowa; dva izolirana
+output-late događaja nisu imala čujnu posljedicu. Operator je potvrdio čist zvuk
+bez clippinga, pucketanja, prekida ili pumping efekta.
 
 ## Hardware acceptance M3-32, 2026-08-24
 

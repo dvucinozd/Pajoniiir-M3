@@ -1,11 +1,11 @@
 # Hardware Wiring
 
-Status: važeća single-chip topologija i plan spajanja, 2026-08-24.
+Status: važeća single-chip topologija i plan spajanja, 2026-08-26.
 
-Trenutni bench ima spojene USB1, USB2/FLX4 i USB3/Rekordbox medij. PCM5102A još
-nije fizički spojen, a 5,0-inčni DSI/FT5426 zaslon još nije stigao. Donje DAC i
-display upute zato su ciljni wiring za njihov zasebni bring-up, ne potvrda da su
-trenutno prisutni.
+Trenutni bench ima spojene USB1, USB2/FLX4, USB3/Rekordbox medij i PCM5102A.
+DAC wiring i konfiguracija ispod hardverski su potvrđeni 2026-08-26.
+5,0-inčni DSI/FT5426 zaslon još nije stigao, pa display upute ostaju ciljni
+wiring za zasebni bring-up.
 
 ## USB
 
@@ -20,14 +20,28 @@ debug/power port.
 
 ## PCM5102A master DAC
 
-| P4 GPIO | PCM5102A signal |
+| P4 / napajanje | PCM5102A signal |
 |---|---|
-| GPIO1 | BCLK |
-| GPIO2 | LRCK / WS |
+| GPIO1 | BCK / BCLK |
+| GPIO2 | LCK / LRCK / WS |
 | GPIO3 | DIN |
+| GND | SCK |
+| GND | GND |
+| 5 V | VIN |
 
-Kada modul stigne, spoji zajednički GND i napajanje prema specifikaciji
-konkretnog DAC modula.
+Na korištenom ljubičastom PCM5102A modulu zalemljeni su konfiguracijski mostovi:
+
+| Most | Položaj | Funkcija |
+|---|---|---|
+| H1 | L | FLT low |
+| H2 | L | DEMP low |
+| H3 | H | XSMT high / unmute |
+| H4 | L | FMT low / standard I2S |
+
+Spaja se srednji pad samo prema navedenoj H/L strani, ne sva tri pada. `SCK`
+ostaje na GND radi internog BCK PLL načina. Otvoreni konfiguracijski mostovi
+uzrokovali su početni glasni šum moduliran glazbom; gornja konfiguracija dala je
+čist stereo izlaz i tihi idle.
 Master izlaz se ne vodi kroz ugrađeni NS4150.
 
 ## Zaslon, touch i mreža
@@ -45,6 +59,6 @@ Master izlaz se ne vodi kroz ugrađeni NS4150.
 - bilo kakav UART prema pomoćnom kontrolnom MCU-u;
 - međupanački I2S/PCM transport.
 
-Prije uključivanja provjeri GND, 5 V polaritet i da su USB2 i USB3 spojeni na
-odgovarajuće uređaje. DAC pinove provjeri tek prije PCM5102A brancha, a DSI
-konektor/panel identitet prije display brancha.
+Prije uključivanja provjeri GND, 5 V polaritet, svih šest DAC vodova i H1-H4
+mostove te da su USB2 i USB3 spojeni na odgovarajuće uređaje. DSI
+konektor/panel identitet provjeri prije display brancha.

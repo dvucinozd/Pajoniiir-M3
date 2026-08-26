@@ -1,6 +1,6 @@
 # Architecture
 
-Status: važeća single-chip arhitektura, 2026-08-24.
+Status: važeća single-chip arhitektura, 2026-08-26.
 
 ## Sustav
 
@@ -15,9 +15,9 @@ USB1/CH340C je izvan aplikacijskog data puta i služi za napajanje, flashing i
 serijsku dijagnostiku.
 
 Dijagram prikazuje ciljnu završnu topologiju. Na aktualnom benchu potvrđeni su
-USB1, USB2/FLX4, USB3/Rekordbox i C6/Wi-Fi krakovi. DSI/FT5426 sklop još nije
-stigao, a PCM5102A nije fizički spojen; firmware gradi njihove UI/I2S putove,
-ali to nije zamjena za panel/touch ni analogni master-output acceptance.
+USB1, USB2/FLX4, USB3/Rekordbox, C6/Wi-Fi i PCM5102A master krakovi. DSI/FT5426
+sklop još nije stigao; firmware gradi UI put, ali to nije zamjena za fizički
+panel/touch acceptance.
 
 ## Ownership
 
@@ -80,8 +80,9 @@ tišini, dok slip timeline nastavlja naprijed.
 
 Output task radi DSP i mixer u
 blokovima, šalje master na I2S/PCM5102A put te cue/headphone miks u FLX4 UAC1
-ring. Trenutno je hardverski potvrđen FLX4 headphone krak; fizički PCM5102A
-RCA/headroom/noise gate čeka spajanje modula.
+ring. FLX4 headphone i PCM5102A master krak hardverski su potvrđeni. PCM5102A
+prati 44,1/48-kHz output rate, ostaje tih u idleu i transparentno koristi
+soft-knee limiter za rijetke vršne sampleove pri punom masteru.
 Kanalni PFL tap je post-trim/post-DSP, ali prije channel fadera; kanalni CUE ga
 uključuje, a `HEADPHONES MIX` ga miješa s post-fader master signalom.
 `HEADPHONES LEVEL` mijenja samo monitor izlaz i koristi per-frame gain ramp kako

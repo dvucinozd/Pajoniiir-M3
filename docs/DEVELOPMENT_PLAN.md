@@ -1,8 +1,8 @@
 # Development Plan
 
 Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
-Beat Jump, Loop Adjust/Quantize, shifted transport/sync, Beat FX, UAC health te
-gapless Censor acceptance blokova, 2026-08-24.
+Beat Jump, Loop Adjust/Quantize, shifted transport/sync, Beat FX, UAC health,
+gapless Censor i PCM5102A master acceptance blokova, 2026-08-26.
 
 ## Trenutna baza
 
@@ -21,9 +21,8 @@ benchu radi rada bez zaslona.
 
 Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
 dodirom je naručen i čeka se njegov dolazak. U dokumentaciji je to ciljana
-konfiguracija; hardverski bring-up još nije potvrđen. PCM5102A I2S put postoji
-u firmwareu, ali modul još nije fizički spojen pa RCA/headroom/limiter/noise
-acceptance također ostaje otvoren.
+konfiguracija; hardverski bring-up još nije potvrđen. PCM5102A I2S master put
+fizički je spojen i prihvaćen 2026-08-26.
 
 Prvi korisni firmware nakon `RC2` uvodi release identitet `M3`. Verzija se
 dobiva iz `git describe`, pa je implementacijski commit namijenjen anotiranom
@@ -33,7 +32,7 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Završni hardverski baseline 2026-08-24 je produkcijski `M3-41-g133f399` u
+Instalirani produkcijski firmware baseline je `M3-41-g133f399` u
 `ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
 2.369.552 B, podigao novi image, vratio OTA API u `idle` te obnovio FLX4 MIDI
 In/Out/UAC, USB3 knjižnicu od 191 trake i SoftAP `Pajoniiir-M3`. Oba decka su
@@ -44,17 +43,21 @@ D1 48-kHz i D2 44,1-kHz gapless Censor acceptance potvrdio je reverse,
 napredovalu slip poziciju, gladak release i nulte kontrolirane
 output-late/PCM/UAC/service-log delte. Ostali zatvoreni OTA, APSTA, audio,
 dual-USB i MIDI rezultati ostaju detaljno zapisani u `docs/OTA-UPDATE.md` i
-odgovarajućim validation zapisima. Trenutno nema korisnog hardverskog koraka bez
-novog zaslona ili PCM5102A modula.
+odgovarajućim validation zapisima.
 
-Nastavak ovisi o prvom dostupnom sklopu:
+PCM5102A acceptance na istom imageu 2026-08-26 potvrdio je čisti stereo i tihi
+idle, 44,1/48-kHz switching, mixed-rate dual-deck i puni master. U 15-s
+full-master dual-deck testu limiter je zahvatio 4.090 od približno 1.323.000
+stereo sampleova (oko 0,31 %) uz peak 48.584; u 15-s single-deck testu samo 212
+sampleova (oko 0,016 %). Nije bilo PCM underruna ni UAC drop/overflowa, a
+operator nije čuo clipping, pucketanje, prekide ni pumping.
 
-1. ako prvo stigne zaslon, evidentirati stvarni panel/controller i pokrenuti
-   800×480 DSI/FT5426 bring-up, zatim Master Tempo i Shift + Browse/Load UI gate;
-2. ako se prvo spoji PCM5102A, potvrditi I2S rate switching, L/R polaritet,
-   headroom, limiter marginu i noise floor;
-3. nakon što su oba sklopa dostupna, odraditi zajednički display/touch,
-   master/headphones, dual-deck i Wi-Fi integration soak.
+Nastavak je sada:
+
+1. kada stigne zaslon, evidentirati stvarni panel/controller i pokrenuti
+    800×480 DSI/FT5426 bring-up, zatim Master Tempo i Shift + Browse/Load UI gate;
+2. nakon što su oba sklopa dostupna, odraditi zajednički display/touch,
+    master/headphones, dual-deck i Wi-Fi integration soak.
 
 ## Sljedeće faze
 
@@ -449,8 +452,8 @@ underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
   `HEADPHONES LEVEL`/`HEADPHONES MIX` bez prekida ili pucketanja;
 - [x] hardware-verify da simultani dual-deck start i seek/start prijelazi ne
   povećavaju PCM underrun brojače nakon prebuffera;
-- [ ] hardware-verify PCM5102A headroom i završnu limiter marginu nakon što
-  korisnik fizički spoji DAC modul;
+- [x] hardware-verify PCM5102A L/R, tihi idle, 44,1/48-kHz switching, mixed-rate
+  headroom i završnu limiter marginu na stvarnom DAC modulu;
 - [x] hardware-verify active-loop scratch i pitch-fader handoff;
 - [x] implementirati i host-testirati gapless slip-reverse Censor bez transport
   seeka ili drugog PCM buffera;

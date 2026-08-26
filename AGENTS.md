@@ -24,16 +24,21 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 
 ## Trenutni handoff
 
-Hardverski prihvaćeni baseline 2026-08-24 je `M3-41-g133f399` u `ota_0`.
+Instalirani firmware baseline je `M3-41-g133f399` u `ota_0`.
 FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi SoftAP/web kontrola i
 potpisani OTA rade. Oba decka su zaustavljena, a Wi-Fi treba ostati uključen
 dok se sustav razvija bez zaslona.
 
-5,0-inčni DSI/FT5426 zaslon još nije stigao i PCM5102A još nije fizički spojen.
-Ne nagađaj panel timing/controller naredbe niti tvrdi da je master DAC
-hardverski prihvaćen. Nastavak počinje prvim dostupnim sklopom: zaslon znači
-DSI/touch/UI/Master Tempo gate, a PCM5102A znači I2S master-output,
-headroom/limiter i noise gate.
+PCM5102A je 2026-08-26 hardverski prihvaćen na istom imageu. Wiring je
+`BCK=GPIO1`, `LCK=GPIO2`, `DIN=GPIO3`, `SCK=GND`, `VIN=5V`, zajednički GND;
+konfiguracijski mostovi modula su `H1=L`, `H2=L`, `H3=H`, `H4=L`. L/R, tihi
+idle, 44,1/48-kHz switching, mixed-rate dual-deck i full-master limiter prošli
+su bez čujnog clippinga, PCM underruna ili UAC drop/overflowa. Dva izolirana
+output-late događaja nisu imala audio posljedicu i ostaju za monitoring.
+
+5,0-inčni DSI/FT5426 zaslon još nije stigao. Ne nagađaj panel timing/controller
+naredbe. Sljedeći hardverski blok je DSI/touch/UI/Master Tempo, a nakon njega
+zajednički display/master/headphones/dual-deck/Wi-Fi integration soak.
 
 ## Najvažnije putanje
 

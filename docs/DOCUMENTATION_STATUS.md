@@ -1,6 +1,6 @@
 # Documentation Status
 
-Status: 2026-08-24.
+Status: 2026-08-26.
 
 ## Trenutni handoff
 
@@ -9,9 +9,10 @@ Status: 2026-08-24.
   SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
 - oba decka su zaustavljena, a Wi-Fi ostaje uključen radi rada bez zaslona;
 - 5,0-inčni DSI/FT5426 zaslon još nije stigao;
-- PCM5102A nije fizički spojen;
-- nastavak: prvi pristigli sklop pokreće svoj hardware gate; zajednički
-  display/master-output integration soak slijedi nakon oba.
+- PCM5102A je spojen i hardverski prihvaćen: L/R, tihi idle, 44,1/48 kHz,
+  mixed-rate dual-deck, headroom i limiter;
+- nastavak: DSI/FT5426 bring-up, touch/UI/Master Tempo gate, zatim zajednički
+  display/master/headphones/dual-deck/Wi-Fi integration soak.
 
 ## Aktivni dokumenti
 

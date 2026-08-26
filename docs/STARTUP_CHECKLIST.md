@@ -1,18 +1,19 @@
 # Startup Checklist
 
-Status: važeći bench postupak, 2026-08-24.
+Status: važeći bench postupak, 2026-08-26.
 
 Aktualni handoff je `M3-41-g133f399 / ota_0`, oba decka zaustavljena, FLX4 i
-USB3 spojeni, a Wi-Fi uključen. Zaslon još nije stigao i PCM5102A nije spojen;
-zato se zajedničke stavke uvijek izvode, a display odnosno DAC stavke tek kada
-odgovarajući sklop postane dostupan.
+USB3 spojeni, PCM5102A prihvaćen, a Wi-Fi uključen. Zaslon još nije stigao;
+zato se zajedničke i DAC stavke izvode, a display stavke tek kada sklop postane
+dostupan.
 
 ## Priprema
 
 - [ ] P4 je napajan preko USB1/CH340C.
 - [ ] DDJ-FLX4 je na USB2 FS Host portu.
 - [ ] Rekordbox medij je na USB3 HS Host portu.
-- [ ] Za DAC branch: PCM5102A je spojen na GPIO1/2/3 i zajednički GND.
+- [ ] PCM5102A ima `BCK=GPIO1`, `LCK=GPIO2`, `DIN=GPIO3`, `SCK=GND`, zajednički
+  GND i `VIN=5V`; mostovi su `H1=L`, `H2=L`, `H3=H`, `H4=L`.
 - [ ] Za display branch: evidentirani su točan panel/controller, DSI laneovi,
   napajanje, reset/backlight i FT5426 adresa stvarnog sklopa.
 - [ ] ESP-IDF profil javlja točno `ESP-IDF v6.0.2`.
@@ -138,7 +139,14 @@ oba normalna statea i obje fizičke LED-ice ostali su OFF.
 
 Master Tempo hardverski gate izvodi se nakon dolaska zaslona jer FLX4 nema
 zasebnu Master Tempo kontrolu, a postojeći firmware je uključuje kroz UI.
-PCM5102A headroom gate ostaje odgođen dok DAC modul nije fizički spojen.
+
+PCM5102A acceptance 2026-08-26 potvrdio je oba kanala i tihi idle, 48-kHz
+single-deck, 44,1-kHz single-deck, mixed-rate dual-deck te puni master bez
+čujnog clippinga ili pumping efekta. Dual-deck full-master test imao je 4.090
+limitiranih sampleova od približno 1.323.000 (oko 0,31 %, peak 48.584), a
+single-deck 212 (oko 0,016 %); obje kontrolirane probe završile su s nultim PCM
+underrun i UAC drop/overflow deltama. Dva izolirana output-late događaja tijekom
+cijelog PCM bloka nisu imala audio posljedicu i ostaju za monitoring.
 
 UAC health hardware acceptance na `M3-39-g3bc04fd` potvrdio je pragove
 512/1536, `nominal` tijekom 12-s single-deck i 15-s 48/44,1-kHz dual-deck

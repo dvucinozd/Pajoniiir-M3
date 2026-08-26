@@ -13,9 +13,10 @@ Aktualni ulaz:
 - [Documentation Status](DOCUMENTATION_STATUS.md)
 
 Trenutni handoff: na uređaju je `M3-41-g133f399 / ota_0`; FLX4, USB3 knjižnica
-od 191 trake i Wi-Fi rade, deckovi su zaustavljeni, a Wi-Fi ostaje uključen.
-Daljnji hardverski rad čeka prvi dostupni sklop: 5,0-inčni DSI/FT5426 zaslon ili
-PCM5102A DAC modul.
+od 191 trake, Wi-Fi i PCM5102A master rade, deckovi su zaustavljeni, a Wi-Fi
+ostaje uključen. PCM5102A L/R, tihi idle, 44,1/48-kHz switching, mixed-rate
+dual-deck i limiter prihvaćeni su 2026-08-26. Daljnji hardverski rad čeka
+5,0-inčni DSI/FT5426 zaslon.
 
 `reference/` sadrži izvore za MIDI i Rekordbox format. Svi ostali dokumenti
 koji nisu navedeni u gornjem popisu — uključujući bench bilješke, stare odluke,

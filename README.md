@@ -22,17 +22,18 @@ LED callback prema izravnom FLX4 USB hostu.
 
 ## Trenutni bench status
 
-Instalirani i hardverski prihvaćeni baseline 2026-08-24 je
+Instalirani firmware baseline je
 `M3-41-g133f399` u `ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake,
 SoftAP `Pajoniiir-M3`, web kontrola i potpisani OTA rade; oba decka su nakon
 završnog smokea zaustavljena, a Wi-Fi ostaje uključen radi lakšeg učitavanja
 traka bez zaslona.
 
-5,0-inčni DSI/FT5426 zaslon još nije stigao, a PCM5102A modul još nije fizički
-spojen. Zato postojeći LVGL/UI i I2S master put imaju host/build pokrivanje, ali
-njihov završni hardverski acceptance nije zatvoren. Razvoj se nastavlja kada
-stigne bilo koji od ta dva sklopa: zaslon otvara DSI/touch/Master Tempo/UI gate,
-a PCM5102A otvara master-output headroom/limiter gate.
+PCM5102A je 2026-08-26 fizički spojen na GPIO1/2/3 i hardverski prihvaćen s
+44,1-kHz i 48-kHz izvorima, mixed-rate dual-deck miksom, tihim idle izlazom te
+kontroliranim full-master limiter testom bez PCM underruna ili UAC gubitka.
+5,0-inčni DSI/FT5426 zaslon još nije stigao, pa postojeći LVGL/UI ima
+host/screenshot pokrivanje, ali fizički DSI/touch i Master Tempo gate ostaju
+sljedeći razvojni blok.
 
 Aktualni baseline potvrđuje FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
