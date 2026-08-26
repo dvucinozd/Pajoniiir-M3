@@ -10,7 +10,8 @@ DAC i ESP32-C6 Wi-Fi modul, bez računala i bez pomoćnog kontrolnog MCU-a.
 - USB2 / FS Host: DDJ-FLX4 MIDI In/Out i UAC1 slušalice
 - USB3 / HS Host: Rekordbox USB Flash / MSC
 - GPIO1/2/3: PCM5102A I2S master izlaz
-- MIPI-DSI + FT5426: 800×480 landscape UI i kapacitivni dodir
+- MIPI-DSI + kapacitivni touch: 800×480 landscape UI; FT5426 je pripremljeni
+  kandidat koji čeka potvrdu stvarnog `DSI-506` primjerka
 - ESP32-C6 preko SDIO: Wi-Fi 6 / ESP-Hosted, operatorski SoftAP
   `Pajoniiir-M3` te privremeni APSTA servisni uplink za potpisani P4 OTA, bez
   gašenja lokalnog DHCP/HTTP puta
@@ -31,9 +32,11 @@ traka bez zaslona.
 PCM5102A je 2026-08-26 fizički spojen na GPIO1/2/3 i hardverski prihvaćen s
 44,1-kHz i 48-kHz izvorima, mixed-rate dual-deck miksom, tihim idle izlazom te
 kontroliranim full-master limiter testom bez PCM underruna ili UAC gubitka.
-5,0-inčni DSI/FT5426 zaslon još nije stigao, pa postojeći LVGL/UI ima
-host/screenshot pokrivanje, ali fizički DSI/touch i Master Tempo gate ostaju
-sljedeći razvojni blok.
+5,0-inčni zaslon još nije stigao. Prodajna fotografija i oznaka `DSI-506`
+upućuju na obitelj `DSI5061/DSI5061-A`; pripremljen je arrival dossier s J2/FFC
+provjerom i sigurnim bring-up redoslijedom. Postojeći LVGL/UI ima host/screenshot
+pokrivanje, ali fizički DSI/touch i Master Tempo gate ostaju sljedeći razvojni
+blok.
 
 Aktualni baseline potvrđuje FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
@@ -104,6 +107,7 @@ Dugi Master Tempo soak i headless UI screenshot gate:
 - [Pregled projekta](docs/PROJECT_OVERVIEW.md)
 - [Arhitektura](docs/ARCHITECTURE.md)
 - [Spajanje hardvera](docs/HARDWARE_WIRING.md)
+- [DSI-506 display arrival dossier](docs/DISPLAY_DSI506_BRINGUP.md)
 - [DDJ-FLX4 MIDI mapa](docs/DDJ_FLX4_MIDI_MAP.md)
 - [Plan razvoja](docs/DEVELOPMENT_PLAN.md)
 - [Startup checklist](docs/STARTUP_CHECKLIST.md)

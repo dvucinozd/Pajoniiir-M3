@@ -17,7 +17,7 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 - **Rekordbox USB Flash disk** spojen je izravno na **USB3** (HS USB Host @ 480 Mbps) za brzo čitanje baze i waveform analiza.
 - **USB1 (USB-TTL / CH340C)** služi za 5V napajanje cijele ploče, programiranje (flashing) i serijsku dijagnostiku.
 - **ESP32-P4 (JC-ESP32P4-M3-DEV)** je autoritativni single-chip host: USB MIDI i Audio host, playback engine, Rekordbox library, 800×480 DSI UI i DSP mixer.
-- **5.0" MIPI-DSI IPS zaslon (800×480)** s FocalTech FT5426 kapacitivnim dodirom pruža brzo i pregledno sučelje u nativnom landscape formatu (0° PPA hardware blit).
+- **5.0" MIPI-DSI IPS zaslon (800×480)** s kapacitivnim dodirom pruža brzo i pregledno sučelje u nativnom landscape formatu (0° PPA hardware blit). Kandidat je `DSI-506`; FT5426/`0x38` je pripremljena firmware pretpostavka koja čeka potvrdu stvarnog IC-a ili I2C scana.
 - **Master audio izlaz** ide preko PCM5102A I2S DAC modula (`GPIO1/2/3` na JP1 headeru).
 - **Wi-Fi 6** je osiguran preko integriranog **ESP32-C6** modula (ESP-Hosted preko SDIO).
 - **Neaktivne periferije**: Ugrađeni mikrofon, NS4150 mono zvučničko pojačalo i RJ45 Ethernet su namjerno isključeni u softveru radi nultog šuma i oslobađanja GPIO pinova.
@@ -36,9 +36,12 @@ idle, 44,1/48-kHz switching, mixed-rate dual-deck i full-master limiter prošli
 su bez čujnog clippinga, PCM underruna ili UAC drop/overflowa. Dva izolirana
 output-late događaja nisu imala audio posljedicu i ostaju za monitoring.
 
-5,0-inčni DSI/FT5426 zaslon još nije stigao. Ne nagađaj panel timing/controller
-naredbe. Sljedeći hardverski blok je DSI/touch/UI/Master Tempo, a nakon njega
-zajednički display/master/headphones/dual-deck/Wi-Fi integration soak.
+5,0-inčni zaslon još nije stigao. Kandidat nosi oznaku `DSI-506` i vjerojatno
+pripada obitelji `DSI5061/DSI5061-A`; `docs/DISPLAY_DSI506_BRINGUP.md` sadrži
+izvore, J2/FFC provjeru, stanje dormantnog `bsp_p4_m3` i sigurni redoslijed.
+Ne nagađaj panel timing/controller naredbe. Sljedeći hardverski blok je
+DSI/touch/UI/Master Tempo, a nakon njega zajednički
+display/master/headphones/dual-deck/Wi-Fi integration soak.
 
 ## Najvažnije putanje
 
@@ -50,6 +53,7 @@ zajednički display/master/headphones/dual-deck/Wi-Fi integration soak.
   docs\ARCHITECTURE.md
   docs\DDJ_FLX4_MIDI_MAP.md
   docs\HARDWARE_WIRING.md
+  docs\DISPLAY_DSI506_BRINGUP.md
   docs\DEVELOPMENT_PLAN.md
   docs\STARTUP_CHECKLIST.md
   docs\RISK_REGISTER.md

@@ -7,7 +7,7 @@ Status: važeća single-chip arhitektura, 2026-08-26.
 ```text
 DDJ-FLX4 USB2 FS ── MIDI/UAC1 ─┐
 Rekordbox USB3 HS ── MSC ──────┼─> ESP32-P4 ── I2S ──> PCM5102A master
-FT5426 + DSI panel ─────────────┤       │
+Touch I2C + DSI panel ──────────┤       │
 ESP32-C6 ── SDIO/ESP-Hosted ───┘       └─> FLX4 MIDI LED + headphones
 ```
 
@@ -15,8 +15,9 @@ USB1/CH340C je izvan aplikacijskog data puta i služi za napajanje, flashing i
 serijsku dijagnostiku.
 
 Dijagram prikazuje ciljnu završnu topologiju. Na aktualnom benchu potvrđeni su
-USB1, USB2/FLX4, USB3/Rekordbox, C6/Wi-Fi i PCM5102A master krakovi. DSI/FT5426
-sklop još nije stigao; firmware gradi UI put, ali to nije zamjena za fizički
+USB1, USB2/FLX4, USB3/Rekordbox, C6/Wi-Fi i PCM5102A master krakovi. `DSI-506`
+display/touch kandidat još nije stigao; firmware gradi UI put i priprema
+FT5426/`0x38`, ali to nije zamjena za identifikaciju stvarnog IC-a ni fizički
 panel/touch acceptance.
 
 ## Ownership

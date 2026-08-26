@@ -4,7 +4,7 @@ Status: važeća single-chip topologija i plan spajanja, 2026-08-26.
 
 Trenutni bench ima spojene USB1, USB2/FLX4, USB3/Rekordbox medij i PCM5102A.
 DAC wiring i konfiguracija ispod hardverski su potvrđeni 2026-08-26.
-5,0-inčni DSI/FT5426 zaslon još nije stigao, pa display upute ostaju ciljni
+5,0-inčni `DSI-506` kandidat još nije stigao, pa display upute ostaju ciljni
 wiring za zasebni bring-up.
 
 ## USB
@@ -46,8 +46,15 @@ Master izlaz se ne vodi kroz ugrađeni NS4150.
 
 ## Zaslon, touch i mreža
 
-- 5.0" 800×480 panel koristi pločin MIPI-DSI priključak u nativnom landscapeu.
-- FT5426 touch koristi tvornički spoj ploče.
+- Kandidat je označen `DSI-506`, vjerojatno iz obitelji `DSI5061/DSI5061-A`:
+  5,0", 800×480 IPS, 15-pin 1,0-mm Raspberry Pi-style MIPI-DSI i kapacitivni
+  touch. Puna oznaka/revizija i IC-i čekaju stvarni primjerak.
+- Pločin J2 i kandidat koriste dvije DSI lane, clock, I2C SCL/SDA te 3,3 V/GND
+  kroz 15-pinski FFC. Pin 1 i same-side/opposite-side orijentaciju kabela treba
+  potvrditi prije umetanja.
+- FT5426 na `0x38` je trenutna firmware pretpostavka, ne hardware acceptance.
+- Modulov vanjski `PWM/GND` backlight ulaz nije dio 15-pinskog DSI kabela;
+  detalji i sigurni redoslijed su u `docs/DISPLAY_DSI506_BRINGUP.md`.
 - ESP32-C6 koristi ESP-Hosted preko SDIO; ne mijenjati SDIO pinove bez revizije
   BSP-a i microSD dijeljenja kontrolera.
 
@@ -60,5 +67,5 @@ Master izlaz se ne vodi kroz ugrađeni NS4150.
 - međupanački I2S/PCM transport.
 
 Prije uključivanja provjeri GND, 5 V polaritet, svih šest DAC vodova i H1-H4
-mostove te da su USB2 i USB3 spojeni na odgovarajuće uređaje. DSI
-konektor/panel identitet provjeri prije display brancha.
+mostove te da su USB2 i USB3 spojeni na odgovarajuće uređaje. DSI kandidat se
+prvi put umeće samo bez napajanja, nakon provjere pinova i FFC orijentacije.

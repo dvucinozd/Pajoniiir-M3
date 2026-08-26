@@ -17,6 +17,7 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-26.
 | R11 | Settings gašenje se sudari sa servisnim APSTA/OTA prijelazom | srušen netif, prekinut download ili AP koji se ne vrati | transition lease, host-testirani START/STOP/WAIT policy, APSTA bez gašenja AP/DHCP/HTTP puta te fizički connectivity, HTTPS channel i missing-bundle 404 smoke; fault je obnovio AP bez reboota |
 | R12 | I2S master output radi na 48 kHz dok je FLX4 UAC fiksiran na 44,1 kHz | kriva brzina/visina tona ili headphone ring overflow na 48-kHz trakama | implementiran stateful 48→44,1-kHz headphone resampler; host omjer/kontinuitet, 60-s 48-kHz gate, 600-s mixed-rate soak i FLX4 slušni acceptance prošli; PCM5102A 44,1/48-kHz i mixed-rate hardware gate zatvoren 2026-08-26 bez krive brzine/visine tona ili UAC gubitka |
 | R13 | Same-version channel check neposredno nakon OTA boota jednom je izazvao PANIC reset | neočekivani restart u maintenance toku | tri svježa post-OTA equality ciklusa uz test-only 64-KiB flash coredump vratila su `already running this build` bez PANIC-a; dump particija ostala je prazna, produkcijski image vraćen je i rizik ostaje samo pod monitoringom |
+| R14 | `DSI-506` kandidat ima nepoznatu reviziju/bridge, FFC orijentaciju ili zaseban backlight PWM put | nema slike/toucha, krive boje ili električno oštećenje | pre-arrival dossier; bez napajanja potvrditi punu oznaku, IC-e, pin 1 i kontakte; prvi build kontrolirano prebacuje dormantni `bsp_p4_m3`; prvo koristiti tvornički backlight način, a timing, RGB format i init dodavati samo iz stvarnog IC-a/mjerenja |
 
 Potpisani noviji signed-bundle install prošao je i lokalnim web uploadom i
 produkcijskim HTTPS pull tokom, a missing-bundle download fault završio je bez
@@ -26,7 +27,7 @@ izolirani post-OTA PANIC ostaje rezidualna monitoring stavka nakon tri neuspjela
 pokušaja reprodukcije s coredumpom. Desetominutni dual-USB/audio/Wi-Fi soak,
 FLX4 reconnect pod playbackom i USB3 media remove/reinsert su zatvoreni.
 PCM5102A headroom/limiter/noise gate zatvoren je 2026-08-26. Preostali najveći
-hardverski gate je bring-up još nedostupnog 800×480 DSI/FT5426 sklopa, zatim
+hardverski gate je bring-up još nedostupnog 800×480 `DSI-506` sklopa, zatim
 zajednički display/master/headphones/dual-deck/Wi-Fi soak. Jednokratni simultani
 start/seek PCM D1=202 događaj nije se
 ponovio u ukupno 25 kontroliranih startova i ostaje telemetrijska stavka, a ne

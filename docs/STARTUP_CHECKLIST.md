@@ -14,8 +14,11 @@ dostupan.
 - [ ] Rekordbox medij je na USB3 HS Host portu.
 - [ ] PCM5102A ima `BCK=GPIO1`, `LCK=GPIO2`, `DIN=GPIO3`, `SCK=GND`, zajednički
   GND i `VIN=5V`; mostovi su `H1=L`, `H2=L`, `H3=H`, `H4=L`.
-- [ ] Za display branch: evidentirani su točan panel/controller, DSI laneovi,
-  napajanje, reset/backlight i FT5426 adresa stvarnog sklopa.
+- [ ] Za display branch izvršen je pre-power dio
+  `docs/DISPLAY_DSI506_BRINGUP.md`: puna `DSI-506...`/REV oznaka, IC-i, J2 pin 1,
+  FFC kontaktna orijentacija, DSI laneovi, napajanje i backlight način.
+- [ ] Touch I2C scan potvrđuje stvarnu adresu/controller prije oslanjanja na
+  FT5426 `0x38` pretpostavku.
 - [ ] ESP-IDF profil javlja točno `ESP-IDF v6.0.2`.
 
 ## Build i flash
@@ -30,7 +33,8 @@ idf.py -p COM17 flash monitor
 
 - [ ] Build završi exit kodom 0.
 - [ ] Boot nema reset loop, abort ni watchdog.
-- [ ] Kada je zaslon dostupan, DSI UI i FT5426 touch rade u 800×480 landscapeu.
+- [ ] Kada je zaslon dostupan, DSI UI i potvrđeni touch controller rade u
+  800×480 landscapeu.
 
 ## USB i kontrola
 

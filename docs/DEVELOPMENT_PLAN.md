@@ -19,10 +19,11 @@ HTTPS pull, rollback, download fault, post-OTA equality dijagnostika i
 dual-USB/audio/Wi-Fi soak hardverski su zatvoreni; Wi-Fi ostaje uključen na
 benchu radi rada bez zaslona.
 
-Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s FT5426
-dodirom je naručen i čeka se njegov dolazak. U dokumentaciji je to ciljana
-konfiguracija; hardverski bring-up još nije potvrđen. PCM5102A I2S master put
-fizički je spojen i prihvaćen 2026-08-26.
+Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s kapacitivnim
+dodirom naručen je i čeka se njegov dolazak. Oznaka je `DSI-506`; FT5426/`0x38`
+ostaje pripremljeni kandidat do provjere stvarnog IC-a ili I2C scana.
+Hardverski bring-up još nije potvrđen. PCM5102A I2S master put fizički je spojen
+i prihvaćen 2026-08-26.
 
 Prvi korisni firmware nakon `RC2` uvodi release identitet `M3`. Verzija se
 dobiva iz `git describe`, pa je implementacijski commit namijenjen anotiranom
@@ -55,7 +56,7 @@ operator nije čuo clipping, pucketanje, prekide ni pumping.
 Nastavak je sada:
 
 1. kada stigne zaslon, evidentirati stvarni panel/controller i pokrenuti
-    800×480 DSI/FT5426 bring-up, zatim Master Tempo i Shift + Browse/Load UI gate;
+    800×480 DSI/touch bring-up, zatim Master Tempo i Shift + Browse/Load UI gate;
 2. nakon što su oba sklopa dostupna, odraditi zajednički display/touch,
     master/headphones, dual-deck i Wi-Fi integration soak.
 
@@ -327,8 +328,11 @@ promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
 
 ### 3. Bring-up novog 5,0-inčnog zaslona
 
+- [x] pripremiti pre-arrival dossier za kandidat `DSI-506` / `DSI5061`, J2
+  pinout, FFC provjeru, postojeći dormantni `bsp_p4_m3`, backlight ograničenje i
+  fazni acceptance (`docs/DISPLAY_DSI506_BRINGUP.md`);
 - po dolasku evidentirati točan panel/controller, DSI lane konfiguraciju,
-  timing, reset, backlight i FT5426 I2C adresu prema stvarnom primjerku;
+  timing, reset, backlight te stvarni touch IC i I2C adresu;
 - pokrenuti panel u 800×480 nativnom landscape načinu i potvrditi stabilan
   cold/warm boot bez tearinga, artefakata ili periodičnog gubitka slike;
 - prilagoditi BSP/Kconfig, LVGL rezoluciju, PPA put i touch transformaciju tek
@@ -338,8 +342,9 @@ promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
 - vizualno pregledati sve ekrane te tek nakon toga obnoviti 800×480 UI
   screenshot baseline i odraditi dugi display/touch/PSRAM soak.
 
-Status: hardverski rad je blokiran do dolaska zaslona; priprema se može raditi
-iz dokumentacije dobavljača, ali controller naredbe i timing ne treba nagađati.
+Status: hardverski rad je blokiran do dolaska zaslona. Kandidat je identificiran
+kao `DSI-506`, vjerojatno obitelj `DSI5061/DSI5061-A`; controller naredbe,
+reviziju, FFC orijentaciju i timing ne treba nagađati.
 
 Acceptance: puni kadar i touch koordinate rade u nativnom landscapeu na cijeloj
 površini, svi postojeći UI tokovi su čitljivi i nema display/audio regresija.

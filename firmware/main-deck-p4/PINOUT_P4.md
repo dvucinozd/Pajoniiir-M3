@@ -2,9 +2,10 @@
 
 Status: 2026-08-26. Autoritativni wiring je `docs/HARDWARE_WIRING.md`.
 
-USB1/2/3, C6/Wi-Fi i PCM5102A trenutno su aktivni na benchu. DSI/FT5426 zaslon
+USB1/2/3, C6/Wi-Fi i PCM5102A trenutno su aktivni na benchu. `DSI-506` kandidat
 još nije stigao; njegovi redovi ispod rezerviraju ciljni put i ne znače da je
-display hardware acceptance završen.
+display hardware acceptance završen. FT5426/`0x38` čeka potvrdu stvarnog IC-a
+ili I2C scana.
 
 | Funkcija | Pin / port |
 |---|---|
@@ -17,7 +18,7 @@ display hardware acceptance završen.
 | Rekordbox MSC | USB3 HS Host |
 | power/flash/monitor | USB1 CH340C |
 | display | board MIPI-DSI connector |
-| touch | board FT5426 connection |
+| touch | J2 I2C; FT5426/FT5x06 kandidat |
 | Wi-Fi | integrated ESP32-C6 over SDIO |
 
 Mikrofon, NS4150 speaker amp i Ethernet su softverski ugašeni. GPIO pinovi koji
