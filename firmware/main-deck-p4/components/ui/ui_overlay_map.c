@@ -40,6 +40,26 @@ bool ui_overlay_map_ppa0(ui_overlay_rect_t logical,
     return true;
 }
 
+bool ui_overlay_map_ppa0_mirror_x(ui_overlay_rect_t logical,
+                                  int logical_w,
+                                  int logical_h,
+                                  ui_overlay_rect_t *physical)
+{
+    if (!physical || logical_w <= 0 || logical_h <= 0 ||
+        logical.w <= 0 || logical.h <= 0 ||
+        logical.x < 0 || logical.y < 0 ||
+        logical.x + logical.w > logical_w ||
+        logical.y + logical.h > logical_h) {
+        return false;
+    }
+
+    physical->x = logical_w - (logical.x + logical.w);
+    physical->y = logical.y;
+    physical->w = logical.w;
+    physical->h = logical.h;
+    return true;
+}
+
 void ui_overlay_i8_to_rgb565(const uint8_t *src,
                              int src_stride_px,
                              uint16_t *dst,

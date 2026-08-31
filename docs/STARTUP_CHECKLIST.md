@@ -1,11 +1,11 @@
 # Startup Checklist
 
-Status: važeći bench postupak, 2026-08-26.
+Status: važeći bench postupak, 2026-08-31.
 
-Aktualni handoff je `M3-41-g133f399 / ota_0`, oba decka zaustavljena, FLX4 i
-USB3 spojeni, PCM5102A prihvaćen, a Wi-Fi uključen. Zaslon još nije stigao;
-zato se zajedničke i DAC stavke izvode, a display stavke tek kada sklop postane
-dostupan.
+Aktualni bench image je app-only `M3-45-g5bb55bc-dirty / factory`, SHA-256
+`52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`;
+`M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline. FLX4, USB3,
+PCM5102A, Wi-Fi i DSI slika rade. Touch još nije prihvaćen.
 
 ## Priprema
 
@@ -14,11 +14,12 @@ dostupan.
 - [ ] Rekordbox medij je na USB3 HS Host portu.
 - [ ] PCM5102A ima `BCK=GPIO1`, `LCK=GPIO2`, `DIN=GPIO3`, `SCK=GND`, zajednički
   GND i `VIN=5V`; mostovi su `H1=L`, `H2=L`, `H3=H`, `H4=L`.
-- [ ] Za display branch izvršen je pre-power dio
-  `docs/DISPLAY_DSI506_BRINGUP.md`: puna `DSI-506...`/REV oznaka, IC-i, J2 pin 1,
-  FFC kontaktna orijentacija, DSI laneovi, napajanje i backlight način.
-- [ ] Touch I2C scan potvrđuje stvarnu adresu/controller prije oslanjanja na
-  FT5426 `0x38` pretpostavku.
+- [ ] EYOYO `DSI506 / DYL0023` FFC je potpuno umetnut na J2 u potvrđenoj
+  orijentaciji; kabel se ne premješta pod napajanjem.
+- [ ] Display koristi tvornički backlight put preko `0x45`; vanjski `PWM/GND`
+  nije spojen, 0-ohm selektor nije premješten i `FAN 3V3` nije ulaz napajanja.
+- [ ] Touch se ne smatra prihvaćenim samo zato što scan vidi `0x38`; runtime
+  mora raditi bez FT5x06 I2C read grešaka i proći koordinatni gate.
 - [ ] ESP-IDF profil javlja točno `ESP-IDF v6.0.2`.
 
 ## Build i flash
@@ -28,13 +29,36 @@ dostupan.
 idf.py --version
 Set-Location firmware\main-deck-p4
 idf.py build
-idf.py -p COM17 flash monitor
+idf.py -p COM6 flash monitor
 ```
 
 - [ ] Build završi exit kodom 0.
 - [ ] Boot nema reset loop, abort ni watchdog.
-- [ ] Kada je zaslon dostupan, DSI UI i potvrđeni touch controller rade u
-  800×480 landscapeu.
+- [ ] Boot izravno prikazuje 800×480 GUI bez testnih traka, bijelog kadra,
+  horizontalnog wrapa, zrcaljenja ili zamjene crvene/plave.
+
+## Display i touch
+
+- [x] EYOYO `DSI506 / DYL0023` prikazuje 800×480 RGB888 u nativnom landscapeu.
+- [x] Aktivni profil je 1 lane / 800 Mbps, 27,777 MHz,
+  HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `7/2/22`, burst sync pulses i bez frame
+  ACK-a.
+- [x] `OVERVIEW` je prvi, `SETTINGS` zadnji tab; nema cikličkog omatanja ruba.
+- [x] Boje GUI-ja su fizički potvrđene, a PPA `rgb_swap` i horizontalni mirror
+  ostaju ugašeni.
+- [x] Backlight se uključuje preko `0x45`, Settings/postotak koristi isti put,
+  a lokalni gumb korak-po-korak mijenja svjetlinu.
+- [ ] Touch read radi bez `panel_io_i2c_rx_buffer` / FT5x06 I2C grešaka.
+- [ ] Dodir pogoduje sva četiri kuta, rubove i središte bez swap/mirror greške.
+- [ ] Screensaver wake, Settings slideri, Library, Hot Cues, Master Tempo i
+  Shift + Browse/Load prolaze eyes-on/touch acceptance.
+- [ ] Dugi display/touch/PSRAM soak nema tearing, artefakte, I2C poplavu loga,
+  reset ni audio/USB posljedicu.
+
+Display-image acceptance 2026-08-31 koristio je COM6 i završni app-only image
+od 2.369.840 B. Puni host suite i ESP-IDF 6.0.2 build prošli su; boot je učitao
+191 traku za približno 4 s i odmah prešao u pravilno poravnati GUI. To zatvara
+samo sliku, ne touch ni zajednički integration gate.
 
 ## USB i kontrola
 
@@ -141,8 +165,9 @@ oba normalna statea i obje fizičke LED-ice ostali su OFF.
   MIDI In/Out i UAC, playback nastavlja, a output-late i PCM underrun ostaju 0.
 - [ ] Dual-deck playback, pitch/Master Tempo i scratch ostaju stabilni.
 
-Master Tempo hardverski gate izvodi se nakon dolaska zaslona jer FLX4 nema
-zasebnu Master Tempo kontrolu, a postojeći firmware je uključuje kroz UI.
+Zaslon je sada dostupan za Master Tempo hardverski gate, ali touch se prvo mora
+stabilizirati ili se mora koristiti drugi pouzdan način UI navigacije jer FLX4
+nema zasebnu Master Tempo kontrolu.
 
 PCM5102A acceptance 2026-08-26 potvrdio je oba kanala i tihi idle, 48-kHz
 single-deck, 44,1-kHz single-deck, mixed-rate dual-deck te puni master bez

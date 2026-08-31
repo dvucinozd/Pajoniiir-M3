@@ -125,7 +125,7 @@ void ui_settings_format_wifi_status(const ui_settings_wifi_status_t *status,
 #ifndef WIN32
 #include "app_settings.h"
 #include "audio_engine.h"
-#include "bsp_jc4880.h"
+#include "bsp_p4_m3.h"
 #include "esp_timer.h"
 #include "esp_system.h"
 #include "firmware_health.h"

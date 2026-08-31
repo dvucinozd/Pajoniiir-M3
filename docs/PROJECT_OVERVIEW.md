@@ -1,6 +1,6 @@
 # Project Overview
 
-Status: važeći opis projekta i ciljne topologije, 2026-08-26.
+Status: važeći opis projekta i bench topologije, 2026-08-31.
 
 Pajoniiir-M3 je standalone dual-deck DJ uređaj bez računala. Jedan ESP32-P4
 obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
@@ -18,16 +18,19 @@ obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
 
 ## Trenutno stanje
 
-`M3-41-g133f399 / ota_0` hardverski potvrđuje tokove FLX4 MIDI/UAC, USB3
-library/decode, Wi-Fi remote/OTA i dual-deck DSP, uključujući gapless Censor.
-Zaslon iz koraka 8 još nije stigao, pa LVGL zasad ima host simulator i screenshot
-regresije, ali ne i fizički DSI/touch acceptance. PCM5102A iz koraka 5 spojen je
-i hardverski prihvaćen 2026-08-26: L/R, tihi idle, 44,1/48-kHz switching,
+`M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline za FLX4 MIDI/UAC,
+USB3 library/decode, Wi-Fi remote/OTA i dual-deck DSP, uključujući gapless
+Censor. App-only `M3-45-g5bb55bc-dirty / factory` dodaje aktivni
+`bsp_p4_m3` i fizički prihvaćenu DSI sliku na EYOYO `DSI506 / DYL0023`:
+800×480 RGB888, ispravne boje, nativni landscape i poravnanje bez cyclic wrapa.
+Touch `0x38` još nije prihvaćen jer FT5x06 runtime čitanje javlja I2C greške.
+PCM5102A iz koraka 5 spojen je i hardverski prihvaćen 2026-08-26: L/R, tihi idle, 44,1/48-kHz switching,
 mixed-rate dual-deck i full-master limiter prošli su bez čujnog clippinga, PCM
 underruna ili UAC gubitka.
 
-Bench ostaje na uključenom Wi-Fi SoftAP-u s oba decka zaustavljena. Nastavak
-počinje dolaskom zaslona i njegovim DSI/touch/UI/Master Tempo gateom.
+Bench ostaje na uključenom Wi-Fi SoftAP-u. Nastavak počinje identifikacijom i
+prihvatom toucha, zatim Master Tempo i Shift + Browse/Load UI gateom te
+zajedničkim display/audio/USB/Wi-Fi soakom.
 
 ## Granice sustava
 

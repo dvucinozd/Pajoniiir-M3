@@ -1,19 +1,26 @@
 # Documentation Status
 
-Status: 2026-08-26.
+Status: 2026-08-31.
 
 ## Trenutni handoff
 
-- instalirani baseline: `M3-41-g133f399`, `ota_0`, OTA state `idle`;
+- aktualni bench image: app-only `M3-45-g5bb55bc-dirty`, `factory`, SHA-256
+  `52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`;
+- posljednji potpisani rollback/release baseline: `M3-41-g133f399`, `ota_0`;
 - potvrđeno: FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi
   SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
-- oba decka su zaustavljena, a Wi-Fi ostaje uključen radi rada bez zaslona;
-- 5,0-inčni zaslon još nije stigao; prodajna fotografija i oznaka `DSI-506`
-  upućuju na obitelj `DSI5061/DSI5061-A`, a pre-arrival dossier je pripremljen;
+- Wi-Fi ostaje uključen tijekom nastavka razvoja;
+- EYOYO `DSI506 / DYL0023` spojen je i slika je prihvaćena: 800×480 RGB888,
+  nativni landscape, ispravne boje i poravnanje, burst/no-frame-ACK;
+- aktivan je `bsp_p4_m3`, a legacy `bsp_jc4880` je izuzet iz produkcijskog
+  linkanja; normalni boot više nema privremene testne trake;
+- touch gate je otvoren: I2C `0x38` postoji, ali FT5x06 runtime read javlja
+  I2C greške i koordinate nisu prihvaćene;
 - PCM5102A je spojen i hardverski prihvaćen: L/R, tihi idle, 44,1/48 kHz,
   mixed-rate dual-deck, headroom i limiter;
-- nastavak: DSI/touch bring-up, UI/Master Tempo gate, zatim zajednički
-  display/master/headphones/dual-deck/Wi-Fi integration soak.
+- nastavak: touch identifikacija i cijela površina, UI Master Tempo i Shift +
+  Browse/Load gate, zatim zajednički display/master/headphones/dual-deck/Wi-Fi
+  integration soak.
 
 ## Aktivni dokumenti
 
@@ -23,7 +30,7 @@ Status: 2026-08-26.
 - `docs/PROJECT_OVERVIEW.md` — scope i glavni tokovi
 - `docs/ARCHITECTURE.md` — ownership i komponente
 - `docs/HARDWARE_WIRING.md` — važeće spajanje
-- `docs/DISPLAY_DSI506_BRINGUP.md` — identifikacija i sigurni display arrival gate
+- `docs/DISPLAY_DSI506_BRINGUP.md` — identifikacija, bring-up i display acceptance
 - `docs/DDJ_FLX4_MIDI_MAP.md` — MIDI acceptance ledger
 - `docs/DEVELOPMENT_PLAN.md` — prioriteti nastavka
 - `docs/STARTUP_CHECKLIST.md` — bench acceptance
@@ -37,9 +44,9 @@ Status: 2026-08-26.
   adrese.
 - `docs/reference/DDJ-FLX4_MIDI_message_List.md` i PDF dopunjuju LED i settings
   poruke.
-- `docs/reference/DSI506_PRODUCT_REFERENCE.jpg` je korisnikova pre-arrival
-  referentna fotografija za usporedbu s isporučenim display modulom; nije dokaz
-  controller/revision identiteta.
+- `docs/reference/DSI506_PRODUCT_REFERENCE.jpg` je korisnikova prodajna
+  referentna fotografija. Isporučeni modul naknadno je identificiran kao EYOYO
+  `DSI506 / DYL0023`; fotografija sama i dalje nije dokaz bridge identiteta.
 
 ## Povijesno
 

@@ -97,7 +97,7 @@ static const char *TAG = "audio";
 #   include "esp_heap_caps.h"
 #   include "esp_system.h"
 #   include "esp_timer.h"
-#   include "bsp_jc4880.h"
+#   include "bsp_p4_m3.h"
 #   include "esp_codec_dev.h"
 #   include "driver/i2s_common.h"
 /* Declarations only — DR_FLAC_IMPLEMENTATION lives in audio_flac_decoder.c. */
@@ -1258,7 +1258,7 @@ static void record_deck_peak(uint8_t deck, audio_mixer_frame_t frame)
 
 
 #if AE_FW
-static esp_codec_dev_handle_t s_codec       = NULL;  /* owned by bsp_jc4880 */
+static esp_codec_dev_handle_t s_codec       = NULL;  /* owned by bsp_p4_m3 */
 static i2s_chan_handle_t      s_main_i2s_tx = NULL;  /* optional PCM5102A MAIN OUT */
 /* Per-deck counting semaphore: each of a deck's tasks gives on exit. Per-deck
  * (not shared) so tearing down deck A never consumes the exit signals a

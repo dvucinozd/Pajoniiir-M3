@@ -139,7 +139,7 @@ esp_err_t ui_lvgl_backend_draw_rect_rgb565(const ui_overlay_rect_t *logical, uin
     return ESP_OK;
 }
 #else
-#include "bsp_jc4880.h"
+#include "bsp_p4_m3.h"
 #include "esp_attr.h"
 #include "esp_cache.h"
 #include "esp_heap_caps.h"
@@ -157,12 +157,13 @@ esp_err_t ui_lvgl_backend_draw_rect_rgb565(const ui_overlay_rect_t *logical, uin
 #define LVGL_TASK_PRIO             4
 /* Driven by the BSP so the two cannot disagree. There is no inactive-buffer
  * swap in this backend: LVGL renders partial rows into one PSRAM draw buffer and
- * the flush callback PPA-rotates them straight into the single DPI framebuffer.
+ * the flush callback PPA-rotates/converts them into the single RGB888 DPI framebuffer.
  * Asking the driver for more would reserve full-screen buffers that are never
  * scanned. */
 #define UI_DSI_FB_COUNT            BSP_LCD_FRAMEBUFFER_COUNT
 _Static_assert(UI_DSI_FB_COUNT == 1u,
                "this backend supports exactly one DPI framebuffer");
+_Static_assert(BSP_SCANOUT_BYTES_PER_PIXEL == 3u, "PPA RGB888 output requires 3-byte scanout");
 #define UI_LVGL_PARTIAL_BUF_ROWS   80u
 #define UI_PERF_SPIKE_THRESHOLD_US 20000u
 #define UI_LVGL_NOTIFY_REFRESH     (1u << 0)
@@ -171,10 +172,16 @@ _Static_assert(UI_DSI_FB_COUNT == 1u,
 #if (BSP_LCD_H_RES == 800 && BSP_LCD_V_RES == 480)
 #define UI_PPA_ROTATION_ANGLE      PPA_SRM_ROTATION_ANGLE_0
 #define ui_overlay_map_backend     ui_overlay_map_ppa0
+#define UI_PPA_MIRROR_X            false
 #else
 #define UI_PPA_ROTATION_ANGLE      PPA_SRM_ROTATION_ANGLE_270
+#define UI_PPA_MIRROR_X            false
 #define ui_overlay_map_backend     ui_overlay_map_ppa270
 #endif
+
+// The isolated PPA channel-order candidate was rejected on hardware: GUI
+// colours and the horizontal displacement were unchanged.
+#define UI_PPA_RGB_SWAP            false
 
 static _lock_t s_lvgl_lock;
 static lv_display_t *s_disp = NULL;
@@ -413,18 +420,20 @@ static esp_err_t ui_lvgl_backend_blit_rgb565_ppa270_mapped(const ui_overlay_rect
         .in.srm_cm          = PPA_SRM_COLOR_MODE_RGB565,
 
         .out.buffer         = s_dsi_fb[s_dsi_active_fb_idx],
-        .out.buffer_size    = ALIGN_UP_BY((size_t)BSP_LCD_H_RES * BSP_LCD_V_RES * 2,
+        .out.buffer_size    = ALIGN_UP_BY((size_t)BSP_LCD_H_RES * BSP_LCD_V_RES * BSP_SCANOUT_BYTES_PER_PIXEL,
                                           s_cache_align),
         .out.pic_w          = BSP_LCD_H_RES,
         .out.pic_h          = BSP_LCD_V_RES,
         .out.block_offset_x = (uint32_t)physical->x,
         .out.block_offset_y = (uint32_t)physical->y,
-        .out.srm_cm         = PPA_SRM_COLOR_MODE_RGB565,
+        .out.srm_cm         = PPA_SRM_COLOR_MODE_RGB888,
 
         .rotation_angle     = UI_PPA_ROTATION_ANGLE,
         .scale_x            = 1.0,
         .scale_y            = 1.0,
-        .rgb_swap           = 0,
+        .mirror_x           = UI_PPA_MIRROR_X,
+        .mirror_y           = false,
+        .rgb_swap           = UI_PPA_RGB_SWAP,
         .byte_swap          = 0,
         .mode               = PPA_TRANS_MODE_BLOCKING,
     };
@@ -642,7 +651,7 @@ esp_err_t ui_lvgl_backend_init(uint16_t hor_res, uint16_t ver_res)
         lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
         lv_indev_set_user_data(indev, tp);
         lv_indev_set_read_cb(indev, ui_touch_read_cb);
-        ESP_LOGI(TAG, "GT911 registered as LVGL pointer input");
+        ESP_LOGI(TAG, "FT5x06 registered as LVGL pointer input");
     } else {
         ESP_LOGW(TAG, "no touch handle - UI will be display-only");
     }
@@ -669,7 +678,7 @@ esp_err_t ui_lvgl_backend_init(uint16_t hor_res, uint16_t ver_res)
     }
 
     ESP_LOGI(TAG,
-             "LVGL backend ready (%ux%u canvas -> PPA-rotated to %dx%d, RGB565, one DPI framebuffer)",
+             "LVGL backend ready (%ux%u RGB565 canvas -> PPA RGB888 %dx%d, one DPI framebuffer)",
              (unsigned)s_hor_res,
              (unsigned)s_ver_res,
              BSP_LCD_H_RES,
@@ -831,21 +840,18 @@ esp_err_t ui_lvgl_backend_draw_rect_rgb565(const ui_overlay_rect_t *logical, uin
         return ESP_ERR_INVALID_ARG;
     }
 
-    uint16_t *fb = (uint16_t *)s_dsi_fb[s_dsi_active_fb_idx];
-    uint32_t stride = BSP_LCD_H_RES;
-
-    for (int y = physical.y; y < physical.y + physical.h; y++) {
-        uint16_t *row = fb + (size_t)y * stride;
-        for (int x = physical.x; x < physical.x + physical.w; x++) {
-            row[x] = color;
-        }
+    uint8_t *fb = s_dsi_fb[s_dsi_active_fb_idx];
+    size_t stride = (size_t)BSP_LCD_H_RES * BSP_SCANOUT_BYTES_PER_PIXEL;
+    if (!bsp_scanout_fill_rect_rgb565(fb, stride * BSP_LCD_V_RES,
+                                     BSP_LCD_H_RES, BSP_LCD_V_RES,
+                                     (unsigned)physical.x, (unsigned)physical.y,
+                                     (unsigned)physical.w, (unsigned)physical.h, color)) {
+        return ESP_ERR_INVALID_ARG;
     }
 
     // Cache sync to RAM for DMA controller to pick it up
-    esp_cache_msync((void *)(fb + (size_t)physical.y * stride),
-                    (size_t)physical.h * stride * sizeof(uint16_t),
+    return esp_cache_msync((void *)(fb + (size_t)physical.y * stride),
+                    (size_t)physical.h * stride,
                     ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
-
-    return ESP_OK;
 }
 #endif

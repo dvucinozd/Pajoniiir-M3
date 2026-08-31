@@ -5,7 +5,7 @@ Aktualni ulaz:
 - [Project Overview](PROJECT_OVERVIEW.md)
 - [Architecture](ARCHITECTURE.md)
 - [Hardware Wiring](HARDWARE_WIRING.md)
-- [DSI-506 Display Arrival Dossier](DISPLAY_DSI506_BRINGUP.md)
+- [DSI-506 Bring-up and Acceptance](DISPLAY_DSI506_BRINGUP.md)
 - [DDJ-FLX4 MIDI Map](DDJ_FLX4_MIDI_MAP.md)
 - [Development Plan](DEVELOPMENT_PLAN.md)
 - [Startup Checklist](STARTUP_CHECKLIST.md)
@@ -13,12 +13,14 @@ Aktualni ulaz:
 - [P4 OTA](OTA-UPDATE.md)
 - [Documentation Status](DOCUMENTATION_STATUS.md)
 
-Trenutni handoff: na uređaju je `M3-41-g133f399 / ota_0`; FLX4, USB3 knjižnica
-od 191 trake, Wi-Fi i PCM5102A master rade, deckovi su zaustavljeni, a Wi-Fi
-ostaje uključen. PCM5102A L/R, tihi idle, 44,1/48-kHz switching, mixed-rate
-dual-deck i limiter prihvaćeni su 2026-08-26. Daljnji hardverski rad čeka
-5,0-inčni zaslon, preliminarno identificiran kao `DSI-506` / obitelj `DSI5061`.
-Priprema i prvi sigurni koraci zapisani su u display arrival dossieru.
+Trenutni handoff: na uređaju je app-only `M3-45-g5bb55bc-dirty / factory`, dok
+je `M3-41-g133f399 / ota_0` posljednji potpisani rollback baseline. FLX4, USB3
+knjižnica od 191 trake, Wi-Fi i PCM5102A master rade. EYOYO
+`DSI506 / DYL0023` prihvaćen je za 800×480 sliku, boje, nativni landscape i
+poravnanje; aktivan je `bsp_p4_m3`. Touch `0x38` još nije prihvaćen zbog
+FT5x06 I2C read grešaka. Sljedeći rad su touch, Master Tempo/Shift+Browse/Load
+i zajednički integration soak. Detalji i odbijeni kandidati zapisani su u
+display bring-up dokumentu.
 
 `reference/` sadrži izvore za MIDI i Rekordbox format. Svi ostali dokumenti
 koji nisu navedeni u gornjem popisu — uključujući bench bilješke, stare odluke,

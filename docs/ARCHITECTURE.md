@@ -1,6 +1,6 @@
 # Architecture
 
-Status: važeća single-chip arhitektura, 2026-08-26.
+Status: važeća single-chip arhitektura, 2026-08-31.
 
 ## Sustav
 
@@ -14,11 +14,12 @@ ESP32-C6 ── SDIO/ESP-Hosted ───┘       └─> FLX4 MIDI LED + headp
 USB1/CH340C je izvan aplikacijskog data puta i služi za napajanje, flashing i
 serijsku dijagnostiku.
 
-Dijagram prikazuje ciljnu završnu topologiju. Na aktualnom benchu potvrđeni su
-USB1, USB2/FLX4, USB3/Rekordbox, C6/Wi-Fi i PCM5102A master krakovi. `DSI-506`
-display/touch kandidat još nije stigao; firmware gradi UI put i priprema
-FT5426/`0x38`, ali to nije zamjena za identifikaciju stvarnog IC-a ni fizički
-panel/touch acceptance.
+Dijagram prikazuje aktualnu fizičku topologiju. Na benchu su potvrđeni USB1,
+USB2/FLX4, USB3/Rekordbox, C6/Wi-Fi, PCM5102A master i slika na EYOYO
+`DSI506 / DYL0023`. Aktivni `bsp_p4_m3` izravno posjeduje DSI/panel kontroler,
+backlight i I2C touch put; `bsp_jc4880` ostaje samo in-tree referenca i
+eksplicitno je isključen iz produkcijskog linkanja. Touch još nije prihvaćen:
+adresa `0x38` postoji, ali FT5x06 runtime read javlja I2C greške.
 
 ## Ownership
 
@@ -38,7 +39,9 @@ ESP32-P4 jedini posjeduje:
 - `deck_core`: actor-like state machine i semantička ponašanja kontrola.
 - `audio_engine`: dual-deck decode, PCM timeline, mixer, DSP i izlazni tapovi.
 - `usb_storage` + `library`: MSC lifecycle, Rekordbox PDB/ANLZ i metadata cache.
-- `ui`: LVGL ekrani, touch i PPA waveform render.
+- `ui`: LVGL ekrani, RGB565 partial canvas, PPA konverzija u jedan RGB888 DSI
+  framebuffer, touch adapter i waveform render. DSI scanout je 0°/1:1;
+  mirror i PPA RGB-swap kandidati hardverski su odbačeni.
 - `wifi_link` + `web_server`: C6 mreža, operatorski SoftAP, privremeni servisni
   STA, remote kontrola i dijagnostika. Probe i pull OTA dijele ekskluzivni
   AP→STA→AP transition lease; Settings gašenje čeka završetak tog prijelaza.

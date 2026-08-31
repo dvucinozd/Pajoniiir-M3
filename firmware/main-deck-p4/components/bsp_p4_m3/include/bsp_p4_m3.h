@@ -4,11 +4,14 @@
 //
 // Pin reference for JC-ESP32P4-M3-DEV:
 //   MIPI-DSI (J2 15-pin FPC):
-//     DSI Lane 1: DSI_A_DATA1_N / DSI_A_DATA1_P (Pins 2, 3)
+//     DSI Lane 1: DSI_A_DATA1_N / DSI_A_DATA1_P (Pins 2, 3; unused by accepted profile)
 //     DSI Clock:  DSI_A_CLK_N   / DSI_A_CLK_P   (Pins 5, 6)
-//     DSI Lane 0: DSI_A_DATA0_N / DSI_A_DATA0_P (Pins 8, 9)
-//     Touch I2C:  ES_I2C_SCL (Pin 11), ES_I2C_SDA (Pin 12) -> FT5426 addr 0x38
+//     DSI Lane 0: DSI_A_DATA0_N / DSI_A_DATA0_P (Pins 8, 9; active)
+//     Shared I2C: ES_I2C_SCL (Pin 11), ES_I2C_SDA (Pin 12)
+//                 FT5426 touch addr 0x38, panel power/backlight addr 0x45
 //     Power:      +3.3V (Pins 14, 15), GND (Pins 1, 4, 7, 10, 13)
+//     One lane is hardware-accepted for this DSI506/DYL0023 example; bridge
+//     identity and a vendor-level electrical specification remain unknown.
 //
 //   SDMMC (MicroSD slot 0):
 //     D0..D3:     GPIO39..42, CMD: GPIO44, CLK: GPIO43 (LDO channel 4)
@@ -20,6 +23,7 @@
 //     D0..D3: GPIO14..17, CLK: GPIO18, CMD: GPIO19, RST: GPIO54
 
 #include "esp_err.h"
+#include "bsp_scanout.h"
 #include "esp_lcd_types.h"
 #include "esp_lcd_touch.h"
 #include "driver/i2c_master.h"
@@ -36,8 +40,8 @@
 #define BSP_LCD_FRAMEBUFFER_COUNT 1u
 
 esp_err_t bsp_display_init(void);   // 5.0" MIPI-DSI 800x480 DPI video mode
-void      bsp_display_set_backlight(uint8_t pct);
-esp_err_t bsp_touch_init(void);     // FT5426 I2C touch controller (addr 0x38)
+void      bsp_display_set_backlight(uint8_t pct); // 0x45 controller; no external PWM wiring
+esp_err_t bsp_touch_init(void);     // provisional FT5x06 path at 0x38; hardware gate open
 esp_err_t bsp_audio_init(void);     // PCM5102A MASTER I2S output
 esp_err_t bsp_audio_force_safe_boot_state(void);
 esp_err_t bsp_sd_init(void);        // MicroSD SDMMC slot 0 (/sd)

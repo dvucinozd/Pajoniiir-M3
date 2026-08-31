@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
+
+# bsp_jc4880 is retained in-tree as a hardware-reference/rollback component,
+# but it exports the same public BSP symbols as the production bsp_p4_m3. If
+# both archives reach the linker, archive order can silently select the old
+# ST7701/GT911 implementation even when all consumers require bsp_p4_m3.
+set(EXCLUDE_COMPONENTS bsp_jc4880)
+
 set(EXTRA_COMPONENT_DIRS
     "components"
     "${CMAKE_CURRENT_LIST_DIR}/../common/firmware_health"

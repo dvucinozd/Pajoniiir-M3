@@ -1229,6 +1229,28 @@ Assert-FileDoesNotContain `
 
 $tests = @(
     @{
+        Name = "bsp_scanout"
+        MinTestsRun = 65969
+        Dir = "tests/bsp_scanout"
+        Target = "test_bsp_scanout.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c11",
+            "-I../../firmware/main-deck-p4/components/bsp_p4_m3/include",
+            "-o", "test_bsp_scanout.exe", "test_bsp_scanout.c"
+        )
+    },
+    @{
+        Name = "bsp_dsi_id_probe"
+        MinTestsRun = 274
+        Dir = "tests/bsp_dsi_id_probe"
+        Target = "test_bsp_dsi_id_probe.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c11",
+            "-I../../firmware/main-deck-p4/components/bsp_p4_m3/include",
+            "-o", "test_bsp_dsi_id_probe.exe", "test_bsp_dsi_id_probe.c"
+        )
+    },
+    @{
         Name = "ui_load_gate"
         MinTestsRun = 12
         Dir = "tests/ui_load_gate"
@@ -2557,7 +2579,7 @@ Invoke-ApiContract
 # renaming, duplicate legacy code in the image, and (for audio_engine) an
 # incomplete-type tentative definition that is a C11 constraint violation.
 foreach ($retired in @(
-    @{ Board = "main-deck-p4";     Component = "bsp_jc4880";                 Wrapper = "bsp_jc4880_single_fb.c" },
+    @{ Board = "main-deck-p4";     Component = "bsp_p4_m3";                  Wrapper = "bsp_p4_m3_single_fb.c" },
     @{ Board = "main-deck-p4";     Component = "ui";                         Wrapper = "ui_lvgl_backend_single_fb.c" },
     @{ Board = "main-deck-p4";     Component = "web_server";                 Wrapper = "web_server_fixed.c" },
     @{ Board = "main-deck-p4";     Component = "deck_core";                  Wrapper = "deck_core_live_led.c" },
@@ -2587,12 +2609,32 @@ Assert-FileContains `
 
 Assert-FileContains `
     -Name "p4 BSP builds its real source" `
-    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_jc4880/CMakeLists.txt") `
-    -LiteralPatterns @('SRCS "bsp_jc4880.c"')
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/CMakeLists.txt") `
+    -LiteralPatterns @('SRCS "bsp_p4_m3.c"')
+
+Assert-FileContains `
+    -Name "p4 product build excludes the symbol-compatible legacy display BSP" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/CMakeLists.txt") `
+    -LiteralPatterns @("set(EXCLUDE_COMPONENTS bsp_jc4880)")
+
+foreach ($consumer in @(
+    "firmware/main-deck-p4/main/CMakeLists.txt",
+    "firmware/main-deck-p4/components/audio_engine/CMakeLists.txt",
+    "firmware/main-deck-p4/components/ui/CMakeLists.txt"
+)) {
+    Assert-FileContains `
+        -Name ("{0} selects the JC-ESP32P4-M3 BSP" -f $consumer) `
+        -Path (Join-Path $RepoRoot $consumer) `
+        -LiteralPatterns @("bsp_p4_m3")
+    Assert-FileDoesNotContain `
+        -Name ("{0} does not select the retired JC4880 display BSP" -f $consumer) `
+        -Path (Join-Path $RepoRoot $consumer) `
+        -LiteralPatterns @("bsp_jc4880")
+}
 
 Assert-FileContains `
     -Name "p4 microSD shares the IDF6 SDMMC controller already owned by ESP-Hosted" `
-    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_jc4880/bsp_jc4880.c") `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
     -LiteralPatterns @(
         "CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE",
         "bsp_sdmmc_host_already_initialized",
@@ -2649,17 +2691,137 @@ Assert-FileContains `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/deck_core/CMakeLists.txt") `
     -LiteralPatterns @('SRCS "deck_core.c"')
 
-# bsp_jc4880.h pulls in esp_lcd/esp_codec_dev, which the host toolchain does not
+# bsp_p4_m3.h pulls in esp_lcd/esp_codec_dev, which the host toolchain does not
 # build, so this stays a text check rather than a compile contract.
 Assert-FileContains `
     -Name "p4 display shares one authoritative framebuffer count" `
-    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_jc4880/include/bsp_jc4880.h") `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/include/bsp_p4_m3.h") `
     -LiteralPatterns @("BSP_LCD_FRAMEBUFFER_COUNT 1")
 
 Assert-FileContains `
     -Name "p4 display allocates only the framebuffer the backend actually uses" `
-    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_jc4880/bsp_jc4880.c") `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
     -LiteralPatterns @(".num_fbs            = BSP_LCD_FRAMEBUFFER_COUNT", "_Static_assert(BSP_LCD_FRAMEBUFFER_COUNT == 1u")
+
+Assert-FileContains `
+    -Name "p4 DSI-506 uses the detected 0x45 controller for power and factory backlight" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @(
+        "BSP_PANEL_CTRL_I2C_ADDR 0x45",
+        "BSP_PANEL_REG_POWERON",
+        "BSP_PANEL_REG_PWM",
+        "panel_ctrl_power_on()",
+        "panel_ctrl_write(BSP_PANEL_REG_PORTA, (1u << 2))"
+    )
+
+Assert-FileContains `
+    -Name "p4 display diagnostic reads candidate ID without assuming bridge identity" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @(
+        "BSP_ICN6211_CANDIDATE_ADDR 0x2c",
+        "i2c_master_transmit_receive(candidate, &reg, 1, &id[reg], 1, 20)",
+        "id[0] == 0xc1 && id[1] == 0x62 && id[2] == 0x11",
+        "i2c_master_bus_rm_device(candidate)",
+        "vendor bridge configuration withheld pending identification"
+    )
+
+Assert-FilePatternsOrdered `
+    -Name "p4 display diagnostic scans before and after panel power-on" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @('bsp_display_i2c_scan("power-off")', 'ESP_RETURN_ON_ERROR(panel_ctrl_power_on()', 'bsp_display_i2c_scan("power-on-early")', 'bsp_display_i2c_scan("power-on-settled")', 'bsp_display_bridge_identify();')
+
+Assert-FileDoesNotContain `
+    -Name "p4 display does not send unverified TC358762 proxy commands" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @("tc358762_write", "tc358762_init", "BSP_PANEL_REG_WR_ADDRH", "BSP_PANEL_REG_WRITEL", "bridge proxy reachable")
+
+# The LL register types are ESP32-P4-only: these are source contracts, not a
+# simulation of DSI response handling. The shared ID sequencing policy above
+# has behavioral tests; the hardware FIFO/deadline still needs COM6 evidence.
+Assert-FileContains `
+    -Name "p4 DSI ID read is bounded and repeats a matching identity" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @(
+        "BSP_DSI_ID_TIMEOUT_US     200000",
+        "esp_timer_get_time() >= deadline",
+        "MIPI_DSI_DT_SET_MAXIMUM_RETURN_PKT, 0, 1",
+        "MIPI_DSI_DT_GENERIC_READ_REQUEST_2, 1, reg",
+        "ESP_ERR_INVALID_RESPONSE",
+        "bsp_dsi_id_probe(bsp_dsi_read_id_byte, bus, id)"
+    )
+
+Assert-FileDoesNotContain `
+    -Name "p4 DSI diagnostic avoids IDF unbounded read helpers" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @("mipi_dsi_hal_host_gen_read_", "esp_lcd_panel_io_rx_param(")
+
+Assert-FilePatternsOrdered `
+    -Name "p4 DSI host resets after ID probe before any DPI client exists" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @("bsp_display_dsi_identify(dsi_bus);", "mipi_dsi_hal_deinit(&dsi_bus->hal);", "esp_lcd_del_dsi_bus(dsi_bus)", "esp_lcd_new_dsi_bus(&bus_cfg, &dsi_bus)", "esp_lcd_new_panel_dpi(dsi_bus,")
+
+Assert-FileDoesNotContain `
+    -Name "p4 DSI-506 does not claim the unmodified module has external GPIO23 PWM" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @("BSP_LCD_BL_GPIO", "ledc_set_duty")
+
+# Host-only clock request/order contract; waveform validation needs hardware.
+Assert-FilePatternsOrdered `
+    -Name "p4 early-clock experiment requests HS before software POWERON and after host reset" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @(
+        '.clock_lane_force_hs = true',
+        'esp_lcd_new_dsi_bus(&bus_cfg, &dsi_bus)',
+        'bsp_dsi_log_clock(dsi_bus, "before-power-on")',
+        'ESP_RETURN_ON_ERROR(panel_ctrl_power_on()',
+        'bsp_dsi_log_clock(dsi_bus, "after-power-on")',
+        'bsp_display_dsi_identify(dsi_bus);',
+        'esp_lcd_del_dsi_bus(dsi_bus)',
+        'esp_lcd_new_dsi_bus(&bus_cfg, &dsi_bus)',
+        'bsp_dsi_log_clock(dsi_bus, "after-host-recreate")',
+        'esp_lcd_panel_init(s_panel)',
+        'bsp_dsi_log_clock(dsi_bus, "video-started")'
+    )
+
+Assert-FileContains `
+    -Name "p4 scanout keeps RGB888 memory and the DSI-506 timing candidate" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @(
+        'BSP_DSI_LANE_NUM        1', 'BSP_DSI_LANE_MBPS       800',
+        'BSP_DPI_CLK_MHZ         27.777f',
+        '.in_color_format    = LCD_COLOR_FMT_RGB888',
+        '.out_color_format   = LCD_COLOR_FMT_RGB888',
+        'BSP_LCD_HSYNC           2', 'BSP_LCD_HBP             45',
+        'BSP_LCD_HFP             59', 'BSP_LCD_VSYNC           2',
+        'BSP_LCD_VBP             22', 'BSP_LCD_VFP             7'
+    )
+
+Assert-FileContains `
+    -Name "p4 DSI-506 uses hardware-accepted burst packetization" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @(
+        'MIPI_DSI_LL_VIDEO_BURST_WITH_SYNC_PULSES',
+        'mipi_dsi_host_ll_dpi_enable_frame_ack(dsi_bus->hal.host, false)'
+    )
+
+Assert-FileDoesNotContain `
+    -Name "p4 DSI-506 does not retain rejected non-burst packetization" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @('MIPI_DSI_LL_VIDEO_NON_BURST_WITH_SYNC_PULSES')
+
+# Hardware-only PPA path: host verifies the byte writer behaviour separately.
+Assert-FileContains `
+    -Name "p4 PPA converts RGB565 sources into the packed RGB888 scanout" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/ui/ui_lvgl_backend.c") `
+    -LiteralPatterns @(
+        '.in.srm_cm          = PPA_SRM_COLOR_MODE_RGB565',
+        '.out.srm_cm         = PPA_SRM_COLOR_MODE_RGB888',
+        'BSP_LCD_H_RES * BSP_LCD_V_RES * BSP_SCANOUT_BYTES_PER_PIXEL',
+        '.mirror_x           = UI_PPA_MIRROR_X',
+        '#define ui_overlay_map_backend     ui_overlay_map_ppa0',
+        'bsp_scanout_fill_rect_rgb565(fb, stride * BSP_LCD_V_RES,',
+        'lv_display_set_color_format(s_disp, LV_COLOR_FORMAT_RGB565)'
+    )
 
 Assert-FilePatternsOrdered `
     -Name "p4 product boot forces the retired speaker PA low before settings load" `
@@ -2668,7 +2830,7 @@ Assert-FilePatternsOrdered `
 
 Assert-FileContains `
     -Name "p4 retired speaker route is compile-time rejected and keeps PA low" `
-    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_jc4880/bsp_jc4880.c") `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
     -LiteralPatterns @("BSP_SPEAKER_ROUTE_RETIRED", "gpio_set_level(BSP_AUDIO_PA_GPIO, 0)", "ESP_ERR_NOT_SUPPORTED")
 
 Assert-FileContains `

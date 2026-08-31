@@ -2,7 +2,7 @@
 
 Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
 Beat Jump, Loop Adjust/Quantize, shifted transport/sync, Beat FX, UAC health,
-gapless Censor i PCM5102A master acceptance blokova, 2026-08-26.
+gapless Censor, PCM5102A master i DSI image acceptance blokova, 2026-08-31.
 
 ## Trenutna baza
 
@@ -17,13 +17,13 @@ Wi-Fi programski temelj već postoji: ESP32-C6/ESP-Hosted preko SDIO-a,
 SoftAP `Pajoniiir-M3`, web API, privremeni STA put i potpisani P4 OTA. APSTA,
 HTTPS pull, rollback, download fault, post-OTA equality dijagnostika i
 dual-USB/audio/Wi-Fi soak hardverski su zatvoreni; Wi-Fi ostaje uključen na
-benchu radi rada bez zaslona.
+benchu tijekom touch/UI nastavka.
 
-Ciljani 5,0-inčni MIPI-DSI zaslon (800×480, nativni landscape) s kapacitivnim
-dodirom naručen je i čeka se njegov dolazak. Oznaka je `DSI-506`; FT5426/`0x38`
-ostaje pripremljeni kandidat do provjere stvarnog IC-a ili I2C scana.
-Hardverski bring-up još nije potvrđen. PCM5102A I2S master put fizički je spojen
-i prihvaćen 2026-08-26.
+5,0-inčni EYOYO `DSI506 / DYL0023` spojen je i 800×480 image gate je zatvoren:
+RGB888, nativni landscape, boje i horizontalno poravnanje fizički su prihvaćeni
+na aktivnom `bsp_p4_m3`. Touch adresa `0x38` postoji, ali FT5x06 runtime read
+javlja I2C greške i touch acceptance ostaje otvoren. PCM5102A I2S master put
+fizički je spojen i prihvaćen 2026-08-26.
 
 Prvi korisni firmware nakon `RC2` uvodi release identitet `M3`. Verzija se
 dobiva iz `git describe`, pa je implementacijski commit namijenjen anotiranom
@@ -33,12 +33,18 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Instalirani produkcijski firmware baseline je `M3-41-g133f399` u
+Posljednji potpisani produkcijski rollback baseline je `M3-41-g133f399` u
 `ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
 2.369.552 B, podigao novi image, vratio OTA API u `idle` te obnovio FLX4 MIDI
 In/Out/UAC, USB3 knjižnicu od 191 trake i SoftAP `Pajoniiir-M3`. Oba decka su
 nakon završnog smokea zaustavljena, service log nema dropova, a Wi-Fi i Windows
-profil ostavljeni su uključeni radi lakšeg učitavanja traka bez zaslona.
+profil ostavljeni su uključeni.
+
+Aktualni app-only bench image je `M3-45-g5bb55bc-dirty` u `factory`, SHA-256
+`52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`.
+On prebacuje produkcijski build na `bsp_p4_m3`, koristi jednu DSI lane na
+800 Mbps, RGB888 i hardware-prihvaćenu burst packetizaciju. GUI se podiže
+izravno, bez dijagnostičkih traka, a USB3 ponovno učitava 191 traku.
 
 D1 48-kHz i D2 44,1-kHz gapless Censor acceptance potvrdio je reverse,
 napredovalu slip poziciju, gladak release i nulte kontrolirane
@@ -55,10 +61,11 @@ operator nije čuo clipping, pucketanje, prekide ni pumping.
 
 Nastavak je sada:
 
-1. kada stigne zaslon, evidentirati stvarni panel/controller i pokrenuti
-    800×480 DSI/touch bring-up, zatim Master Tempo i Shift + Browse/Load UI gate;
-2. nakon što su oba sklopa dostupna, odraditi zajednički display/touch,
-    master/headphones, dual-deck i Wi-Fi integration soak.
+1. identificirati i stabilizirati touch put na `0x38`, zatim prihvatiti cijelu
+   površinu, rubove i orijentaciju;
+2. izvesti Master Tempo i Shift + Browse/Load eyes-on UI gate;
+3. odraditi zajednički display/touch, master/headphones, dual-deck i Wi-Fi
+   integration soak.
 
 ## Sljedeće faze
 
@@ -331,20 +338,23 @@ promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
 - [x] pripremiti pre-arrival dossier za kandidat `DSI-506` / `DSI5061`, J2
   pinout, FFC provjeru, postojeći dormantni `bsp_p4_m3`, backlight ograničenje i
   fazni acceptance (`docs/DISPLAY_DSI506_BRINGUP.md`);
-- po dolasku evidentirati točan panel/controller, DSI lane konfiguraciju,
-  timing, reset, backlight te stvarni touch IC i I2C adresu;
-- pokrenuti panel u 800×480 nativnom landscape načinu i potvrditi stabilan
-  cold/warm boot bez tearinga, artefakata ili periodičnog gubitka slike;
-- prilagoditi BSP/Kconfig, LVGL rezoluciju, PPA put i touch transformaciju tek
-  nakon potvrde stvarnog panel ID-a i električnih parametara;
-- provjeriti cijelu dodirnu površinu, orijentaciju, multitouch gdje ga UI
+- [x] evidentirati isporučeni EYOYO `DSI506 / DYL0023`, FFC/J2, I2C adrese,
+  tvornički backlight i hardverski prihvaćenu DSI lane/timing/video konfiguraciju;
+- [x] aktivirati `bsp_p4_m3`, isključiti simbol-kompatibilni legacy BSP iz
+  linkanja te prilagoditi LVGL/PPA put na jedan RGB888 framebuffer;
+- [x] pokrenuti panel u 800×480 nativnom landscape načinu i potvrditi boje,
+  geometriju, redoslijed i stabilan warm boot bez horizontalnog omatanja;
+- [ ] identificirati zašto FT5x06 read na prisutnoj adresi `0x38` javlja I2C
+  greške; potvrditi stvarni touch protokol/reset/INT;
+- [ ] provjeriti cijelu dodirnu površinu, orijentaciju, multitouch gdje ga UI
   koristi, svjetlinu, potrošnju i ponašanje screensavera;
-- vizualno pregledati sve ekrane te tek nakon toga obnoviti 800×480 UI
+- [ ] vizualno pregledati sve ekrane te tek nakon toga obnoviti 800×480 UI
   screenshot baseline i odraditi dugi display/touch/PSRAM soak.
 
-Status: hardverski rad je blokiran do dolaska zaslona. Kandidat je identificiran
-kao `DSI-506`, vjerojatno obitelj `DSI5061/DSI5061-A`; controller naredbe,
-reviziju, FFC orijentaciju i timing ne treba nagađati.
+Status: display-image dio je prihvaćen 2026-08-31. Non-burst način odbačen je
+nakon mjerene faze `70123456`; burst sync pulses uklonio je wrap uz nepromijenjen
+timing. Bridge identitet i vendor init ostaju nepoznati i ne nagađaju se. Touch
+i zajednički soak još su otvoreni.
 
 Acceptance: puni kadar i touch koordinate rade u nativnom landscapeu na cijeloj
 površini, svi postojeći UI tokovi su čitljivi i nema display/audio regresija.
@@ -387,7 +397,7 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   FLANGER/DELAY DSP te potpuni shifted reset statea i ON/OFF LED-ice;
 - [x] hardware-verify D1 ANLZ-grid ponašanje shifted CUE/LOOP CALL back/forward
   i inertni safety behavior Shift + Smart CFX/Fader kontrola;
-- [ ] nakon dolaska zaslona hardware-verify Shift + Browse force-open/ubrzano
+- [ ] hardware-verify Shift + Browse force-open/ubrzano
   kretanje i Shift + Load D1/D2 routing;
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
@@ -425,8 +435,8 @@ CALL:
 `30000→29574→30058 ms`, odnosno jedan forward beat od 484 ms pri 124 BPM,
 bez release duplikata ili audio/USB counter delte. Shifted Smart CFX/Fader
 ostali su programski i fizički OFF, u skladu s namjernim no-op dizajnom.
-Browse/Load helperi ne mogu dobiti smislen eyes-on acceptance bez zaslona i
-odgođeni su do display bring-upa.
+Zaslon je sada dostupan, pa su Browse/Load helperi prebačeni u sljedeći eyes-on
+UI acceptance blok čim touch ili privremena pouzdana UI navigacija bude spremna.
 
 Screen-independent release hardening zatim je dobio čistu, host-testiranu UAC
 health politiku. Clock-correction deadband ostaje 3/8–5/8 ringa, a upozorenje se
@@ -464,7 +474,7 @@ underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
   seeka ili drugog PCM buffera;
 - [x] hardware-verify Censor reverse/release na oba decka uz nulte output-late,
   PCM-underrun i UAC drop/overflow delte;
-- [ ] nakon dolaska zaslona uključiti Master Tempo kroz UI i izmjeriti stvarni
+- [ ] nakon touch stabilizacije uključiti Master Tempo kroz UI i izmjeriti stvarni
   dual-deck keylock/PSRAM deadline uz suprotne pitch vrijednosti;
 - [x] postaviti pragove za UAC ring i output timing alarme, uz idle suppression,
   rate-limitirani servisni log i status API observability;

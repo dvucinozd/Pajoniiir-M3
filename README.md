@@ -10,8 +10,9 @@ DAC i ESP32-C6 Wi-Fi modul, bez računala i bez pomoćnog kontrolnog MCU-a.
 - USB2 / FS Host: DDJ-FLX4 MIDI In/Out i UAC1 slušalice
 - USB3 / HS Host: Rekordbox USB Flash / MSC
 - GPIO1/2/3: PCM5102A I2S master izlaz
-- MIPI-DSI + kapacitivni touch: 800×480 landscape UI; FT5426 je pripremljeni
-  kandidat koji čeka potvrdu stvarnog `DSI-506` primjerka
+- MIPI-DSI: fizički prihvaćen 800×480 landscape UI na EYOYO
+  `DSI506 / DYL0023`; touch adresa `0x38` postoji, ali FT5x06 čitanje i
+  koordinate još čekaju hardware acceptance
 - ESP32-C6 preko SDIO: Wi-Fi 6 / ESP-Hosted, operatorski SoftAP
   `Pajoniiir-M3` te privremeni APSTA servisni uplink za potpisani P4 OTA, bez
   gašenja lokalnog DHCP/HTTP puta
@@ -23,20 +24,24 @@ LED callback prema izravnom FLX4 USB hostu.
 
 ## Trenutni bench status
 
-Instalirani firmware baseline je
-`M3-41-g133f399` u `ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake,
-SoftAP `Pajoniiir-M3`, web kontrola i potpisani OTA rade; oba decka su nakon
-završnog smokea zaustavljena, a Wi-Fi ostaje uključen radi lakšeg učitavanja
-traka bez zaslona.
+Na benchu je app-only display acceptance kandidat `M3-45-g5bb55bc-dirty` u
+`factory` particiji, SHA-256
+`52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`.
+Posljednji potpisani rollback/release baseline ostaje `M3-41-g133f399` u
+`ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, SoftAP
+`Pajoniiir-M3`, web kontrola i potpisani OTA rade; Wi-Fi ostaje uključen.
 
 PCM5102A je 2026-08-26 fizički spojen na GPIO1/2/3 i hardverski prihvaćen s
 44,1-kHz i 48-kHz izvorima, mixed-rate dual-deck miksom, tihim idle izlazom te
 kontroliranim full-master limiter testom bez PCM underruna ili UAC gubitka.
-5,0-inčni zaslon još nije stigao. Prodajna fotografija i oznaka `DSI-506`
-upućuju na obitelj `DSI5061/DSI5061-A`; pripremljen je arrival dossier s J2/FFC
-provjerom i sigurnim bring-up redoslijedom. Postojeći LVGL/UI ima host/screenshot
-pokrivanje, ali fizički DSI/touch i Master Tempo gate ostaju sljedeći razvojni
-blok.
+5,0-inčni EYOYO `DSI506 / DYL0023` sada je spojen i fizički prihvaćen za sliku.
+Aktivni `bsp_p4_m3` koristi jednu DSI lane na 800 Mbps, RGB888, 27,777 MHz,
+HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `7/2/22` i burst video bez frame ACK-a.
+Korisnik je potvrdio ispravne boje, čitljiv nativni landscape, redoslijed GUI-ja
+i uklonjeno horizontalno omatanje; privremene testne trake uklonjene su iz
+normalnog boota. Touch `0x38` odgovara na I2C scan, ali runtime FT5x06 čitanje
+javlja greške, pa touch, Master Tempo/Shift+Browse/Load i zajednički
+display/audio/USB/Wi-Fi soak ostaju sljedeći razvojni blok.
 
 Aktualni baseline potvrđuje FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi
@@ -107,7 +112,7 @@ Dugi Master Tempo soak i headless UI screenshot gate:
 - [Pregled projekta](docs/PROJECT_OVERVIEW.md)
 - [Arhitektura](docs/ARCHITECTURE.md)
 - [Spajanje hardvera](docs/HARDWARE_WIRING.md)
-- [DSI-506 display arrival dossier](docs/DISPLAY_DSI506_BRINGUP.md)
+- [DSI-506 bring-up i acceptance zapis](docs/DISPLAY_DSI506_BRINGUP.md)
 - [DDJ-FLX4 MIDI mapa](docs/DDJ_FLX4_MIDI_MAP.md)
 - [Plan razvoja](docs/DEVELOPMENT_PLAN.md)
 - [Startup checklist](docs/STARTUP_CHECKLIST.md)

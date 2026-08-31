@@ -1,6 +1,6 @@
 #include "control_link.h"
 #include "deck_core.h"
-#include "bsp_jc4880.h"
+#include "bsp_p4_m3.h"
 #include "library.h"
 #include "audio_engine.h"
 #include "audio_uac_health.h"
@@ -324,7 +324,7 @@ void app_main(void)
     ESP_ERROR_CHECK(p4_ota_init());
 
     ESP_LOGI(TAG, "Pajoniiir P4 main deck firmware starting");
-    ESP_LOGI(TAG, "Board: JC4880P443C_I_W (ESP32-P4)");
+    ESP_LOGI(TAG, "Board: JC-ESP32P4-M3-DEV (ESP32-P4)");
     // Log the reason for the most recent reset. A spontaneous reboot during use
     // that reports BROWNOUT points at power (bus-powered USB drive current
     // spike); PANIC/WDT points at firmware. Visible at the default WARN level.

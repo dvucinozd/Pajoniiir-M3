@@ -25,6 +25,13 @@ bool ui_overlay_map_ppa0(ui_overlay_rect_t logical,
                          int logical_h,
                          ui_overlay_rect_t *physical);
 
+/* Landscape mapping for a panel whose active image is horizontally mirrored.
+ * The PPA mirror_x flag flips pixels inside this destination rectangle. */
+bool ui_overlay_map_ppa0_mirror_x(ui_overlay_rect_t logical,
+                                  int logical_w,
+                                  int logical_h,
+                                  ui_overlay_rect_t *physical);
+
 void ui_overlay_i8_to_rgb565(const uint8_t *src,
                              int src_stride_px,
                              uint16_t *dst,
