@@ -3,8 +3,7 @@
 Status: 2026-08-31. Autoritativni wiring je `docs/HARDWARE_WIRING.md`.
 
 USB1/2/3, C6/Wi-Fi, PCM5102A i EYOYO `DSI506 / DYL0023` trenutno su aktivni na
-benchu. DSI slika je prihvaćena; touch `0x38` je prisutan, ali FT5x06 čitanje i
-koordinate još nisu prihvaćeni.
+benchu. DSI slika i fokusirani FT5426 touch gate prihvaćeni su 2026-08-31.
 
 | Funkcija | Pin / port |
 |---|---|
@@ -18,7 +17,7 @@ koordinate još nisu prihvaćeni.
 | power/flash/monitor | USB1 CH340C |
 | display | J2 MIPI-DSI; lane 0 + clock aktivni, lane 1 neaktivan |
 | display I2C | GPIO7 SDA / GPIO8 SCL; `0x45` power/backlight |
-| touch | isti J2 I2C; `0x38` FT5426/FT5x06 kandidat, acceptance otvoren |
+| touch | isti J2 I2C; FT5426/FT5x06 `0x38`, 100 kHz, `swap_xy=0`, obje mirror osi |
 | Wi-Fi | integrated ESP32-C6 over SDIO |
 
 Mikrofon, NS4150 speaker amp i Ethernet su softverski ugašeni. GPIO pinovi koji

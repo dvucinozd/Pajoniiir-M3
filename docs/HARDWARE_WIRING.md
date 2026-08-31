@@ -4,8 +4,9 @@ Status: važeća single-chip topologija i potvrđeno bench spajanje, 2026-08-31.
 
 Trenutni bench ima spojene USB1, USB2/FLX4, USB3/Rekordbox medij, PCM5102A i
 EYOYO `DSI506 / DYL0023`. DAC wiring potvrđen je 2026-08-26, a DSI slika,
-backlight, boje, nativni landscape i poravnanje 2026-08-31. Touch još nije
-prihvaćen.
+backlight, boje, nativni landscape, poravnanje i fokusirani touch gate
+2026-08-31. Touch koristi 100-kHz I2C te `swap_xy=0`, `mirror_x=1`,
+`mirror_y=1`.
 
 ## USB
 
@@ -60,9 +61,11 @@ Master izlaz se ne vodi kroz ugrađeni NS4150.
   stupnjevito mijenja svjetlinu. Vanjski `PWM/GND` nije spojen i 0-ohm selektor
   nije premješten. `FAN 3V3/GND` je samo mjerno mjesto (izmjereno 3,3 V), ne
   ulaz dodatnog napajanja zaslona.
-- `0x38` odgovara na scan i dokumentacija navodi FT5426, ali aktualni FT5x06
-  runtime read javlja I2C greške. Ne smatrati touch ni 1:1 koordinate
-  prihvaćenima dok ne prođu cijela površina, rubovi i orijentacija.
+- `0x38` je FT5426/FT5x06 touch put. Stabilan rad traži 100-kHz I2C; raniji
+  400-kHz pre-arrival override davao je runtime read greške i uklonjen je.
+  Nativno landscape mapiranje je `swap_xy=0`, `mirror_x=1`, `mirror_y=1`.
+  Kartice, Backlight drag i obje strane Overviewa fizički su potvrđeni; točan
+  corner/multitouch, screensaver i dugi integration soak ostaju zasebni gateovi.
 - Detalji i odbijeni display kandidati su u
   `docs/DISPLAY_DSI506_BRINGUP.md`.
 - ESP32-C6 koristi ESP-Hosted preko SDIO; ne mijenjati SDIO pinove bez revizije

@@ -57,6 +57,7 @@ enum {
 #define BSP_I2C_PORT            I2C_NUM_1
 #define BSP_I2C_SDA_GPIO        GPIO_NUM_7
 #define BSP_I2C_SCL_GPIO        GPIO_NUM_8
+#define BSP_TOUCH_I2C_HZ        100000
 
 // ── Master Out: PCM5102A I2S DAC ─────────────────────────────────────────────
 #define BSP_PCM5102_I2S_NUM        I2S_NUM_1
@@ -541,7 +542,10 @@ esp_err_t bsp_touch_init(void)
 
     esp_lcd_panel_io_handle_t tp_io = NULL;
     esp_lcd_panel_io_i2c_config_t tp_io_cfg = ESP_LCD_TOUCH_IO_I2C_FT5x06_CONFIG();
-    tp_io_cfg.scl_speed_hz = 400000;
+    // Keep the component default. The attached DYL0023 module ACKs address
+    // probes at either rate, but its register reads are not reliable at the
+    // old 400 kHz pre-arrival assumption over the display FFC.
+    tp_io_cfg.scl_speed_hz = BSP_TOUCH_I2C_HZ;
     ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(s_i2c_bus, &tp_io_cfg, &tp_io),
                         TAG, "FT5426 panel IO failed");
 
@@ -557,8 +561,8 @@ esp_err_t bsp_touch_init(void)
         },
         .flags = {
             .swap_xy  = 0,
-            .mirror_x = 0,
-            .mirror_y = 0,
+            .mirror_x = 1,
+            .mirror_y = 1,
         },
     };
     esp_err_t err = esp_lcd_touch_new_i2c_ft5x06(tp_io, &tp_cfg, &s_touch);
@@ -568,8 +572,8 @@ esp_err_t bsp_touch_init(void)
         return ESP_OK;
     }
 
-    ESP_LOGI(TAG, "FT5426 touch ready (I2C SDA=%d SCL=%d, addr=0x38, 800x480 landscape)",
-             BSP_I2C_SDA_GPIO, BSP_I2C_SCL_GPIO);
+    ESP_LOGI(TAG, "FT5426 touch ready (I2C SDA=%d SCL=%d, addr=0x38, %u Hz, 800x480 landscape)",
+             BSP_I2C_SDA_GPIO, BSP_I2C_SCL_GPIO, BSP_TOUCH_I2C_HZ);
     return ESP_OK;
 }
 

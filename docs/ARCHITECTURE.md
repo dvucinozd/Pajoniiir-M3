@@ -18,8 +18,10 @@ Dijagram prikazuje aktualnu fizičku topologiju. Na benchu su potvrđeni USB1,
 USB2/FLX4, USB3/Rekordbox, C6/Wi-Fi, PCM5102A master i slika na EYOYO
 `DSI506 / DYL0023`. Aktivni `bsp_p4_m3` izravno posjeduje DSI/panel kontroler,
 backlight i I2C touch put; `bsp_jc4880` ostaje samo in-tree referenca i
-eksplicitno je isključen iz produkcijskog linkanja. Touch još nije prihvaćen:
-adresa `0x38` postoji, ali FT5x06 runtime read javlja I2C greške.
+eksplicitno je isključen iz produkcijskog linkanja. FT5426 na `0x38` radi na
+100 kHz; landscape mapiranje je `swap_xy=0`, `mirror_x=1`, `mirror_y=1`.
+LVGL odbacuje uzorak ako hardverski read ne uspije, umjesto korištenja starih
+koordinata.
 
 ## Ownership
 

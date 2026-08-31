@@ -20,17 +20,18 @@ obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
 
 `M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline za FLX4 MIDI/UAC,
 USB3 library/decode, Wi-Fi remote/OTA i dual-deck DSP, uključujući gapless
-Censor. App-only `M3-45-g5bb55bc-dirty / factory` dodaje aktivni
+Censor. App-only `M3-46-gee004d6-dirty / factory` dodaje aktivni
 `bsp_p4_m3` i fizički prihvaćenu DSI sliku na EYOYO `DSI506 / DYL0023`:
 800×480 RGB888, ispravne boje, nativni landscape i poravnanje bez cyclic wrapa.
-Touch `0x38` još nije prihvaćen jer FT5x06 runtime čitanje javlja I2C greške.
+FT5426 touch na `0x38` stabiliziran je na 100 kHz uz obje mirror osi. Korisnik
+je 2026-08-31 potvrdio kartice, Backlight drag i kontrole na obje strane.
 PCM5102A iz koraka 5 spojen je i hardverski prihvaćen 2026-08-26: L/R, tihi idle, 44,1/48-kHz switching,
 mixed-rate dual-deck i full-master limiter prošli su bez čujnog clippinga, PCM
 underruna ili UAC gubitka.
 
-Bench ostaje na uključenom Wi-Fi SoftAP-u. Nastavak počinje identifikacijom i
-prihvatom toucha, zatim Master Tempo i Shift + Browse/Load UI gateom te
-zajedničkim display/audio/USB/Wi-Fi soakom.
+Bench ostaje na uključenom Wi-Fi SoftAP-u. Fokusirani touch gate je prihvaćen;
+nastavak su Master Tempo i Shift + Browse/Load UI gate, screensaver/multitouch
+rubna provjera te zajednički display/audio/USB/Wi-Fi soak.
 
 ## Granice sustava
 

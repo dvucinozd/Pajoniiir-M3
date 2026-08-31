@@ -4,8 +4,8 @@ Status: 2026-08-31.
 
 ## Trenutni handoff
 
-- aktualni bench image: app-only `M3-45-g5bb55bc-dirty`, `factory`, SHA-256
-  `52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`;
+- aktualni bench image: app-only `M3-46-gee004d6-dirty`, `factory`, SHA-256
+  `00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`;
 - posljednji potpisani rollback/release baseline: `M3-41-g133f399`, `ota_0`;
 - potvrđeno: FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi
   SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
@@ -14,12 +14,12 @@ Status: 2026-08-31.
   nativni landscape, ispravne boje i poravnanje, burst/no-frame-ACK;
 - aktivan je `bsp_p4_m3`, a legacy `bsp_jc4880` je izuzet iz produkcijskog
   linkanja; normalni boot više nema privremene testne trake;
-- touch gate je otvoren: I2C `0x38` postoji, ali FT5x06 runtime read javlja
-  I2C greške i koordinate nisu prihvaćene;
+- FT5426 touch na I2C `0x38` radi na 100 kHz uz `swap_xy=0`, obje mirror osi;
+  potvrđene su sve četiri kartice, Backlight drag i kontrole na obje strane;
 - PCM5102A je spojen i hardverski prihvaćen: L/R, tihi idle, 44,1/48 kHz,
   mixed-rate dual-deck, headroom i limiter;
-- nastavak: touch identifikacija i cijela površina, UI Master Tempo i Shift +
-  Browse/Load gate, zatim zajednički display/master/headphones/dual-deck/Wi-Fi
+- nastavak: UI Master Tempo i Shift + Browse/Load gate, screensaver/multitouch
+  rubna provjera, zatim zajednički display/master/headphones/dual-deck/Wi-Fi
   integration soak.
 
 ## Aktivni dokumenti

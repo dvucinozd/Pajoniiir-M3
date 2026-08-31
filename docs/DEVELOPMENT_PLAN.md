@@ -21,9 +21,10 @@ benchu tijekom touch/UI nastavka.
 
 5,0-inčni EYOYO `DSI506 / DYL0023` spojen je i 800×480 image gate je zatvoren:
 RGB888, nativni landscape, boje i horizontalno poravnanje fizički su prihvaćeni
-na aktivnom `bsp_p4_m3`. Touch adresa `0x38` postoji, ali FT5x06 runtime read
-javlja I2C greške i touch acceptance ostaje otvoren. PCM5102A I2S master put
-fizički je spojen i prihvaćen 2026-08-26.
+na aktivnom `bsp_p4_m3`. FT5426 touch na `0x38` stabiliziran je na 100 kHz;
+prihvaćeno mapiranje je `swap_xy=0`, `mirror_x=1`, `mirror_y=1`, a kartice,
+Backlight drag i kontrole na obje strane fizički su potvrđeni 2026-08-31.
+PCM5102A I2S master put fizički je spojen i prihvaćen 2026-08-26.
 
 Prvi korisni firmware nakon `RC2` uvodi release identitet `M3`. Verzija se
 dobiva iz `git describe`, pa je implementacijski commit namijenjen anotiranom
@@ -40,8 +41,8 @@ In/Out/UAC, USB3 knjižnicu od 191 trake i SoftAP `Pajoniiir-M3`. Oba decka su
 nakon završnog smokea zaustavljena, service log nema dropova, a Wi-Fi i Windows
 profil ostavljeni su uključeni.
 
-Aktualni app-only bench image je `M3-45-g5bb55bc-dirty` u `factory`, SHA-256
-`52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`.
+Aktualni app-only bench image je `M3-46-gee004d6-dirty` u `factory`, SHA-256
+`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`.
 On prebacuje produkcijski build na `bsp_p4_m3`, koristi jednu DSI lane na
 800 Mbps, RGB888 i hardware-prihvaćenu burst packetizaciju. GUI se podiže
 izravno, bez dijagnostičkih traka, a USB3 ponovno učitava 191 traku.
@@ -61,9 +62,8 @@ operator nije čuo clipping, pucketanje, prekide ni pumping.
 
 Nastavak je sada:
 
-1. identificirati i stabilizirati touch put na `0x38`, zatim prihvatiti cijelu
-   površinu, rubove i orijentaciju;
-2. izvesti Master Tempo i Shift + Browse/Load eyes-on UI gate;
+1. izvesti Master Tempo i Shift + Browse/Load eyes-on UI gate;
+2. završiti screensaver, corner/multitouch i ponovljeni touch rubni gate;
 3. odraditi zajednički display/touch, master/headphones, dual-deck i Wi-Fi
    integration soak.
 
@@ -344,17 +344,19 @@ promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
   linkanja te prilagoditi LVGL/PPA put na jedan RGB888 framebuffer;
 - [x] pokrenuti panel u 800×480 nativnom landscape načinu i potvrditi boje,
   geometriju, redoslijed i stabilan warm boot bez horizontalnog omatanja;
-- [ ] identificirati zašto FT5x06 read na prisutnoj adresi `0x38` javlja I2C
-  greške; potvrditi stvarni touch protokol/reset/INT;
-- [ ] provjeriti cijelu dodirnu površinu, orijentaciju, multitouch gdje ga UI
-  koristi, svjetlinu, potrošnju i ponašanje screensavera;
+- [x] ukloniti FT5x06 read greške na `0x38`: vratiti component-default 100-kHz
+  I2C umjesto 400-kHz pre-arrival overridea;
+- [x] prihvatiti landscape koordinate (`swap_xy=0`, obje mirror osi), sve četiri
+  kartice, Backlight drag i kontrole na obje strane;
+- [ ] dovršiti točan corner/multitouch gate, svjetlinu, potrošnju i ponašanje
+  screensavera;
 - [ ] vizualno pregledati sve ekrane te tek nakon toga obnoviti 800×480 UI
   screenshot baseline i odraditi dugi display/touch/PSRAM soak.
 
-Status: display-image dio je prihvaćen 2026-08-31. Non-burst način odbačen je
+Status: display-image i fokusirani touch dio prihvaćeni su 2026-08-31. Non-burst način odbačen je
 nakon mjerene faze `70123456`; burst sync pulses uklonio je wrap uz nepromijenjen
-timing. Bridge identitet i vendor init ostaju nepoznati i ne nagađaju se. Touch
-i zajednički soak još su otvoreni.
+timing. Bridge identitet i vendor init ostaju nepoznati i ne nagađaju se.
+Corner/multitouch, screensaver i zajednički soak još su otvoreni.
 
 Acceptance: puni kadar i touch koordinate rade u nativnom landscapeu na cijeloj
 površini, svi postojeći UI tokovi su čitljivi i nema display/audio regresija.

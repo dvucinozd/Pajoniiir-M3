@@ -2809,6 +2809,27 @@ Assert-FileDoesNotContain `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
     -LiteralPatterns @('MIPI_DSI_LL_VIDEO_NON_BURST_WITH_SYNC_PULSES')
 
+Assert-FileContains `
+    -Name "p4 DSI-506 touch keeps the hardware-accepted bus rate and landscape mapping" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
+    -LiteralPatterns @(
+        'BSP_TOUCH_I2C_HZ        100000',
+        'tp_io_cfg.scl_speed_hz = BSP_TOUCH_I2C_HZ',
+        '.swap_xy  = 0',
+        '.mirror_x = 1',
+        '.mirror_y = 1'
+    )
+
+Assert-FilePatternsOrdered `
+    -Name "p4 LVGL touch rejects a failed hardware read before consuming coordinates" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/ui/ui_lvgl_backend.c") `
+    -LiteralPatterns @(
+        'esp_err_t read_rc = esp_lcd_touch_read_data(tp)',
+        'if (read_rc != ESP_OK)',
+        'data->state = LV_INDEV_STATE_RELEASED',
+        'esp_lcd_touch_get_data(tp, &point, &cnt, 1)'
+    )
+
 # Hardware-only PPA path: host verifies the byte writer behaviour separately.
 Assert-FileContains `
     -Name "p4 PPA converts RGB565 sources into the packed RGB888 scanout" `

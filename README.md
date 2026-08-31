@@ -10,9 +10,9 @@ DAC i ESP32-C6 Wi-Fi modul, bez računala i bez pomoćnog kontrolnog MCU-a.
 - USB2 / FS Host: DDJ-FLX4 MIDI In/Out i UAC1 slušalice
 - USB3 / HS Host: Rekordbox USB Flash / MSC
 - GPIO1/2/3: PCM5102A I2S master izlaz
-- MIPI-DSI: fizički prihvaćen 800×480 landscape UI na EYOYO
-  `DSI506 / DYL0023`; touch adresa `0x38` postoji, ali FT5x06 čitanje i
-  koordinate još čekaju hardware acceptance
+- MIPI-DSI: fizički prihvaćen 800×480 landscape UI i FT5426 touch na EYOYO
+  `DSI506 / DYL0023`; touch koristi I2C `0x38` na 100 kHz te obostrano
+  zrcaljenje koordinata bez zamjene osi
 - ESP32-C6 preko SDIO: Wi-Fi 6 / ESP-Hosted, operatorski SoftAP
   `Pajoniiir-M3` te privremeni APSTA servisni uplink za potpisani P4 OTA, bez
   gašenja lokalnog DHCP/HTTP puta
@@ -24,9 +24,9 @@ LED callback prema izravnom FLX4 USB hostu.
 
 ## Trenutni bench status
 
-Na benchu je app-only display acceptance kandidat `M3-45-g5bb55bc-dirty` u
+Na benchu je app-only display/touch acceptance kandidat `M3-46-gee004d6-dirty` u
 `factory` particiji, SHA-256
-`52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`.
+`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`.
 Posljednji potpisani rollback/release baseline ostaje `M3-41-g133f399` u
 `ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, SoftAP
 `Pajoniiir-M3`, web kontrola i potpisani OTA rade; Wi-Fi ostaje uključen.
@@ -39,9 +39,11 @@ Aktivni `bsp_p4_m3` koristi jednu DSI lane na 800 Mbps, RGB888, 27,777 MHz,
 HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `7/2/22` i burst video bez frame ACK-a.
 Korisnik je potvrdio ispravne boje, čitljiv nativni landscape, redoslijed GUI-ja
 i uklonjeno horizontalno omatanje; privremene testne trake uklonjene su iz
-normalnog boota. Touch `0x38` odgovara na I2C scan, ali runtime FT5x06 čitanje
-javlja greške, pa touch, Master Tempo/Shift+Browse/Load i zajednički
-display/audio/USB/Wi-Fi soak ostaju sljedeći razvojni blok.
+normalnog boota. FT5426 touch je stabiliziran na 100 kHz; `swap_xy=0`,
+`mirror_x=1`, `mirror_y=1`. Korisnik je potvrdio sve četiri kartice, Backlight
+drag te kontrole na obje strane Overviewa. Master Tempo/Shift+Browse/Load,
+screensaver/multitouch rubni gate i zajednički display/audio/USB/Wi-Fi soak
+ostaju sljedeći razvojni blok.
 
 Aktualni baseline potvrđuje FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi

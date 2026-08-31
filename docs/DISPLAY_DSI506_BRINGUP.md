@@ -1,6 +1,7 @@
 # DSI506 / DYL0023 Display Bring-up and Acceptance
 
-Status: display-image gate je prihvaćen 2026-08-31; touch i zajednički soak su
+Status: display-image i fokusirani touch gate prihvaćeni su 2026-08-31.
+Corner/multitouch, screensaver wake i zajednički integration soak ostaju
 otvoreni. Aktualni zapis ima prednost nad pripremom od 2026-08-26 koja je
 sačuvana ispod njega kao povijesna polazna točka.
 
@@ -59,9 +60,10 @@ sačuvana ispod njega kao povijesna polazna točka.
 - Wi-Fi postavke i audio put ostaju netaknuti. Nije pokrenut audio/integration
   soak; oba decka trebaju ostati zaustavljena tijekom display dijagnostike.
 
-### Završni image i otvoreni touch gate
+### Završni image i prihvaćeni fokusirani touch gate
 
-Završni normal-boot kandidat nakon uklanjanja privremenih testnih traka:
+Prethodni display-only kandidat nakon uklanjanja privremenih testnih traka
+(touch-fix image je dokumentiran odmah ispod):
 
 - version string: `M3-45-g5bb55bc-dirty`;
 - slot: `factory`, app-only flash na `0x20000`;
@@ -75,12 +77,30 @@ Završni normal-boot kandidat nakon uklanjanja privremenih testnih traka:
 - korisnik je potvrdio ispravne boje, nativnu orijentaciju, redoslijed tabova i
   uklonjeno horizontalno omatanje.
 
-Touch nije dio tog PASS-a. Scan vidi `0x38`, a dokumentacija navodi FT5426, no
-aktivni FT5x06 adapter tijekom runtimea prijavljuje
-`panel_io_i2c_rx_buffer(): i2c transaction failed` i
-`esp_lcd_touch_ft5x06_read_data(): I2C read error`. Nisu prihvaćeni reset/INT,
-protokol, koordinatna transformacija, rubovi ni cijela dodirna površina. Ne
-proglašavati touch ispravnim prije uklanjanja tih grešaka i fizičkog testa.
+Fokusirani touch gate prihvaćen je na završnom čistom imageu
+`M3-46-gee004d6-dirty`, app-only u `factory` na `0x20000`, veličine
+2.369.840 B (`0x242930`) i SHA-256
+`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`.
+Flash hash je verificiran, a Wi-Fi je ostao uključen.
+
+Uzrok ranijih FT5x06 runtime grešaka bio je pre-arrival BSP override od
+400 kHz. Modul na `0x38` stabilno radi na 100 kHz; nakon promjene nema
+`panel_io_i2c_rx_buffer()` ni FT5x06 read grešaka. Dijagnostičko čitanje dalo
+je sirove ID bajtove `A3/A6/A8 = FF/0B/79`, koji se ne koriste kao dokaz točnog
+IC modela. Raw sampler potvrdio je valjane koordinate i horizontalni swipe bez
+read grešaka.
+
+Prvi LVGL testovi zabilježili su fizičke dodire gornjih tabova kao
+`Library x=297 y=458` i `Settings x=703 y=457`: X je već bio ispravno zrcaljen,
+a Y je bio obrnut. Prihvaćena landscape transformacija zato je
+`swap_xy=0`, `mirror_x=1`, `mirror_y=1`. Korisnik je nakon uklanjanja svih
+privremenih dijagnostičkih logova potvrdio slijed Overview -> Library ->
+Hot Cues -> Settings, Settings backlight slider dolje/gore te velike kontrole
+na lijevoj i desnoj strani Overviewa. Time su I2C komunikacija, press/release,
+osnovna koordinatna transformacija i fokusirana interakcija prihvaćeni.
+
+Ovaj PASS ne uključuje eksplicitni corner/multitouch test, screensaver wake ni
+zajednički display/master/headphones/dual-deck/Wi-Fi integration soak.
 
 Identifikacijska referenca:
 [Linux ICN6211 driver](https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/bridge/chipone-icn6211.c)

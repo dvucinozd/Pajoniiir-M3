@@ -2,10 +2,11 @@
 
 Status: važeći bench postupak, 2026-08-31.
 
-Aktualni bench image je app-only `M3-45-g5bb55bc-dirty / factory`, SHA-256
-`52A324421F59BA6AA6E48B409FDA286E8BB6AA7086315C7EEF01813DC8DE437E`;
+Aktualni bench image je app-only `M3-46-gee004d6-dirty / factory`, SHA-256
+`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`;
 `M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline. FLX4, USB3,
-PCM5102A, Wi-Fi i DSI slika rade. Touch još nije prihvaćen.
+PCM5102A, Wi-Fi, DSI slika i fokusirani touch gate rade. Corner/multitouch,
+screensaver i zajednički integration soak još nisu prihvaćeni.
 
 ## Priprema
 
@@ -18,8 +19,8 @@ PCM5102A, Wi-Fi i DSI slika rade. Touch još nije prihvaćen.
   orijentaciji; kabel se ne premješta pod napajanjem.
 - [ ] Display koristi tvornički backlight put preko `0x45`; vanjski `PWM/GND`
   nije spojen, 0-ohm selektor nije premješten i `FAN 3V3` nije ulaz napajanja.
-- [ ] Touch se ne smatra prihvaćenim samo zato što scan vidi `0x38`; runtime
-  mora raditi bez FT5x06 I2C read grešaka i proći koordinatni gate.
+- [x] FT5426 touch na `0x38` radi bez read grešaka na 100 kHz; prihvaćene su
+  obje mirror osi bez `swap_xy`.
 - [ ] ESP-IDF profil javlja točno `ESP-IDF v6.0.2`.
 
 ## Build i flash
@@ -48,17 +49,20 @@ idf.py -p COM6 flash monitor
   ostaju ugašeni.
 - [x] Backlight se uključuje preko `0x45`, Settings/postotak koristi isti put,
   a lokalni gumb korak-po-korak mijenja svjetlinu.
-- [ ] Touch read radi bez `panel_io_i2c_rx_buffer` / FT5x06 I2C grešaka.
-- [ ] Dodir pogoduje sva četiri kuta, rubove i središte bez swap/mirror greške.
+- [x] Touch read radi bez `panel_io_i2c_rx_buffer` / FT5x06 I2C grešaka.
+- [x] Sve četiri kartice, Backlight drag te lijeva/desna Overview kontrola
+  reagiraju na odgovarajućem mjestu bez swap/mirror greške.
+- [ ] Dovršiti eksplicitni corner/multitouch i ponovljeni-edge gate.
 - [ ] Screensaver wake, Settings slideri, Library, Hot Cues, Master Tempo i
   Shift + Browse/Load prolaze eyes-on/touch acceptance.
 - [ ] Dugi display/touch/PSRAM soak nema tearing, artefakte, I2C poplavu loga,
   reset ni audio/USB posljedicu.
 
-Display-image acceptance 2026-08-31 koristio je COM6 i završni app-only image
+Display/touch acceptance 2026-08-31 koristio je COM6 i završni app-only image
 od 2.369.840 B. Puni host suite i ESP-IDF 6.0.2 build prošli su; boot je učitao
-191 traku za približno 4 s i odmah prešao u pravilno poravnati GUI. To zatvara
-samo sliku, ne touch ni zajednički integration gate.
+191 traku za približno 4 s i odmah prešao u pravilno poravnati GUI. Fokusirani
+touch gate je zatvoren; corner/multitouch, screensaver i zajednički integration
+gate ostaju otvoreni.
 
 ## USB i kontrola
 

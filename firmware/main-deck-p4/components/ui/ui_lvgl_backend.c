@@ -529,7 +529,11 @@ static void ui_touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     }
     esp_lcd_touch_point_data_t point = {0};
     uint8_t cnt = 0;
-    esp_lcd_touch_read_data(tp);
+    esp_err_t read_rc = esp_lcd_touch_read_data(tp);
+    if (read_rc != ESP_OK) {
+        data->state = LV_INDEV_STATE_RELEASED;
+        return;
+    }
     esp_err_t rc = esp_lcd_touch_get_data(tp, &point, &cnt, 1);
     if (rc == ESP_OK && cnt > 0) {
         /* Any touch counts as activity. The screensaver is a separate LVGL

@@ -18,7 +18,7 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-31.
 | R12 | I2S master output radi na 48 kHz dok je FLX4 UAC fiksiran na 44,1 kHz | kriva brzina/visina tona ili headphone ring overflow na 48-kHz trakama | implementiran stateful 48→44,1-kHz headphone resampler; host omjer/kontinuitet, 60-s 48-kHz gate, 600-s mixed-rate soak i FLX4 slušni acceptance prošli; PCM5102A 44,1/48-kHz i mixed-rate hardware gate zatvoren 2026-08-26 bez krive brzine/visine tona ili UAC gubitka |
 | R13 | Same-version channel check neposredno nakon OTA boota jednom je izazvao PANIC reset | neočekivani restart u maintenance toku | tri svježa post-OTA equality ciklusa uz test-only 64-KiB flash coredump vratila su `already running this build` bez PANIC-a; dump particija ostala je prazna, produkcijski image vraćen je i rizik ostaje samo pod monitoringom |
 | R14 | DSI bridge identitet nije poznat i prihvaćeni parametri potječu iz kontroliranog hardware bring-upa, ne vendor datasheeta | buduća revizija modula može ostati bijela, imati krive boje ili wrap | za isporučeni EYOYO `DSI506 / DYL0023` zatvoreni su FFC, backlight, RGB888, 1-lane/800-Mbps, timing, burst packetizacija, boje i poravnanje; ne slati nagađane vendor upise, zadržati točan model/reviziju u wiring dokumentu i ponovno otvoriti gate za drugi modul |
-| R15 | Touch `0x38` se enumerira, ali FT5x06 runtime read javlja I2C greške | nema dodira, zamijenjene osi ili nestabilan LVGL input | ne tvrditi FT5426 acceptance iz samog scana; identificirati protokol/reset/INT, ukloniti read greške, zatim provjeriti sva četiri ruba, orijentaciju i ponovljene dodire prije Master Tempo/Shift+Browse/Load acceptancea |
+| R15 | FT5426 na `0x38` je osjetljiv na I2C brzinu i tvornička orijentacija zrcali obje osi | nema dodira, zamijenjene osi ili nestabilan LVGL input | read greške uklonjene vraćanjem na 100 kHz; prihvaćeno mapiranje je `swap_xy=0`, `mirror_x=1`, `mirror_y=1`; kartice, Backlight drag i obje strane prošli su 2026-08-31, a corner/multitouch, screensaver i dugi integration soak ostaju pod monitoringom |
 
 Potpisani noviji signed-bundle install prošao je i lokalnim web uploadom i
 produkcijskim HTTPS pull tokom, a missing-bundle download fault završio je bez
@@ -27,9 +27,10 @@ je automatski vraćen na prethodni valjani slot. OTA acceptance blok je zatvoren
 izolirani post-OTA PANIC ostaje rezidualna monitoring stavka nakon tri neuspjela
 pokušaja reprodukcije s coredumpom. Desetominutni dual-USB/audio/Wi-Fi soak,
 FLX4 reconnect pod playbackom i USB3 media remove/reinsert su zatvoreni.
-PCM5102A headroom/limiter/noise gate zatvoren je 2026-08-26. DSI image gate za
-EYOYO `DSI506 / DYL0023` zatvoren je 2026-08-31; otvoreni su touch, eyes-on UI
-funkcije i zajednički display/master/headphones/dual-deck/Wi-Fi soak. Jednokratni simultani
+PCM5102A headroom/limiter/noise gate zatvoren je 2026-08-26. DSI image i
+fokusirani touch gate za EYOYO `DSI506 / DYL0023` zatvoreni su 2026-08-31;
+otvoreni su corner/multitouch, screensaver, eyes-on UI funkcije i zajednički
+display/master/headphones/dual-deck/Wi-Fi soak. Jednokratni simultani
 start/seek PCM D1=202 događaj nije se
 ponovio u ukupno 25 kontroliranih startova i ostaje telemetrijska stavka, a ne
 potvrđeni reproducibilni kvar. Povijesni Censor MVP radio je dva playing seeka;
