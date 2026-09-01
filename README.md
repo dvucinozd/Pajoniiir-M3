@@ -52,7 +52,8 @@ UI, sljedeći radi normalno, a touch ne aktivira kontrolu ispod screensavera.
 Corner/edge i two-finger safety gate prošli su bez ghost akcije ili stuck pressa.
 Refresh-sinkronizirani waveform kandidat također je fizički prihvaćen: solo D1
 i oba istodobna decka imaju oštar, fluidan prikaz bez bljeskanja ili audio
-posljedice. Dual-deck direct-PPA redoslijed prati scanout odozgo prema dolje;
+posljedice na svih pet zoom razina. Dual-deck direct-PPA redoslijed prati
+scanout odozgo prema dolje, a waveform update prethodi Library/Status radu;
 vidi [waveform sync zapis](docs/validation/2026-09-01-dsi506-waveform-sync.md).
 Desetominutni zajednički display/touch/master/headphones/dual-deck/USB/Wi-Fi
 soak također je prihvaćen: 1840 status pollova bez greške, nulte PCM/UAC i

@@ -232,6 +232,30 @@ function Assert-OverviewInactiveGuardBeforeCacheUpdate {
     }
 }
 
+function Assert-OverviewRefreshRunsBeforeNoncriticalUiWork {
+    $Path = Join-Path $RepoRoot "firmware/main-deck-p4/components/ui/ui.c"
+    Write-Host "==> static overview direct overlay runs before library and status work"
+    $text = Get-Content -LiteralPath $Path -Raw
+    $start = $text.IndexOf("void ui_update(void)")
+    if ($start -lt 0) {
+        throw "ui_update not found"
+    }
+    $end = $text.IndexOf("bool ui_is_overview_active", $start)
+    if ($end -lt 0) {
+        throw "ui_update end marker not found"
+    }
+    $body = $text.Substring($start, $end - $start)
+    $overview = $body.IndexOf("ui_overview_update(&ctx)")
+    $library = $body.IndexOf("ui_library_update(&ctx)")
+    $status = $body.IndexOf("ui_status_update(&ctx)")
+    if ($overview -lt 0 -or $library -lt 0 -or $status -lt 0) {
+        throw "ui_update is missing overview, library, or status phase"
+    }
+    if ($overview -gt $library -or $overview -gt $status) {
+        throw "overview waveform refresh no longer runs before noncritical UI work"
+    }
+}
+
 # The P4's FPU is single-precision only, so any double that reaches the audio
 # hot path is emulated in libgcc - hundreds of cycles per operation on a task
 # that must finish every 5.8 ms block. The gate this replaces searched
@@ -539,6 +563,7 @@ Assert-NoTestSideCompilationWrappers
 Invoke-SinglePrecisionContract
 Assert-DecodeWarmsCacheBeforeEngineLock
 Assert-OverviewInactiveGuardBeforeCacheUpdate
+Assert-OverviewRefreshRunsBeforeNoncriticalUiWork
 Assert-OverviewMainRenderCommitGuard
 Assert-OverviewLoadDefersMainWaveRender
 

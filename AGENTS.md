@@ -60,7 +60,11 @@ vidi `docs/validation/2026-09-01-hot-cue-ui.md`.
 Waveform scanout kandidat prihvaćen je 2026-09-01: update je vezan uz panel
 refresh, a kad oba decka sviraju direct-PPA blit uvijek ide odozgo prema dolje.
 Korisnik je prvo potvrdio oštar i fluidan solo D1, zatim oba oštra i fluidna
-waveforma bez bljeskanja ili audio posljedice. Vidi
+waveforma bez bljeskanja ili audio posljedice. Naknadna regresija na oba decka
+bila je ograničena na dva najveća zooma (4/8 beatova) i reproducirala se i bez
+Master Tempa; waveform update je zato premješten ispred Library/Status rada da
+oba PPA upisa ostanu unutar VFP-a bez smanjenja 50-Hz cadencea. Korisnik je
+potvrdio oba waveforma fluidnima na svih pet zoom razina. Vidi
 `docs/validation/2026-09-01-dsi506-waveform-sync.md`.
 Naknadni desetominutni zajednički integration soak prihvaćen je 2026-09-01:
 oba 44,1-kHz decka s aktivnim loopovima svirala su svih 600 s uz PCM5102A

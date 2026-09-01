@@ -86,7 +86,10 @@ reboota. Vidi [validation zapis](validation/2026-09-01-hot-cue-ui.md).
 Fokusirani waveform-sync preduvjet zatvoren je 2026-09-01. DSI timing sada
 koristi VFP `109` (50,0146 Hz), a dual-deck direct-PPA update ide gornji pa
 donji waveform. Operator je potvrdio oštar i fluidan solo D1 te oba istodobna
-waveforma bez bljeskanja ili audio posljedice. To ne zamjenjuje dugi zajednički
+waveforma bez bljeskanja ili audio posljedice. Naknadna regresija ograničena na
+4/8-beat dual-deck zoom zatvorena je pomicanjem waveform updatea ispred
+Library/Status rada, bez smanjenja 50-Hz cadencea; operator je potvrdio oba
+waveforma fluidnima na svih pet zoom razina. To ne zamjenjuje dugi zajednički
 soak.
 
 ## Sljedeće faze

@@ -4,9 +4,9 @@ Status: 2026-09-01.
 
 ## Trenutni handoff
 
-- aktualni bench image: app-only `M3-48-g435bcfe-dirty`, `factory`, SHA-256
-  `2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`;
-- posljednji potpisani rollback/release baseline: `M3-41-g133f399`, `ota_0`;
+- aktualni bench image: all-zoom kandidat `M3-50-gc4897b7-dirty`, `factory`,
+  SHA-256 `C5F018558BA91729A7F16DA4D3056E34E44FA7BBE2E07AA13E1558C4272E30F1`;
+- posljednji potpisani rollback/release baseline: `M3-50-gc4897b7`, `ota_0`;
 - potvrđeno: FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi
   SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
 - Wi-Fi ostaje uključen tijekom nastavka razvoja;
@@ -52,9 +52,10 @@ Status: 2026-09-01.
   stuck pressa, promjene postavki ili audio counter delte. LVGL input ostaje
   namjerno single-pointer; vidi
   [validation zapis](validation/2026-09-01-touch-edge-multitouch.md);
-- solo i dual-deck waveform sync gate prihvaćen je 2026-09-01. Refresh-bound
-  50,0146-Hz prikaz i top-to-bottom direct-PPA raspored daju oštre, fluidne
-  waveforme bez bljeskanja ili audio posljedice; vidi
+- solo, dual-deck i all-zoom waveform sync gate prihvaćen je 2026-09-01.
+  Refresh-bound 50,0146-Hz prikaz, top-to-bottom direct-PPA raspored i rani
+  waveform update prije Library/Status rada daju oštre, fluidne waveforme na
+  svih pet zoom razina bez bljeskanja ili audio posljedice; vidi
   [validation zapis](validation/2026-09-01-dsi506-waveform-sync.md);
 - desetominutni zajednički display/touch/master/headphones/dual-deck/USB3/
   Wi-Fi soak prihvaćen je 2026-09-01. Svih 600 s oba su decka i loopa ostala

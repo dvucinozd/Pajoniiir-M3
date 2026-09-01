@@ -2,9 +2,9 @@
 
 Status: važeći bench postupak, 2026-09-01.
 
-Aktualni bench image je app-only `M3-48-g435bcfe-dirty / factory`, SHA-256
-`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`;
-`M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline. FLX4, USB3,
+Aktualni bench image je all-zoom kandidat `M3-50-gc4897b7-dirty / factory`,
+SHA-256 `C5F018558BA91729A7F16DA4D3056E34E44FA7BBE2E07AA13E1558C4272E30F1`;
+potpisani `M3-50-gc4897b7 / ota_0` ostaje rollback baseline. FLX4, USB3,
 PCM5102A, Wi-Fi, DSI slika, fokusirani touch, screensaver wake te corner/edge i
 two-finger safety gate rade. Desetominutni zajednički i produženi
 cold-power/reconnect integration gateovi prihvaćeni su.
@@ -56,8 +56,9 @@ idf.py -p COM6 flash monitor
 - [x] Aktivni profil je 1 lane / 800 Mbps, 27,777 MHz,
   HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `109/2/22` (50,0146 Hz), burst sync pulses i bez frame
   ACK-a.
-- [x] Solo D1 i istodobni D1+D2 waveform ostaju oštri i fluidni; dual-deck PPA
-  blit slijedi fizički scanout odozgo prema dolje, bez bljeskanja ili audio
+- [x] Solo D1 i istodobni D1+D2 waveform ostaju oštri i fluidni na svih pet
+  zoom razina; dual-deck PPA blit slijedi fizički scanout odozgo prema dolje,
+  a waveform update prethodi Library/Status radu, bez bljeskanja ili audio
   posljedice. Vidi
   [validation zapis](validation/2026-09-01-dsi506-waveform-sync.md).
 - [x] Desetominutni kombinirani display/touch/master/headphones/dual-deck/

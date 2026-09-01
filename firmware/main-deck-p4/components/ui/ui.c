@@ -1146,10 +1146,22 @@ void ui_update(void) {
 #ifndef WIN32
     ui_idle_service(&ctx);
 #endif
+    /* The DSI refresh callback wakes this task at the start of the long VFP.
+     * Write both direct-PPA waveform overlays before Library/Status work so
+     * the transfers finish inside that blanking interval. At the two closest
+     * zoom levels a one-frame position delta spans several pixels, making a
+     * scanout race visible as bent/watery waveform lines even though the cache
+     * data itself is intact. Keep the full 50 Hz dual-deck cadence; deliberately
+     * staggering the decks was already rejected on hardware as visible stutter.
+     * A just-completed load may therefore reach Overview on the next refresh
+     * (20 ms later), while the fresh context below still updates Status in the
+     * current tick. */
+    ui_overview_update(&ctx);
     ui_library_update(&ctx);
     /* A completed load/USB clear can publish a new immutable ANLZ snapshot
-     * during ui_library_update(). Refresh the frame so overview/status never
-     * re-publish the pre-update handle for one extra tick. */
+     * during ui_library_update(). Refresh the retained frame handles and
+     * Status immediately; the early Overview phase picks them up on the next
+     * panel refresh. */
     ui_release_frame_context(&ctx);
     ui_build_frame_context(&ctx);
 
@@ -1168,7 +1180,6 @@ void ui_update(void) {
 #endif
 
     ui_status_update(&ctx);
-    ui_overview_update(&ctx);
     ui_settings_update(&ctx);
     ui_release_frame_context(&ctx);
 
