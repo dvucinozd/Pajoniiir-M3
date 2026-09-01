@@ -28,6 +28,30 @@ static int count_changed_pixels(const uint16_t *a, const uint16_t *b, int count)
     return changed;
 }
 
+static void compose_visible_view(const uint16_t *strip,
+                                 int strip_stride,
+                                 int height,
+                                 const ui_overview_wave_cache_report_t *report,
+                                 uint16_t *view,
+                                 int view_stride)
+{
+    assert(strip);
+    assert(report);
+    assert(view);
+    assert(report->blit_required);
+
+    memset(view, 0, (size_t)view_stride * (size_t)height * sizeof(*view));
+    for (uint8_t seg = 0; seg < report->blit_count; seg++) {
+        const ui_overview_wave_cache_blit_t *blit = &report->blit[seg];
+        assert((int)blit->dst_x_px + (int)blit->width_px <= view_stride);
+        for (int y = 0; y < height; y++) {
+            memcpy(&view[y * view_stride + blit->dst_x_px],
+                   &strip[y * strip_stride + blit->src_x_px],
+                   (size_t)blit->width_px * sizeof(*view));
+        }
+    }
+}
+
 static void test_initial_update_renders_full_view(void)
 {
     uint8_t samples[64];
@@ -127,6 +151,117 @@ static void test_steady_advance_uses_offset_without_mutating_pixels(void)
     assert(report.blit_count >= 1);
     assert(report.blit[0].src_x_px != TEST_MARGIN_W);
     assert(memcmp(before, pixels, sizeof(before)) == 0);
+}
+
+static void test_visible_shape_translates_without_deforming(void)
+{
+    uint8_t samples[512];
+    for (int i = 0; i < (int)sizeof(samples); i++) {
+        uint8_t amp = (uint8_t)(((i * 13) ^ (i >> 2)) & 0x1Fu);
+        samples[i] = (uint8_t)((((unsigned)i >> 3) & 0x07u) << 5) | amp;
+    }
+    ui_waveform_source_t source = {
+        .kind = UI_WAVEFORM_SOURCE_HIGH,
+        .samples = samples,
+        .sample_count = sizeof(samples),
+    };
+    uint16_t pixels[TEST_STRIP_W * TEST_H] = {0};
+    uint16_t before[TEST_VIEW_W * TEST_H] = {0};
+    uint16_t after[TEST_VIEW_W * TEST_H] = {0};
+    ui_overview_wave_cache_t cache = {0};
+    ui_overview_wave_cache_report_t report;
+
+    assert(ui_overview_wave_cache_bind_strip(&cache, pixels,
+                                             TEST_STRIP_W,
+                                             TEST_STRIP_W,
+                                             TEST_VIEW_W,
+                                             TEST_H,
+                                             TEST_MARGIN_W,
+                                             palette,
+                                             sizeof(palette) / sizeof(palette[0])));
+    assert(ui_overview_wave_cache_update(&cache, &source, 64000, NULL,
+                                         10000, 8000, &report));
+    compose_visible_view(pixels, TEST_STRIP_W, TEST_H, &report,
+                         before, TEST_VIEW_W);
+
+    /* 8 s / 16 px = 500 ms per pixel. A 500-ms center advance must be a
+     * rigid one-column translation, not a re-sampled or deformed view. */
+    assert(ui_overview_wave_cache_update(&cache, &source, 64000, NULL,
+                                         10500, 8000, &report));
+    assert(report.kind == UI_OVERVIEW_WAVE_CACHE_OFFSET);
+    assert(report.scroll_dx_px == 1);
+    compose_visible_view(pixels, TEST_STRIP_W, TEST_H, &report,
+                         after, TEST_VIEW_W);
+
+    for (int y = 0; y < TEST_H; y++) {
+        assert(memcmp(&before[y * TEST_VIEW_W + 1],
+                      &after[y * TEST_VIEW_W],
+                      (TEST_VIEW_W - 1u) * sizeof(uint16_t)) == 0);
+    }
+}
+
+static void test_long_scroll_stays_rigid_across_edges_and_ring_wraps(void)
+{
+    uint8_t samples[2048];
+    for (int i = 0; i < (int)sizeof(samples); i++) {
+        uint8_t amp = (uint8_t)(((i * 29) ^ (i >> 1) ^ (i >> 5)) & 0x1Fu);
+        samples[i] = (uint8_t)((((unsigned)i >> 4) & 0x07u) << 5) | amp;
+    }
+    ui_waveform_source_t source = {
+        .kind = UI_WAVEFORM_SOURCE_HIGH,
+        .samples = samples,
+        .sample_count = sizeof(samples),
+    };
+    uint16_t pixels[TEST_STRIP_W * TEST_H] = {0};
+    uint16_t before[TEST_VIEW_W * TEST_H] = {0};
+    uint16_t after[TEST_VIEW_W * TEST_H] = {0};
+    ui_overview_wave_cache_t cache = {0};
+    ui_overview_wave_cache_report_t report;
+    unsigned edge_updates = 0;
+    unsigned wrapped_views = 0;
+
+    assert(ui_overview_wave_cache_bind_strip(&cache, pixels,
+                                             TEST_STRIP_W,
+                                             TEST_STRIP_W,
+                                             TEST_VIEW_W,
+                                             TEST_H,
+                                             TEST_MARGIN_W,
+                                             palette,
+                                             sizeof(palette) / sizeof(palette[0])));
+    assert(ui_overview_wave_cache_update(&cache, &source, 256000, NULL,
+                                         20000, 8000, &report));
+    compose_visible_view(pixels, TEST_STRIP_W, TEST_H, &report,
+                         before, TEST_VIEW_W);
+
+    /* Advance by exactly one visible pixel for long enough to repeatedly refill
+     * both physical ends of the strip and wrap the ring-buffer view. Every
+     * overlapping column must remain bit-identical to the preceding view. */
+    for (unsigned step = 1; step <= 160; step++) {
+        uint32_t center_ms = 20000u + (step * 500u);
+        assert(ui_overview_wave_cache_update(&cache, &source, 256000, NULL,
+                                             center_ms, 8000, &report));
+        assert(report.kind == UI_OVERVIEW_WAVE_CACHE_OFFSET ||
+               report.kind == UI_OVERVIEW_WAVE_CACHE_EDGE);
+        assert(report.scroll_dx_px == 1);
+        if (report.kind == UI_OVERVIEW_WAVE_CACHE_EDGE) {
+            edge_updates++;
+        }
+        if (report.blit_count == 2) {
+            wrapped_views++;
+        }
+
+        compose_visible_view(pixels, TEST_STRIP_W, TEST_H, &report,
+                             after, TEST_VIEW_W);
+        for (int y = 0; y < TEST_H; y++) {
+            assert(memcmp(&before[y * TEST_VIEW_W + 1],
+                          &after[y * TEST_VIEW_W],
+                          (TEST_VIEW_W - 1u) * sizeof(uint16_t)) == 0);
+        }
+        memcpy(before, after, sizeof(before));
+    }
+
+    assert(edge_updates > 1);
+    assert(wrapped_views > 1);
 }
 
 static void test_edge_advance_renders_small_batch_without_full_rebuild(void)
@@ -418,6 +553,8 @@ int main(void)
     test_initial_update_renders_full_view();
     test_small_center_advance_rebuilds_compat_view();
     test_steady_advance_uses_offset_without_mutating_pixels();
+    test_visible_shape_translates_without_deforming();
+    test_long_scroll_stays_rigid_across_edges_and_ring_wraps();
     test_edge_advance_renders_small_batch_without_full_rebuild();
     test_wrap_reports_two_blit_segments();
     test_window_change_forces_full_redraw();

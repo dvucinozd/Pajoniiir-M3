@@ -415,12 +415,14 @@ void app_main(void)
     // exist.  A saved Wi-Fi setting is likewise activated after the UI and
     // playback state are fully initialized, so web requests cannot race boot.
     /* Every controller/UI event resets the idle screensaver, and one that
-     * wakes it is consumed there rather than acted on. */
+     * wakes it is consumed there rather than acted on. Direct FLX4 USB events
+     * enter through control_link, while touch enters through deck_core. */
     /* wifi_link already owns web_server's lifetime, so the web layer reaches
      * the connectivity probe through here rather than calling back into it. */
     web_server_set_probe_hooks(app_probe_start, app_probe_status);
 
     deck_core_set_activity_cb(ui_activity_notice);
+    control_link_set_activity_cb(ui_activity_notice);
     ui_settings_set_wifi_toggle_cb(wifi_link_request_enable);
     ui_settings_set_wifi_status_cb(app_wifi_status);
 #if CONFIG_AUDIO_RECORDER_ENABLED

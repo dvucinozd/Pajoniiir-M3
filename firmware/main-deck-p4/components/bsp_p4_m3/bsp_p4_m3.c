@@ -97,17 +97,22 @@ static esp_err_t bsp_sdmmc_host_already_initialized(void)
 #define BSP_DSI_LANE_MBPS       800
 
 // ── 5.0" MIPI-DSI IPS Video Timing (800x480 native landscape) ────────────────
-// Controlled timing candidate based on the Raspberry Pi Linux
+// Horizontal timing is based on the Raspberry Pi Linux
 // vc4-kms-dsi-waveshare-800x480 overlay: one lane, RGB888, 27.777 MHz and
-// HFP/HSW/HBP=59/2/45, VFP/VSW/VBP=7/2/22. This is a timing reference, not
-// proof that the unmarked DSI-506 bridge accepts the same mode.
+// HFP/HSW/HBP=59/2/45. VFP is extended from the reference value 7 to 109 so
+// Overview work is phase-locked to an approximately 50 Hz panel refresh:
+//   Htotal = 800 + 59 + 2 + 45 = 906
+//   Vtotal = 480 + 109 + 2 + 22 = 613
+//   refresh = 27.777 MHz / (906 * 613) = 50.0146 Hz
+// The same refresh-synchronised 50 Hz strategy previously removed the physical
+// DSI "watery waveform" effect without changing horizontal phase or colours.
 #define BSP_DPI_CLK_MHZ         27.777f
 #define BSP_LCD_HSYNC           2
 #define BSP_LCD_HBP             45
 #define BSP_LCD_HFP             59
 #define BSP_LCD_VSYNC           2
 #define BSP_LCD_VBP             22
-#define BSP_LCD_VFP             7
+#define BSP_LCD_VFP             109
 
 static esp_lcd_panel_handle_t   s_panel    = NULL;
 static esp_ldo_channel_handle_t s_mipi_ldo = NULL;

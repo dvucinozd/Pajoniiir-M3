@@ -357,6 +357,40 @@ static void test_drop_newest_crosses_uint32_wrap_backwards(void)
     CHECK(audio_pcm_timeline_pop(&t, &out) && out.left == 42);
 }
 
+/* A decode task can be preempted after it advances its physical write index
+ * but before it publishes write_seq. Retained PCM must still use the consumer
+ * anchor, not that half-published producer cursor. */
+static void test_seek_ignores_unpublished_producer_index(void)
+{
+    audio_pcm_timeline_t t;
+    audio_pcm_timeline_init(&t, s_storage, CAP);
+    for (int16_t i = 0; i < 5; ++i) push_value(&t, (int16_t)(10 + i));
+    t.frames[10] = 99;
+    t.frames[11] = -99;
+    t.write_index = 6u; /* physical index advanced before publishing sequence 6 */
+    CHECK(audio_pcm_timeline_set_playhead(&t, 1u));
+    expect_seq(&t, 1u, 11);
+    expect_seq(&t, 4u, 14);
+    audio_mixer_frame_t frame;
+    CHECK(!audio_pcm_timeline_read(&t, 5u, &frame));
+    t.write_seq = 6u; /* producer finishes its release-publication */
+    expect_seq(&t, 5u, 99);
+    CHECK(audio_pcm_timeline_pop(&t, &frame) && frame.left == 11);
+}
+
+static void test_random_read_rejects_low_word_aliases(void)
+{
+    audio_pcm_timeline_t t;
+    seed_empty_at(&t, (UINT64_C(1) << 33) + 17u);
+    push_value(&t, 42);
+    uint64_t seq = audio_pcm_timeline_play_seq(&t);
+    expect_seq(&t, seq, 42);
+    audio_mixer_frame_t frame;
+    CHECK(!audio_pcm_timeline_read(&t, seq + (UINT64_C(1) << 32), &frame));
+    CHECK(!audio_pcm_timeline_read(&t, seq - (UINT64_C(1) << 32), &frame));
+    CHECK(!audio_pcm_timeline_read(&t, UINT64_MAX, &frame));
+}
+
 int main(void)
 {
     test_drop_newest_withdraws_only_the_unplayed_runway();
@@ -373,6 +407,8 @@ int main(void)
     test_random_read_rejects_sequences_outside_the_retained_window();
     test_all_cursors_and_random_reads_cross_uint32_wrap();
     test_drop_newest_crosses_uint32_wrap_backwards();
+    test_seek_ignores_unpublished_producer_index();
+    test_random_read_rejects_low_word_aliases();
     printf("TESTS_RUN=%u\n", s_checks);
     puts("audio_pcm_timeline tests passed");
     return 0;

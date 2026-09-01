@@ -1,8 +1,10 @@
 # DSI506 / DYL0023 Display Bring-up and Acceptance
 
-Status: display-image i fokusirani touch gate prihvaćeni su 2026-08-31.
-Corner/multitouch, screensaver wake i zajednički integration soak ostaju
-otvoreni. Aktualni zapis ima prednost nad pripremom od 2026-08-26 koja je
+Status: display-image i fokusirani touch gate prihvaćeni su 2026-08-31, a
+screensaver wake, corner/edge, two-finger safety, waveform sync i desetominutni
+zajednički integration soak 2026-09-01. Produženi cold-power/reconnect soak
+ostaje otvoren. Aktualni zapis ima prednost nad pripremom od
+2026-08-26 koja je
 sačuvana ispod njega kao povijesna polazna točka.
 
 ## Aktualni dijagnosticki zapis (2026-08-31)
@@ -54,7 +56,7 @@ sačuvana ispod njega kao povijesna polazna točka.
   Ostale adrese samo se prijavljuju, bez generickog register dumpa ili upisa.
   Neodziv `0x2C` ne iskljucuje bridge na privatnoj I2C sabirnici modula.
 - Prihvaćeni DSI stream koristi 1 lane / 800 Mbps, 27,777 MHz,
-  H front/sync/back `59/2/45`, V `7/2/22`, RGB888 framebuffer i izlaz te
+  H front/sync/back `59/2/45`, V `109/2/22` (50,0146 Hz), RGB888 framebuffer i izlaz te
   burst sync pulses / bez frame ACK-a. To je empirijski prihvaćen profil ovog
   fizičkog DYL0023 primjerka, ne vendor specifikacija za sve revizije.
 - Wi-Fi postavke i audio put ostaju netaknuti. Nije pokrenut audio/integration
@@ -99,8 +101,43 @@ Hot Cues -> Settings, Settings backlight slider dolje/gore te velike kontrole
 na lijevoj i desnoj strani Overviewa. Time su I2C komunikacija, press/release,
 osnovna koordinatna transformacija i fokusirana interakcija prihvaćeni.
 
-Ovaj PASS ne uključuje eksplicitni corner/multitouch test, screensaver wake ni
-zajednički display/master/headphones/dual-deck/Wi-Fi integration soak.
+Ovaj fokusirani PASS nije uključivao eksplicitni corner/multitouch test,
+screensaver wake ni zajednički display/master/headphones/dual-deck/Wi-Fi
+integration soak. Screensaver wake naknadno je prihvaćen 2026-09-01; vidi
+[validation zapis](validation/2026-09-01-screensaver-wake.md).
+Corner/edge i two-finger safety također su naknadno prihvaćeni; vidi
+[validation zapis](validation/2026-09-01-touch-edge-multitouch.md). LVGL input
+ostaje namjerno single-pointer, pa rezultat ne tvrdi dva neovisna kursora.
+
+### Refresh-sinkronizirani waveform gate (2026-09-01)
+
+Nakon što je korisnik na pokretnim glavnim waveformima prijavio efekt kao da
+su linije u vodi, rigidnost cachea provjerena je kroz više rubnih dopuna i
+obilazaka ring buffera. Problem je ostao ograničen na fizički scanout. Panel
+refresh je spušten na 50,0146 Hz povećanjem samo VFP-a s `7` na `109`;
+horizontalni timing, RGB888, burst packetizacija, lane/rate, orijentacija i
+touch nisu mijenjani. Solo D1 tada je fizički potvrđen kao oštar i fluidan.
+
+Pri istodobnom D1+D2 opterećenju gornji waveform još je blago pokazivao isti
+efekt. Scheduler je na svakom frameu izmjenjivao redoslijed dvaju direct-PPA
+blitova, zbog čega je gornji overlay svaki drugi frame bio kasni upis. Za
+dual-redraw tick redoslijed je zaključan na gornji pa donji, u skladu s
+panel scanoutom; single-redraw fairness i dalje se izmjenjuje. Korisnik je na
+završnom kandidatu potvrdio da su oba waveforma oštra i fluidna te da nema
+bljeskanja ni audio posljedice. Puni host suite i ESP-IDF 6.0.2 build prošli su.
+Detalji, image identitet i ograničenja nalaze se u
+[validation zapisu](validation/2026-09-01-dsi506-waveform-sync.md).
+
+### Desetominutni zajednički integration soak (2026-09-01)
+
+Oba 44,1-kHz decka s aktivnim loopovima ostala su u playbacku svih 600 s dok
+su istodobno radili PCM5102A master, FLX4 UAC slušalice, Overview waveformi,
+FT5426 touch/backlight, USB3 knjižnica od 191 trake i kontinuirani Wi-Fi web
+promet. Operator je potvrdio čist zvuk, fluidan prikaz, responzivan touch,
+stabilan zaslon i FLX4. Nije bilo PCM underruna, UAC drop/overflow/underflowa,
+service-log dropa ni API/state greške. Pet output-late događaja, maksimalno
+12522 us, nije imalo fizičku posljedicu i ostaje monitoring nalaz. Vidi
+[integration soak zapis](validation/2026-09-01-integration-soak.md).
 
 Identifikacijska referenca:
 [Linux ICN6211 driver](https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/bridge/chipone-icn6211.c)

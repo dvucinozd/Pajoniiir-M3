@@ -47,14 +47,21 @@ void ui_overview_scheduler_next_deck_order(ui_overview_scheduler_t *scheduler,
                                            uint8_t *first,
                                            uint8_t *second)
 {
-    bool flip = scheduler && scheduler->deck_order_flip;
+    /* With two redraw slots both direct-PPA overlays are written during the
+     * same panel-refresh interval. Keep their order aligned with panel scanout
+     * (top deck, then bottom deck): alternating the order made the top overlay
+     * the late write every other frame and exposed a slight watery/tearing
+     * effect under dual-deck load. A one-slot tick still alternates so pending
+     * paused/restore work cannot starve either deck. */
+    bool dual_redraw = scheduler && scheduler->main_redraw_budget >= 2u;
+    bool flip = scheduler && !dual_redraw && scheduler->deck_order_flip;
     if (first) {
         *first = flip ? deck_b : deck_a;
     }
     if (second) {
         *second = flip ? deck_a : deck_b;
     }
-    if (scheduler) {
+    if (scheduler && !dual_redraw) {
         scheduler->deck_order_flip = !scheduler->deck_order_flip;
     }
 }

@@ -24,9 +24,9 @@ LED callback prema izravnom FLX4 USB hostu.
 
 ## Trenutni bench status
 
-Na benchu je app-only display/touch acceptance kandidat `M3-46-gee004d6-dirty` u
+Na benchu je app-only Master Tempo response kandidat `M3-47-g3f23bd2-dirty` u
 `factory` particiji, SHA-256
-`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`.
+`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`.
 Posljednji potpisani rollback/release baseline ostaje `M3-41-g133f399` u
 `ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, SoftAP
 `Pajoniiir-M3`, web kontrola i potpisani OTA rade; Wi-Fi ostaje uključen.
@@ -36,14 +36,48 @@ PCM5102A je 2026-08-26 fizički spojen na GPIO1/2/3 i hardverski prihvaćen s
 kontroliranim full-master limiter testom bez PCM underruna ili UAC gubitka.
 5,0-inčni EYOYO `DSI506 / DYL0023` sada je spojen i fizički prihvaćen za sliku.
 Aktivni `bsp_p4_m3` koristi jednu DSI lane na 800 Mbps, RGB888, 27,777 MHz,
-HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `7/2/22` i burst video bez frame ACK-a.
+HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `109/2/22` (50,0146 Hz) i burst video bez frame ACK-a.
 Korisnik je potvrdio ispravne boje, čitljiv nativni landscape, redoslijed GUI-ja
 i uklonjeno horizontalno omatanje; privremene testne trake uklonjene su iz
 normalnog boota. FT5426 touch je stabiliziran na 100 kHz; `swap_xy=0`,
 `mirror_x=1`, `mirror_y=1`. Korisnik je potvrdio sve četiri kartice, Backlight
-drag te kontrole na obje strane Overviewa. Master Tempo/Shift+Browse/Load,
-screensaver/multitouch rubni gate i zajednički display/audio/USB/Wi-Fi soak
-ostaju sljedeći razvojni blok.
+drag te kontrole na obje strane Overviewa. Shift+Browse force-open i ubrzano
+pomicanje te Shift+Load routing na oba decka fizički su prihvaćeni 2026-09-01.
+Screensaver wake gate sada je također prihvaćen: prvi lokalni PLAY samo budi
+UI, sljedeći radi normalno, a touch ne aktivira kontrolu ispod screensavera.
+Corner/edge i two-finger safety gate prošli su bez ghost akcije ili stuck pressa.
+Refresh-sinkronizirani waveform kandidat također je fizički prihvaćen: solo D1
+i oba istodobna decka imaju oštar, fluidan prikaz bez bljeskanja ili audio
+posljedice. Dual-deck direct-PPA redoslijed prati scanout odozgo prema dolje;
+vidi [waveform sync zapis](docs/validation/2026-09-01-dsi506-waveform-sync.md).
+Desetominutni zajednički display/touch/master/headphones/dual-deck/USB/Wi-Fi
+soak također je prihvaćen: 1840 status pollova bez greške, nulte PCM/UAC i
+service-log loss delte te fizički čist zvuk, fluidni waveformi, responzivan
+touch i stabilan zaslon. Pet izoliranih output-late događaja do 12522 us nije
+imalo posljedicu i ostaje za monitoring. Vidi
+[integration soak zapis](docs/validation/2026-09-01-integration-soak.md).
+Produženi/cold-power/reconnect soak i preostali potpuni UI eyes-on gate ostaju
+otvoreni.
+
+Master Tempo test otkrio je da zvuk može zaostajati za ispravno prikazanim
+tempom. Ispravljeno je vremensko sidrenje audio-isječaka; novi PCM onset test
+(18 slučajeva), puni host suite, 300-s PC soak i ESP-IDF build prolaze.
+Fizički solo odziv i kratki 48/48-kHz dual-deck deadline sada su potvrđeni; vidi
+[zapis ispravka](docs/validation/2026-08-31-master-tempo-response.md).
+Naknadni negativni pitch test otkrio je pucketanje i zastajkivanje uz watchdog.
+Aktualni kandidat dodaje internu predmemoriju PCM pretrage; PC regresije prolaze.
+Solo pitch prijelazi na D1 i D2 potvrđeni su uz zvuk bez pucketanja i fluidan
+waveform. Prvi zajednički 48/48-kHz test je odbačen zbog trzanja, PCM/UAC
+gubitka i bljeska zaslona. Aktualni SHA ispravlja reproduciranu utrku između
+producer indeksa i objavljenog PCM cursora te ograničava correlation rad
+hijerarhijskom pretragom; puni host suite, 313-assert timeline gate, build i
+300-s PC soak prolaze. Kratki fizički 48/48-kHz dual-deck retest s D1 +5 % i
+D2 -5 % prihvaćen je uz čist zvuk, fluidan waveform, stabilan zaslon i nulte
+PCM/UAC drop/overflow delte. Jedan završni output-late od 11024 us nije imao
+čujnu ili vizualnu posljedicu. Naknadni 44,1/48-kHz mixed-rate MT test također
+je prihvaćen bez novih output-late, PCM ili UAC gubitaka; operator je potvrdio
+zvuk, waveform i zaslon. Desetominutni kombinirani soak sada prolazi; duži
+cold-power/reconnect acceptance ostaje otvoren.
 
 Aktualni baseline potvrđuje FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi

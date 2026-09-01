@@ -1301,6 +1301,33 @@ $tests = @(
         )
     },
     @{
+        Name = "audio_keylock_search"
+        Dir = "tests/audio_keylock"
+        Target = "test_audio_keylock_search.exe"
+        Args = @(
+            "-O2", "-Wall", "-Wextra", "-Wpedantic", "-Werror=implicit-function-declaration", "-std=c99",
+            "-I../../firmware/main-deck-p4/components/audio_engine/include",
+            "-o", "test_audio_keylock_search.exe",
+            "test_audio_keylock_search.c",
+            "../../firmware/main-deck-p4/components/audio_engine/audio_keylock.c",
+            "-lm"
+        )
+    },
+    @{
+        Name = "audio_keylock_tempo"
+        Dir = "tests/audio_keylock"
+        Target = "test_audio_keylock_tempo.exe"
+        Args = @(
+            "-O2", "-Wall", "-Wextra", "-Wpedantic", "-Werror=implicit-function-declaration", "-std=c99",
+            "-I../../firmware/main-deck-p4/components/audio_engine/include",
+            "-o", "test_audio_keylock_tempo.exe",
+            "test_audio_keylock_tempo.c",
+            "../../firmware/main-deck-p4/components/audio_engine/audio_keylock.c",
+            "../../firmware/main-deck-p4/components/audio_engine/audio_pcm_timeline.c",
+            "-lm"
+        )
+    },
+    @{
         Name = "audio_keylock_soak"
         Dir = "tests/audio_keylock_soak"
         Target = "test_audio_keylock_soak.exe"
@@ -1876,7 +1903,7 @@ $tests = @(
     },
     @{
         Name = "audio_pcm_timeline"
-        MinTestsRun = 229
+        MinTestsRun = 313
         Dir = "tests/audio_pcm_timeline"
         Target = "test_audio_pcm_timeline.exe"
         Args = @(
@@ -2116,6 +2143,21 @@ $tests = @(
             "-o", "test_ui_idle.exe",
             "test_ui_idle.c",
             "../../firmware/main-deck-p4/components/ui/ui_idle.c"
+        )
+    },
+    @{
+        Name = "control_link"
+        Dir = "tests/control_link"
+        Target = "test_control_link_local.exe"
+        Args = @(
+            "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-std=c11",
+            "-I../support/rtos",
+            "-I../support/stubs",
+            "-I../../firmware/main-deck-p4/components/control_link/include",
+            "-o", "test_control_link_local.exe",
+            "test_control_link_local.c",
+            "../../firmware/main-deck-p4/components/control_link/control_link_local.c",
+            "../support/rtos/fake_rtos.c"
         )
     },
     @{
@@ -2784,7 +2826,7 @@ Assert-FilePatternsOrdered `
     )
 
 Assert-FileContains `
-    -Name "p4 scanout keeps RGB888 memory and the DSI-506 timing candidate" `
+    -Name "p4 scanout keeps RGB888 memory and the refresh-synchronised DSI-506 timing candidate" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/bsp_p4_m3/bsp_p4_m3.c") `
     -LiteralPatterns @(
         'BSP_DSI_LANE_NUM        1', 'BSP_DSI_LANE_MBPS       800',
@@ -2793,7 +2835,7 @@ Assert-FileContains `
         '.out_color_format   = LCD_COLOR_FMT_RGB888',
         'BSP_LCD_HSYNC           2', 'BSP_LCD_HBP             45',
         'BSP_LCD_HFP             59', 'BSP_LCD_VSYNC           2',
-        'BSP_LCD_VBP             22', 'BSP_LCD_VFP             7'
+        'BSP_LCD_VBP             22', 'BSP_LCD_VFP             109'
     )
 
 Assert-FileContains `
@@ -2873,6 +2915,16 @@ Assert-FileContains `
     -Name "p4 remote controls wake the screensaver without losing their first command" `
     -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/deck_core/deck_core.c") `
     -LiteralPatterns @("queue_control_event", "consume_wake_event", "deck_core_queue_remote_event", "queue_control_event(ev, false)")
+
+Assert-FileContains `
+    -Name "p4 direct FLX4 controls consume the local event that wakes the screensaver" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/components/control_link/control_link_local.c") `
+    -LiteralPatterns @("control_link_set_activity_cb", "type != CTRL_TYPE_STATE", "s_activity_cb()")
+
+Assert-FileContains `
+    -Name "p4 product wires screensaver activity to touch and direct FLX4 producers" `
+    -Path (Join-Path $RepoRoot "firmware/main-deck-p4/main/app_main.c") `
+    -LiteralPatterns @("deck_core_set_activity_cb(ui_activity_notice)", "control_link_set_activity_cb(ui_activity_notice)")
 
 # The symbols exist and are reachable by design - they are simply the wrong
 # call for this component - so no link contract can express it.

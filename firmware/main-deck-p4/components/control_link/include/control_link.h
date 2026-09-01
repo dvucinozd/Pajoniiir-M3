@@ -375,6 +375,13 @@ typedef struct {
 // Bind the direct USB controller producer to deck_core's event queue.
 esp_err_t control_link_init(QueueHandle_t ctrl_event_queue);
 
+/* Called before a local FLX4 control is queued. Returning true means the
+ * control was spent waking the screensaver and must not also mutate deck/UI
+ * state. Connection-state notifications are not operator activity and bypass
+ * this hook. */
+typedef bool (*control_link_activity_cb_t)(void);
+void control_link_set_activity_cb(control_link_activity_cb_t cb);
+
 // Send an LED command to the directly attached controller.
 void control_link_send_led(led_id_t led, uint8_t state);  // state: 0 off / 1 on / 2 blink
 void control_link_send_led_deck(led_id_t led, uint8_t state, uint8_t deck);

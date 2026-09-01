@@ -1,12 +1,24 @@
 # Startup Checklist
 
-Status: važeći bench postupak, 2026-08-31.
+Status: važeći bench postupak, 2026-09-01.
 
-Aktualni bench image je app-only `M3-46-gee004d6-dirty / factory`, SHA-256
-`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`;
+Aktualni bench image je app-only `M3-47-g3f23bd2-dirty / factory`, SHA-256
+`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`;
 `M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline. FLX4, USB3,
-PCM5102A, Wi-Fi, DSI slika i fokusirani touch gate rade. Corner/multitouch,
-screensaver i zajednički integration soak još nisu prihvaćeni.
+PCM5102A, Wi-Fi, DSI slika, fokusirani touch, screensaver wake te corner/edge i
+two-finger safety gate rade. Desetominutni zajednički integration soak je
+prihvaćen; produženi cold-power/reconnect soak još nije.
+
+- [x] MT 0% -> +5% -> -5% -> 0% potvrđen je na oba decka, a kratki simultani
+  48/48-kHz gate s D1 +5 % i D2 -5 % prošao je uz čist zvuk, fluidan waveform,
+  stabilan zaslon i nulte PCM/UAC drop/overflow delte. Novi build ispravlja
+  akumulaciju grain offseta i reproduciranu PCM producer/consumer cursor utrku
+  te ograničava correlation rad hijerarhijskom pretragom.
+- [x] Isti dual-deck MT gate s 44,1/48-kHz izvorima prošao je bez novih
+  output-late događaja, PCM underruna ili UAC drop/overflowa; operator je
+  potvrdio zvuk, waveform i zaslon. Brojilo položaja nije dokaz audio-tempa.
+  Vidi
+  [validation zapis](validation/2026-08-31-master-tempo-response.md).
 
 ## Priprema
 
@@ -42,8 +54,17 @@ idf.py -p COM6 flash monitor
 
 - [x] EYOYO `DSI506 / DYL0023` prikazuje 800×480 RGB888 u nativnom landscapeu.
 - [x] Aktivni profil je 1 lane / 800 Mbps, 27,777 MHz,
-  HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `7/2/22`, burst sync pulses i bez frame
+  HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `109/2/22` (50,0146 Hz), burst sync pulses i bez frame
   ACK-a.
+- [x] Solo D1 i istodobni D1+D2 waveform ostaju oštri i fluidni; dual-deck PPA
+  blit slijedi fizički scanout odozgo prema dolje, bez bljeskanja ili audio
+  posljedice. Vidi
+  [validation zapis](validation/2026-09-01-dsi506-waveform-sync.md).
+- [x] Desetominutni kombinirani display/touch/master/headphones/dual-deck/
+  USB3/Wi-Fi soak završava bez fizičkog artefakta i bez PCM/UAC/service-log
+  loss delte. Pet output-late događaja do 12522 us ostaje monitoring nalaz,
+  ne zero-late tvrdnja. Vidi
+  [validation zapis](validation/2026-09-01-integration-soak.md).
 - [x] `OVERVIEW` je prvi, `SETTINGS` zadnji tab; nema cikličkog omatanja ruba.
 - [x] Boje GUI-ja su fizički potvrđene, a PPA `rgb_swap` i horizontalni mirror
   ostaju ugašeni.
@@ -52,17 +73,24 @@ idf.py -p COM6 flash monitor
 - [x] Touch read radi bez `panel_io_i2c_rx_buffer` / FT5x06 I2C grešaka.
 - [x] Sve četiri kartice, Backlight drag te lijeva/desna Overview kontrola
   reagiraju na odgovarajućem mjestu bez swap/mirror greške.
-- [ ] Dovršiti eksplicitni corner/multitouch i ponovljeni-edge gate.
-- [ ] Screensaver wake, Settings slideri, Library, Hot Cues, Master Tempo i
-  Shift + Browse/Load prolaze eyes-on/touch acceptance.
+- [x] Gornji lijevi/desni i donji lijevi/desni aktivni rub reagiraju ispravno;
+  dva istodobna dodira ne uzrokuju ghost akciju, stuck press ni nestabilnost.
+  Vidi [validation zapis](validation/2026-09-01-touch-edge-multitouch.md).
+- [x] Library, Master Tempo i Shift + Browse/Load prolaze eyes-on/touch
+  acceptance; oba shifted load puta mijenjaju samo ciljani zaustavljeni deck.
+- [x] Screensaver se budi bez propuštanja prvog lokalnog PLAY događaja;
+  sljedeći PLAY radi, a dismissing touch ne aktivira kontrolu ispod. Vidi
+  [validation zapis](validation/2026-09-01-screensaver-wake.md).
+- [ ] Dovršiti preostale Settings slidere i Hot Cues rubni eyes-on/touch gate.
 - [ ] Dugi display/touch/PSRAM soak nema tearing, artefakte, I2C poplavu loga,
   reset ni audio/USB posljedicu.
 
 Display/touch acceptance 2026-08-31 koristio je COM6 i završni app-only image
 od 2.369.840 B. Puni host suite i ESP-IDF 6.0.2 build prošli su; boot je učitao
 191 traku za približno 4 s i odmah prešao u pravilno poravnati GUI. Fokusirani
-touch gate je zatvoren; corner/multitouch, screensaver i zajednički integration
-gate ostaju otvoreni.
+touch gate je zatvoren. Screensaver wake i corner/two-finger safety prihvaćeni
+su na kasnijem app-only imageu iz zaglavlja. Desetominutni zajednički gate je
+zatvoren; produženi cold-power/reconnect gate ostaje otvoren.
 
 ## USB i kontrola
 
@@ -169,9 +197,8 @@ oba normalna statea i obje fizičke LED-ice ostali su OFF.
   MIDI In/Out i UAC, playback nastavlja, a output-late i PCM underrun ostaju 0.
 - [ ] Dual-deck playback, pitch/Master Tempo i scratch ostaju stabilni.
 
-Zaslon je sada dostupan za Master Tempo hardverski gate, ali touch se prvo mora
-stabilizirati ili se mora koristiti drugi pouzdan način UI navigacije jer FLX4
-nema zasebnu Master Tempo kontrolu.
+Zaslon i stabilizirani touch sada su dostupni za Master Tempo hardverski gate.
+MT treba uključiti kroz UI jer FLX4 nema zasebnu Master Tempo kontrolu.
 
 PCM5102A acceptance 2026-08-26 potvrdio je oba kanala i tihi idle, 48-kHz
 single-deck, 44,1-kHz single-deck, mixed-rate dual-deck te puni master bez

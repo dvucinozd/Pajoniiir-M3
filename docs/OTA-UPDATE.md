@@ -7,8 +7,8 @@ Bundle mora biti `.ddjota`, potpisan pouzdanim ECDSA P-256 ključem, s ispravnim
 projektom, chip ID-em, verzijom, veličinom i SHA-256 sažetkom.
 
 Posljednji potpisani i OTA-prihvaćeni release image je `M3-41-g133f399` u
-`ota_0`. Na benchu se trenutačno podiže app-only display/touch kandidat
-`M3-46-gee004d6-dirty` iz `factory` particije; nije pakiran ni instaliran kao
+`ota_0`. Na benchu se trenutačno podiže app-only Master Tempo response kandidat
+`M3-47-g3f23bd2-dirty` iz `factory` particije; nije pakiran ni instaliran kao
 potpisani release bundle. FLX4, USB3, PCM5102A, Wi-Fi i DSI slika dostupni su.
 Display acceptance zato ne proširuje niti zamjenjuje postojeći OTA gate; nakon
 commita treba zasebno proizvesti i potpisati budući release ako se želi OTA

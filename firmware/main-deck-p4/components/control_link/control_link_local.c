@@ -6,6 +6,7 @@ static QueueHandle_t s_event_queue;
 static atomic_uint_fast8_t s_sequence;
 static control_link_led_sink_fn_t s_led_sink;
 static void *s_led_sink_context;
+static control_link_activity_cb_t s_activity_cb;
 
 esp_err_t control_link_init(QueueHandle_t ctrl_event_queue)
 {
@@ -15,6 +16,11 @@ esp_err_t control_link_init(QueueHandle_t ctrl_event_queue)
     s_event_queue = ctrl_event_queue;
     atomic_store_explicit(&s_sequence, 0u, memory_order_relaxed);
     return ESP_OK;
+}
+
+void control_link_set_activity_cb(control_link_activity_cb_t cb)
+{
+    s_activity_cb = cb;
 }
 
 void control_link_set_led_sink(control_link_led_sink_fn_t sink, void *user_ctx)
@@ -71,6 +77,14 @@ esp_err_t control_link_inject_semantic(uint8_t type, uint8_t id, int16_t value)
         break;
     default:
         return ESP_ERR_INVALID_ARG;
+    }
+
+    /* FLX4 USB events enter through control_link and therefore do not pass
+     * through deck_core_queue_event(). Consume the first local operator event
+     * here when it wakes the screensaver. Link-state notifications are not
+     * operator activity and must still reach deck_core. */
+    if (type != CTRL_TYPE_STATE && s_activity_cb && s_activity_cb()) {
+        return ESP_OK;
     }
 
     return xQueueSend(s_event_queue, &event, 0) == pdTRUE ? ESP_OK : ESP_ERR_TIMEOUT;

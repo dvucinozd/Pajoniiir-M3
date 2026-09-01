@@ -1154,14 +1154,16 @@ adding the control later is wiring, not redesign.
 **Consuming the event that wakes it** splits in two, and only one half is free.
 Touch costs nothing: the screensaver is its own LVGL screen with no widgets, so
 a dismissing tap cannot press whatever sits underneath. Controller events do
-cost something, because every FLX4 button, jog, fader and web mutation passes
-through `deck_core_queue_event()` — that callback returns `bool` and the event
-is swallowed when it woke the screen. Without it a PLAY press that wakes the
-panel would also start the deck.
+cost something. The original note incorrectly assumed that every FLX4 event
+passed through `deck_core_queue_event()`. A 2026-09-01 physical retest proved
+that direct USB semantic events instead enter through `control_link`; the first
+PLAY both woke the UI and started a loaded track. `control_link` now invokes
+the same activity callback and swallows a valid local event when it woke the
+screen. Web mutations remain wake-and-execute remote commands.
 
 `ui_activity_notice()` only sets a flag and reports whether the screensaver was
 up; the LVGL work happens on the UI task's next 16 ms tick, so
-`deck_core_queue_event()` stays lock-free on whatever task produced the event.
+both local queue entry paths stay lock-free on whatever task produced the event.
 Events arriving inside that window are also swallowed, which reads as debounce.
 
 **Restoring the screen is not enough.** LVGL repaints the whole tab on return

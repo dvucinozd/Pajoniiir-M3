@@ -1,26 +1,67 @@
 # Documentation Status
 
-Status: 2026-08-31.
+Status: 2026-09-01.
 
 ## Trenutni handoff
 
-- aktualni bench image: app-only `M3-46-gee004d6-dirty`, `factory`, SHA-256
-  `00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`;
+- aktualni bench image: app-only `M3-47-g3f23bd2-dirty`, `factory`, SHA-256
+  `EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`;
 - posljednji potpisani rollback/release baseline: `M3-41-g133f399`, `ota_0`;
 - potvrđeno: FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi
   SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
 - Wi-Fi ostaje uključen tijekom nastavka razvoja;
 - EYOYO `DSI506 / DYL0023` spojen je i slika je prihvaćena: 800×480 RGB888,
-  nativni landscape, ispravne boje i poravnanje, burst/no-frame-ACK;
+  nativni landscape, ispravne boje i poravnanje, burst/no-frame-ACK te
+  50,0146-Hz profil s VFP `109`;
 - aktivan je `bsp_p4_m3`, a legacy `bsp_jc4880` je izuzet iz produkcijskog
   linkanja; normalni boot više nema privremene testne trake;
 - FT5426 touch na I2C `0x38` radi na 100 kHz uz `swap_xy=0`, obje mirror osi;
   potvrđene su sve četiri kartice, Backlight drag i kontrole na obje strane;
 - PCM5102A je spojen i hardverski prihvaćen: L/R, tihi idle, 44,1/48 kHz,
   mixed-rate dual-deck, headroom i limiter;
-- nastavak: UI Master Tempo i Shift + Browse/Load gate, screensaver/multitouch
-  rubna provjera, zatim zajednički display/master/headphones/dual-deck/Wi-Fi
-  integration soak.
+- MT zaostajanje zvuka reproducirano je i ispravljeno sidrenjem grainova na
+  source clock; 18-case PCM onset gate, puni host suite, 300-s PC soak i build
+  prolaze. [Validation zapis](validation/2026-08-31-master-tempo-response.md)
+  razdvaja PC rezultat od fizičkih gateova;
+- na stalnom negativnom tempu zabilježeni su pucketanje, waveform stutter,
+  watchdog/CPU starvation i povremeni bljesak ekrana. Novi kandidat iste
+  dirty verzije (SHA gore) dodaje bounded cache PCM pretrage; PC izlaz je
+  identičan uz manje source read poziva. Solo pitch prijelazi na D1 i D2 sada
+  imaju potvrđen zvuk bez pucketanja i fluidan waveform. Prvi zajednički
+  48/48-kHz pokušaj je odbačen zbog trzanja, PCM/UAC gubitka i bljeska zaslona;
+  aktualni SHA ispravlja reproduciranu producer/consumer PCM cursor utrku,
+  dodaje bounded hijerarhijsku correlation pretragu i prolazi 313-assert
+  timeline gate, puni host suite, build i 300-s PC soak. Kratki fizički
+  48/48-kHz dual-deck retest s D1 +5 % i D2 -5 % prihvaćen je uz nulte PCM i
+  UAC drop/overflow delte; operator je potvrdio čist zvuk, fluidan waveform i
+  stabilan zaslon. Jedan završni output-late od 11024 us nije imao posljedicu.
+  Naknadni 44,1/48-kHz mixed-rate MT test također je prihvaćen bez novih
+  output-late događaja te uz nulte PCM i UAC drop/overflow delte; operator je
+  potvrdio zvuk, waveform i zaslon;
+- Shift + Browse force-open, ubrzano Library kretanje i Shift + Load D1/D2
+  routing prihvaćeni su eyes-on i API provjerom bez audio counter delte;
+- direct-FLX4 screensaver wake regresija reproducirana je i ispravljena;
+  fizički test s učitanom trakom potvrdio je wake-only prvi PLAY, izvršavanje
+  drugog PLAY-a i touch wake bez aktiviranja kontrole ispod. Vidi
+  [validation zapis](validation/2026-09-01-screensaver-wake.md);
+- corner/edge i two-finger safety provjera prihvaćena je bez ghost akcije,
+  stuck pressa, promjene postavki ili audio counter delte. LVGL input ostaje
+  namjerno single-pointer; vidi
+  [validation zapis](validation/2026-09-01-touch-edge-multitouch.md);
+- solo i dual-deck waveform sync gate prihvaćen je 2026-09-01. Refresh-bound
+  50,0146-Hz prikaz i top-to-bottom direct-PPA raspored daju oštre, fluidne
+  waveforme bez bljeskanja ili audio posljedice; vidi
+  [validation zapis](validation/2026-09-01-dsi506-waveform-sync.md);
+- desetominutni zajednički display/touch/master/headphones/dual-deck/USB3/
+  Wi-Fi soak prihvaćen je 2026-09-01. Svih 600 s oba su decka i loopa ostala
+  aktivna; 1840 status pollova prošlo je bez greške, a PCM underrun, UAC
+  drop/overflow/underflow i service-log drop delte bile su 0. Operator je
+  potvrdio čist master i slušalice, fluidne waveforme, responzivan touch,
+  stabilan zaslon i FLX4. Pet output-late događaja do 12522 us nije imalo
+  posljedicu i ostaje monitoring nalaz; vidi
+  [validation zapis](validation/2026-09-01-integration-soak.md);
+- nastavak: preostali potpuni Settings/Hot Cues eyes-on gate, screenshot
+  baseline te produženi cold-power/reconnect soak.
 
 ## Aktivni dokumenti
 

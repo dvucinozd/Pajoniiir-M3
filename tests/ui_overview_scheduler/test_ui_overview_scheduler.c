@@ -74,12 +74,13 @@ static void test_direct_overlay_is_allowed_for_both_decks(void)
     assert(!ui_overview_scheduler_direct_overlay_allowed(2));
 }
 
-static void test_deck_order_alternates_each_call(void)
+static void test_single_redraw_order_alternates_each_call(void)
 {
     ui_overview_scheduler_t scheduler;
     uint8_t first = 0;
     uint8_t second = 0;
     ui_overview_scheduler_init(&scheduler);
+    ui_overview_scheduler_begin_tick(&scheduler, 1);
 
     ui_overview_scheduler_next_deck_order(&scheduler, 1, 2, &first, &second);
     assert(first == 1);
@@ -92,6 +93,38 @@ static void test_deck_order_alternates_each_call(void)
     ui_overview_scheduler_next_deck_order(&scheduler, 1, 2, &first, &second);
     assert(first == 1);
     assert(second == 2);
+}
+
+static void test_dual_redraw_order_follows_top_to_bottom_scanout(void)
+{
+    ui_overview_scheduler_t scheduler;
+    uint8_t first = 0;
+    uint8_t second = 0;
+    ui_overview_scheduler_init(&scheduler);
+
+    /* Seed the fairness bit first; a dual-redraw tick must ignore it. */
+    ui_overview_scheduler_begin_tick(&scheduler, 1);
+    ui_overview_scheduler_next_deck_order(&scheduler, 1, 2, &first, &second);
+    assert(first == 1);
+    assert(second == 2);
+    assert(scheduler.deck_order_flip);
+
+    ui_overview_scheduler_begin_tick(&scheduler, 2);
+    ui_overview_scheduler_next_deck_order(&scheduler, 1, 2, &first, &second);
+    assert(first == 1);
+    assert(second == 2);
+    assert(scheduler.deck_order_flip);
+
+    ui_overview_scheduler_next_deck_order(&scheduler, 1, 2, &first, &second);
+    assert(first == 1);
+    assert(second == 2);
+    assert(scheduler.deck_order_flip);
+
+    /* One-slot fairness resumes where it left off. */
+    ui_overview_scheduler_begin_tick(&scheduler, 1);
+    ui_overview_scheduler_next_deck_order(&scheduler, 1, 2, &first, &second);
+    assert(first == 2);
+    assert(second == 1);
 }
 
 static void test_null_arguments_are_safe(void)
@@ -125,7 +158,8 @@ int main(void)
     test_two_playing_decks_get_two_redraws_per_tick();
     test_single_or_no_playing_deck_keeps_one_redraw_budget();
     test_direct_overlay_is_allowed_for_both_decks();
-    test_deck_order_alternates_each_call();
+    test_single_redraw_order_alternates_each_call();
+    test_dual_redraw_order_follows_top_to_bottom_scanout();
     test_null_arguments_are_safe();
 
     puts("ui_overview_scheduler tests passed");

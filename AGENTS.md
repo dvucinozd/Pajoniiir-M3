@@ -24,9 +24,9 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 
 ## Trenutni handoff
 
-Na benchu je app-only display/touch acceptance kandidat `M3-46-gee004d6-dirty` u
+Na benchu je app-only Master Tempo response kandidat `M3-47-g3f23bd2-dirty` u
 `factory` particiji, SHA-256
-`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`.
+`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`.
 Posljednji potpisani rollback/release baseline je `M3-41-g133f399` u `ota_0`.
 FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi SoftAP/web kontrola i
 potpisani OTA rade. Oba decka su zaustavljena, a Wi-Fi treba ostati uključen
@@ -41,14 +41,60 @@ output-late događaja nisu imala audio posljedicu i ostaju za monitoring.
 
 5,0-inčni EYOYO `DSI506 / DYL0023` spojen je na J2 i display-image gate je
 zatvoren 2026-08-31. Aktivni `bsp_p4_m3` koristi 1 lane / 800 Mbps, RGB888,
-27,777 MHz, HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `7/2/22`, burst sync pulses i
+27,777 MHz, HFP/HSW/HBP `59/2/45`, VFP/VSW/VBP `109/2/22` (50,0146 Hz), burst sync pulses i
 bez frame ACK-a. Boje, nativni landscape, GUI redoslijed i horizontalno
 poravnanje fizički su potvrđeni; non-burst način je odbačen jer je davao
 ciklički pomak `70123456`. Ne nagađaj nepoznati bridge/init. FT5426 touch je
 2026-08-31 stabiliziran na 100 kHz i korisnik je potvrdio kartice, Backlight
-drag i kontrole na obje strane. Sljedeći blok je UI Master Tempo i Shift +
-Browse/Load, zatim screensaver/multitouch rubni gate pa zajednički
-display/master/headphones/dual-deck/Wi-Fi soak.
+drag i kontrole na obje strane. Shift + Browse force-open, ubrzano pomicanje i
+Shift + Load D1/D2 routing prihvaćeni su 2026-09-01. Screensaver wake također
+je prihvaćen nakon popravka direct-FLX4 puta: prvi PLAY samo budi UI, drugi
+PLAY izvršava naredbu, a touch ne aktivira kontrolu ispod. Corner/edge i
+two-finger safety gate također su prihvaćeni bez ghost akcije ili stuck pressa;
+LVGL put ostaje namjerno single-pointer i ne tvrdi dva neovisna kursora.
+Waveform scanout kandidat prihvaćen je 2026-09-01: update je vezan uz panel
+refresh, a kad oba decka sviraju direct-PPA blit uvijek ide odozgo prema dolje.
+Korisnik je prvo potvrdio oštar i fluidan solo D1, zatim oba oštra i fluidna
+waveforma bez bljeskanja ili audio posljedice. Puni dugi integration soak time
+nije zamijenjen i ostaje otvoren. Vidi
+`docs/validation/2026-09-01-dsi506-waveform-sync.md`.
+Naknadni desetominutni zajednički integration soak prihvaćen je 2026-09-01:
+oba 44,1-kHz decka s aktivnim loopovima svirala su svih 600 s uz PCM5102A
+master, FLX4 slušalice/UAC, fluidne waveforme, touch/backlight, USB3 knjižnicu
+od 191 trake i kontinuirani Wi-Fi API promet. Prošlo je 1840 status pollova
+bez API/library/firmware greške; PCM underrun, UAC drop/overflow/underflow i
+service-log drop delte ostale su 0. Pet izoliranih output-late događaja,
+maksimum 12522 us, nije imalo čujnu ni vizualnu posljedicu i ostaje monitoring
+nalaz, pa ovo nije zero-late tvrdnja. Vidi
+`docs/validation/2026-09-01-integration-soak.md`. Produženi/cold-power/reconnect
+soak i preostali potpuni UI eyes-on gate ostaju otvoreni.
+
+MT test otkrio je da correlation offseti mogu akumulirati pomak zvuka unatoč
+ispravnom brojilu položaja. Nominalni grain sada se sidri na integrirani source
+clock. Prošli su novi 18-case PCM onset gate, puni host suite, 300-s PC soak i
+ESP-IDF build. Detalji:
+`docs/validation/2026-08-31-master-tempo-response.md`. API BPM/position sam po
+sebi nije dokaz akustičkog tempa. Raniji izolirani FLX4 disconnect i jedan
+11997-us output-late događaj ostaju otvoreni za monitoring.
+Negativni pitch na timing-only kandidatu naknadno je reproducirao pucketanje,
+waveform stutter i IDLE0 WDT (ae_output/PCM reads te ae_decode); povremeni
+display flash također je prijavljen. Trenutni cache kandidat iste dirty
+verzije razlikuje se SHA-om gore: per-deck 640-frame search cache je u internoj
+BSS, ne na output stacku. PC PCM hash i tempo očuvani su uz manje source read
+poziva; D2 pri -5,01% sada je potvrđen bez pucketanja uz fluidan waveform.
+Solo MT pitch prijelazi sada su potvrđeni na D1 i D2 uz čist zvuk i fluidan
+waveform. Prvi zajednički 48/48-kHz pokušaj je odbačen zbog teškog trzanja,
+PCM/UAC gubitka i bljeska zaslona. Aktualni SHA dodaje consumer-owned PCM
+playhead/read mapiranje nakon reproducirane half-published producer-index
+greške te bounded hijerarhijsku correlation pretragu. Puni host suite,
+313-assert timeline gate, build i 300-s PC soak prolaze. Kratki fizički
+48/48-kHz dual-deck retest s D1 +5 % i D2 -5 % prihvaćen je 2026-09-01:
+operator je potvrdio čist zvuk, fluidan waveform i stabilan zaslon, PCM i UAC
+drop/overflow delte ostale su 0, a jedan završni output-late od 11024 us nije
+imao čujnu ili vizualnu posljedicu. Naknadni 44,1/48-kHz mixed-rate MT test s
+istim suprotnim pitch vrijednostima također je prihvaćen: nije bilo novih
+output-late događaja ni PCM/UAC gubitka, a operator je potvrdio zvuk, waveform
+i zaslon. Ne pripisuj raniji bljesak heap overflowu bez dokaza.
 
 ## Najvažnije putanje
 

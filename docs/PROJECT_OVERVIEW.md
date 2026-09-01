@@ -20,9 +20,12 @@ obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
 
 `M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline za FLX4 MIDI/UAC,
 USB3 library/decode, Wi-Fi remote/OTA i dual-deck DSP, uključujući gapless
-Censor. App-only `M3-46-gee004d6-dirty / factory` dodaje aktivni
+Censor. App-only `M3-47-g3f23bd2-dirty / factory` zadržava aktivni
 `bsp_p4_m3` i fizički prihvaćenu DSI sliku na EYOYO `DSI506 / DYL0023`:
 800×480 RGB888, ispravne boje, nativni landscape i poravnanje bez cyclic wrapa.
+Panel radi na 50,0146 Hz s VFP `109`; dual-deck direct-PPA update prati scanout
+odozgo prema dolje. Solo i istodobni D1+D2 waveform fizički su prihvaćeni kao
+oštri i fluidni, bez bljeskanja ili audio posljedice.
 FT5426 touch na `0x38` stabiliziran je na 100 kHz uz obje mirror osi. Korisnik
 je 2026-08-31 potvrdio kartice, Backlight drag i kontrole na obje strane.
 PCM5102A iz koraka 5 spojen je i hardverski prihvaćen 2026-08-26: L/R, tihi idle, 44,1/48-kHz switching,
@@ -30,8 +33,17 @@ mixed-rate dual-deck i full-master limiter prošli su bez čujnog clippinga, PCM
 underruna ili UAC gubitka.
 
 Bench ostaje na uključenom Wi-Fi SoftAP-u. Fokusirani touch gate je prihvaćen;
-nastavak su Master Tempo i Shift + Browse/Load UI gate, screensaver/multitouch
-rubna provjera te zajednički display/audio/USB/Wi-Fi soak.
+Shift + Browse/Load UI, screensaver wake te corner/edge i two-finger safety
+gateovi također su prihvaćeni. Desetominutni zajednički display/touch/master/
+headphones/dual-deck/USB3/Wi-Fi soak prošao je bez fizičkog artefakta i bez
+PCM/UAC/service-log loss delte. Pet bezposljedičnih output-late događaja do
+12522 us ostaje za monitoring. Produženi cold-power/reconnect soak ostaje
+otvoren.
+Novi MT kandidat sidri analysis grainove na source clock kako korelacijski
+offseti ne bi usporavali reakciju stvarnog zvuka, koristi consumer-owned PCM
+mapiranje i bounded hijerarhijsku correlation pretragu. Host regresije i build
+prolaze. Solo prijelazi te kratki 48/48-kHz i 44,1/48-kHz mixed-rate dual-deck
+fizički gateovi prihvaćeni su.
 
 ## Granice sustava
 

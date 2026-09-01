@@ -21,6 +21,13 @@ static void cursor_store_absolute(uint32_t *epoch,
                                   uint32_t *version,
                                   uint64_t value)
 {
+    /* One writer owns each cursor. Within its existing epoch only one atomic
+     * low-word publication is needed; readers can legitimately observe either
+     * position. Reserve the seqlock for the rare epoch transition. */
+    if (__atomic_load_n(epoch, __ATOMIC_RELAXED) == (uint32_t)(value >> 32)) {
+        __atomic_store_n(low, (uint32_t)value, __ATOMIC_RELEASE);
+        return;
+    }
     (void)__atomic_add_fetch(version, 1u, __ATOMIC_ACQ_REL);
     __atomic_store_n(epoch, (uint32_t)(value >> 32), __ATOMIC_RELAXED);
     __atomic_store_n(low, (uint32_t)value, __ATOMIC_RELAXED);
@@ -102,18 +109,31 @@ bool audio_pcm_timeline_read(const audio_pcm_timeline_t *t, uint64_t seq,
     if (!t || !t->frames || !out || t->capacity == 0u) {
         return false;
     }
-    uint64_t oldest_seq = audio_pcm_timeline_oldest_seq(t);
-    uint64_t write_seq = audio_pcm_timeline_write_seq(t);
-    if (seq < oldest_seq || seq >= write_seq) {
-        return false;
-    }
     /* play_seq/play_index are owned by the same output task that performs
      * random key-lock reads. Use that stable physical anchor rather than the
      * producer-owned eviction cursor; the retained window is at most one
      * capacity wide, so at most one wrap correction is required. */
-    uint64_t play_seq = audio_pcm_timeline_play_seq(t);
-    int64_t index_from_play = (int64_t)t->play_index +
-                              ((int64_t)seq - (int64_t)play_seq);
+    const uint32_t play_low = t->play_seq;
+    const uint64_t play_seq = ((uint64_t)t->play_epoch << 32) | play_low;
+    int64_t delta;
+    if (seq >= play_seq) {
+        uint64_t ahead = seq - play_seq;
+        uint32_t write_low = __atomic_load_n(&t->write_seq, __ATOMIC_ACQUIRE);
+        if (ahead >= (uint32_t)(write_low - play_low) || ahead >= t->capacity) {
+            return false;
+        }
+        delta = (int64_t)ahead;
+    } else {
+        uint64_t behind = play_seq - seq;
+        uint32_t oldest_low = __atomic_load_n(&t->oldest_seq, __ATOMIC_ACQUIRE);
+        if (behind > (uint32_t)(play_low - oldest_low) || behind > t->capacity) {
+            return false;
+        }
+        delta = -(int64_t)behind;
+    }
+    /* Absolute distance checks above also reject another 64-bit epoch with
+     * the same low word. Producer spans are unambiguous below 2^31 frames. */
+    int64_t index_from_play = (int64_t)t->play_index + delta;
     if (index_from_play < 0) index_from_play += t->capacity;
     if (index_from_play >= t->capacity) index_from_play -= t->capacity;
     uint32_t index = (uint32_t)index_from_play;
@@ -122,7 +142,8 @@ bool audio_pcm_timeline_read(const audio_pcm_timeline_t *t, uint64_t seq,
     /* The producer may evict and overwrite this exact slot after our first
      * range check. Discard a possibly torn frame if its sequence expired while
      * it was being copied; callers already treat false as unavailable PCM. */
-    return seq >= audio_pcm_timeline_oldest_seq(t);
+    uint32_t oldest_after = __atomic_load_n(&t->oldest_seq, __ATOMIC_ACQUIRE);
+    return (uint32_t)((uint32_t)seq - oldest_after) < t->capacity;
 }
 
 bool audio_pcm_timeline_pop(audio_pcm_timeline_t *t, audio_mixer_frame_t *out)
@@ -149,14 +170,25 @@ bool audio_pcm_timeline_set_playhead(audio_pcm_timeline_t *t, uint64_t seq)
 {
     if (!t || t->capacity == 0u || seq < audio_pcm_timeline_oldest_seq(t) ||
         seq > audio_pcm_timeline_write_seq(t)) return false;
-    uint64_t write_seq = audio_pcm_timeline_write_seq(t);
-    uint64_t frames_back = write_seq - seq;
-    if (frames_back > t->capacity) return false;
-    uint32_t rewind = (uint32_t)frames_back;
-    uint32_t index = t->write_index >= rewind
-        ? t->write_index - rewind
-        : t->write_index + t->capacity - rewind;
-    t->play_index = index;
+    /* write_index can already point at the NEXT slot while write_seq still
+     * publishes the previous frame (producer preempted mid-push). Anchor on
+     * the consumer-owned pair instead, just like random reads. */
+    uint64_t previous = ((uint64_t)t->play_epoch << 32) | t->play_seq;
+    if (seq == previous) return true;
+    int64_t delta;
+    if (seq >= previous) {
+        uint64_t ahead = seq - previous;
+        if (ahead > t->capacity) return false;
+        delta = (int64_t)ahead;
+    } else {
+        uint64_t behind = previous - seq;
+        if (behind > t->capacity) return false;
+        delta = -(int64_t)behind;
+    }
+    int64_t index = (int64_t)t->play_index + delta;
+    if (index < 0) index += t->capacity;
+    if (index >= t->capacity) index -= t->capacity;
+    t->play_index = (uint32_t)index;
     cursor_store_absolute(&t->play_epoch, &t->play_seq,
                           &t->play_version, seq);
     return true;

@@ -41,9 +41,9 @@ In/Out/UAC, USB3 knjižnicu od 191 trake i SoftAP `Pajoniiir-M3`. Oba decka su
 nakon završnog smokea zaustavljena, service log nema dropova, a Wi-Fi i Windows
 profil ostavljeni su uključeni.
 
-Aktualni app-only bench image je `M3-46-gee004d6-dirty` u `factory`, SHA-256
-`00A131B3CE5A1DB9B009007316A3940DA9EBD6E58864E2F25EC4CB2676742988`.
-On prebacuje produkcijski build na `bsp_p4_m3`, koristi jednu DSI lane na
+Aktualni app-only bench image je `M3-47-g3f23bd2-dirty` u `factory`, SHA-256
+`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`.
+On zadržava produkcijski `bsp_p4_m3`, koristi jednu DSI lane na
 800 Mbps, RGB888 i hardware-prihvaćenu burst packetizaciju. GUI se podiže
 izravno, bez dijagnostičkih traka, a USB3 ponovno učitava 191 traku.
 
@@ -60,12 +60,24 @@ stereo sampleova (oko 0,31 %) uz peak 48.584; u 15-s single-deck testu samo 212
 sampleova (oko 0,016 %). Nije bilo PCM underruna ni UAC drop/overflowa, a
 operator nije čuo clipping, pucketanje, prekide ni pumping.
 
+Desetominutni zajednički display/touch, master/headphones, dual-deck, USB3 i
+Wi-Fi integration soak prihvaćen je 2026-09-01. Oba 44,1-kHz decka ostala su
+u aktivnim loopovima svih 600 s; 1840 status pollova, 46 library i 15 firmware
+provjera prošli su bez greške. PCM underrun, UAC drop/overflow/underflow i
+service-log drop delte bile su 0. Pet izoliranih output-late događaja do
+12522 us nije imalo fizičku posljedicu i ostaje za monitoring.
+
 Nastavak je sada:
 
-1. izvesti Master Tempo i Shift + Browse/Load eyes-on UI gate;
-2. završiti screensaver, corner/multitouch i ponovljeni touch rubni gate;
-3. odraditi zajednički display/touch, master/headphones, dual-deck i Wi-Fi
-   integration soak.
+1. dovršiti preostali Settings/Hot Cues eyes-on gate i obnoviti provjereni
+   800×480 UI screenshot baseline;
+2. odraditi produženi cold-power/reconnect integration soak.
+
+Fokusirani waveform-sync preduvjet zatvoren je 2026-09-01. DSI timing sada
+koristi VFP `109` (50,0146 Hz), a dual-deck direct-PPA update ide gornji pa
+donji waveform. Operator je potvrdio oštar i fluidan solo D1 te oba istodobna
+waveforma bez bljeskanja ili audio posljedice. To ne zamjenjuje dugi zajednički
+soak.
 
 ## Sljedeće faze
 
@@ -344,19 +356,32 @@ promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
   linkanja te prilagoditi LVGL/PPA put na jedan RGB888 framebuffer;
 - [x] pokrenuti panel u 800×480 nativnom landscape načinu i potvrditi boje,
   geometriju, redoslijed i stabilan warm boot bez horizontalnog omatanja;
+- [x] sinkronizirati waveform update s 50,0146-Hz panel refreshom i potvrditi
+  solo i dual-deck prikaz uz scanout-redoslijed gornji pa donji;
 - [x] ukloniti FT5x06 read greške na `0x38`: vratiti component-default 100-kHz
   I2C umjesto 400-kHz pre-arrival overridea;
 - [x] prihvatiti landscape koordinate (`swap_xy=0`, obje mirror osi), sve četiri
   kartice, Backlight drag i kontrole na obje strane;
-- [ ] dovršiti točan corner/multitouch gate, svjetlinu, potrošnju i ponašanje
-  screensavera;
+- [x] prihvatiti corner/edge odziv i two-finger safety bez ghost akcije, stuck
+  pressa ili promjene postavki; LVGL put ostaje namjerno single-pointer;
+- [ ] dovršiti mjerenje svjetline i potrošnje ako je potrebno za enclosure;
+- [x] prihvatiti screensaver wake: prvi lokalni FLX4 događaj samo budi UI,
+  sljedeći se izvršava, a touch ne aktivira kontrolu ispod screensavera;
 - [ ] vizualno pregledati sve ekrane te tek nakon toga obnoviti 800×480 UI
-  screenshot baseline i odraditi dugi display/touch/PSRAM soak.
+  screenshot baseline i odraditi produženi cold-power/reconnect
+  display/touch/PSRAM soak. Fokusirani desetominutni kombinirani soak je
+  prihvaćen 2026-09-01.
 
 Status: display-image i fokusirani touch dio prihvaćeni su 2026-08-31. Non-burst način odbačen je
 nakon mjerene faze `70123456`; burst sync pulses uklonio je wrap uz nepromijenjen
 timing. Bridge identitet i vendor init ostaju nepoznati i ne nagađaju se.
-Corner/multitouch, screensaver i zajednički soak još su otvoreni.
+Screensaver wake prihvaćen je 2026-09-01 nakon popravka direct-FLX4 event
+puta; vidi [validation zapis](validation/2026-09-01-screensaver-wake.md).
+Corner/edge i two-finger safety također su prihvaćeni; vidi
+[validation zapis](validation/2026-09-01-touch-edge-multitouch.md).
+Desetominutni zajednički soak je prihvaćen; vidi
+[integration soak zapis](validation/2026-09-01-integration-soak.md).
+Produženi cold-power/reconnect soak ostaje otvoren.
 
 Acceptance: puni kadar i touch koordinate rade u nativnom landscapeu na cijeloj
 površini, svi postojeći UI tokovi su čitljivi i nema display/audio regresija.
@@ -399,8 +424,10 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   FLANGER/DELAY DSP te potpuni shifted reset statea i ON/OFF LED-ice;
 - [x] hardware-verify D1 ANLZ-grid ponašanje shifted CUE/LOOP CALL back/forward
   i inertni safety behavior Shift + Smart CFX/Fader kontrola;
-- [ ] hardware-verify Shift + Browse force-open/ubrzano
-  kretanje i Shift + Load D1/D2 routing;
+- [x] hardware-verify Shift + Browse force-open/ubrzano kretanje i Shift + Load
+  D1/D2 routing; eyes-on i API provjera prošle su 2026-09-01 bez audio counter
+  delte, vidi
+  [validation zapis](validation/2026-09-01-shift-browse-load.md);
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.
@@ -437,8 +464,9 @@ CALL:
 `30000→29574→30058 ms`, odnosno jedan forward beat od 484 ms pri 124 BPM,
 bez release duplikata ili audio/USB counter delte. Shifted Smart CFX/Fader
 ostali su programski i fizički OFF, u skladu s namjernim no-op dizajnom.
-Zaslon je sada dostupan, pa su Browse/Load helperi prebačeni u sljedeći eyes-on
-UI acceptance blok čim touch ili privremena pouzdana UI navigacija bude spremna.
+Zaslon je sada dostupan. Eyes-on test 2026-09-01 potvrdio je Shift + Browse
+force-open Libraryja, ubrzano kretanje od deset redaka po detentu i Shift + Load
+D1/D2 routing bez pokretanja deckova ili audio counter delte.
 
 Screen-independent release hardening zatim je dobio čistu, host-testiranu UAC
 health politiku. Clock-correction deadband ostaje 3/8–5/8 ringa, a upozorenje se
@@ -476,8 +504,10 @@ underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
   seeka ili drugog PCM buffera;
 - [x] hardware-verify Censor reverse/release na oba decka uz nulte output-late,
   PCM-underrun i UAC drop/overflow delte;
-- [ ] nakon touch stabilizacije uključiti Master Tempo kroz UI i izmjeriti stvarni
-  dual-deck keylock/PSRAM deadline uz suprotne pitch vrijednosti;
+- [x] nakon touch stabilizacije uključiti Master Tempo kroz UI i potvrditi solo
+  prijelaze te kratki 48/48-kHz dual-deck keylock/PSRAM deadline uz suprotne
+  pitch vrijednosti;
+- [x] ponoviti dual-deck Master Tempo deadline na mixed-rate 44,1/48-kHz paru;
 - [x] postaviti pragove za UAC ring i output timing alarme, uz idle suppression,
   rate-limitirani servisni log i status API observability;
 

@@ -58,11 +58,14 @@ bool audio_pcm_timeline_pop(audio_pcm_timeline_t *t, audio_mixer_frame_t *out);
  * and the consumer must be excluded while it runs. */
 uint32_t audio_pcm_timeline_drop_newest(audio_pcm_timeline_t *t, uint32_t frames);
 
-/* Random-access read by monotonic 64-bit frame sequence. */
+/* Random-access read by monotonic 64-bit frame sequence. Consumer-owned:
+ * call from the output task, or exclude it while another task uses this API.
+ * Producer publication/eviction may continue concurrently. */
 bool audio_pcm_timeline_read(const audio_pcm_timeline_t *t, uint64_t seq,
                              audio_mixer_frame_t *out);
 
-/* Reposition normal playback to any retained frame, or write_seq (end). */
+/* Reposition normal playback to any retained frame, or write_seq (end).
+ * Same consumer-ownership requirement as audio_pcm_timeline_read. */
 bool audio_pcm_timeline_set_playhead(audio_pcm_timeline_t *t, uint64_t seq);
 
 /* Reposition using the scratch coordinate (0 = newest retained frame). */
