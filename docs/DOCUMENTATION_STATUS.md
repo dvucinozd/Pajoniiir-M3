@@ -4,8 +4,8 @@ Status: 2026-09-01.
 
 ## Trenutni handoff
 
-- aktualni bench image: app-only `M3-47-g3f23bd2-dirty`, `factory`, SHA-256
-  `EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`;
+- aktualni bench image: app-only `M3-48-g435bcfe-dirty`, `factory`, SHA-256
+  `2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`;
 - posljednji potpisani rollback/release baseline: `M3-41-g133f399`, `ota_0`;
 - potvrđeno: FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi
   SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
@@ -40,6 +40,10 @@ Status: 2026-09-01.
   potvrdio zvuk, waveform i zaslon;
 - Shift + Browse force-open, ubrzano Library kretanje i Shift + Load D1/D2
   routing prihvaćeni su eyes-on i API provjerom bez audio counter delte;
+- D1/D2 target selektori dobili su ispravno početno vizualno stanje. Fizički
+  D1 Hot Cue A set/shifted-clear odmah osvježava UI, nenulti recall je
+  trenutačan i čist, a NVS cue preživljava reboot i reload iste trake; vidi
+  [validation zapis](validation/2026-09-01-hot-cue-ui.md);
 - direct-FLX4 screensaver wake regresija reproducirana je i ispravljena;
   fizički test s učitanom trakom potvrdio je wake-only prvi PLAY, izvršavanje
   drugog PLAY-a i touch wake bez aktiviranja kontrole ispod. Vidi
@@ -60,8 +64,8 @@ Status: 2026-09-01.
   stabilan zaslon i FLX4. Pet output-late događaja do 12522 us nije imalo
   posljedicu i ostaje monitoring nalaz; vidi
   [validation zapis](validation/2026-09-01-integration-soak.md);
-- nastavak: preostali potpuni Settings/Hot Cues eyes-on gate, screenshot
-  baseline te produženi cold-power/reconnect soak.
+- nastavak: preostali Settings eyes-on gate, screenshot baseline te produženi
+  cold-power/reconnect soak.
 
 ## Aktivni dokumenti
 

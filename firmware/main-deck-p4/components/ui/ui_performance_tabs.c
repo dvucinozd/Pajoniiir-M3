@@ -42,6 +42,7 @@ uint32_t ui_performance_tabs_calculate_jump_target(uint32_t position_ms,
 #ifndef UI_PERFORMANCE_TABS_HOST_TEST
 
 #include "esp_log.h"
+#include "hot_cue_store.h"
 #include "ui_theme.h"
 
 #define UI_PERFORMANCE_TAB_COUNT_HOT_CUES 8
@@ -311,6 +312,12 @@ void ui_performance_tabs_update_hot_cues(void)
         ui_performance_tabs_acquire_active_anlz();
     const anlz_metadata_t *meta = anlz_snapshot_metadata(snapshot);
     bool has_anlz = meta != NULL;
+    deck_loaded_track_summary_t loaded = {0};
+    hot_cue_store_blob_t local = {0};
+    bool has_loaded_track =
+        deck_core_get_loaded_track(deck, &loaded) && loaded.valid;
+    bool has_local = has_loaded_track &&
+                     hot_cue_store_load(loaded.track_key, &local) == ESP_OK;
 
     for (int i = 0; i < UI_PERFORMANCE_TAB_COUNT_HOT_CUES; i++) {
         bool found = false;
@@ -318,7 +325,17 @@ void ui_performance_tabs_update_hot_cues(void)
         uint32_t end_pos = 0;
         uint8_t type = UI_CONTROLS_HOT_CUE_SINGLE;
 
-        if (has_anlz) {
+        if (has_local) {
+            uint32_t bit = 1u << i;
+            if ((local.valid_mask & bit) != 0u) {
+                pos = local.slots[i].pos_ms;
+                end_pos = local.slots[i].end_ms;
+                type = local.slots[i].type == HOT_CUE_STORE_TYPE_LOOP
+                           ? UI_CONTROLS_HOT_CUE_LOOP
+                           : UI_CONTROLS_HOT_CUE_SINGLE;
+                found = true;
+            }
+        } else if (has_anlz) {
             for (int j = 0; j < meta->cue_count; j++) {
                 if (meta->cues[j].index == i) {
                     pos = meta->cues[j].start_ms;
@@ -351,7 +368,7 @@ void ui_performance_tabs_update_hot_cues(void)
                 lv_label_set_text_fmt(lbl_pad, "%s %c", is_loop ? "LOOP" : "CUE", 'A' + i);
             }
             ui_performance_tabs_style_hot_cue_pad(i, is_loop, false);
-        } else if (has_anlz) {
+        } else if (has_local || has_anlz) {
             ui_controls_set_hot_cue(ui_performance_tabs_controls(),
                                     (uint8_t)i,
                                     0,

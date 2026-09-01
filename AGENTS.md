@@ -24,9 +24,9 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 
 ## Trenutni handoff
 
-Na benchu je app-only Master Tempo response kandidat `M3-47-g3f23bd2-dirty` u
-`factory` particiji, SHA-256
-`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`.
+Na benchu je app-only UI/Hot Cue kandidat `M3-48-g435bcfe-dirty` u `factory`
+particiji, SHA-256
+`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`.
 Posljednji potpisani rollback/release baseline je `M3-41-g133f399` u `ota_0`.
 FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi SoftAP/web kontrola i
 potpisani OTA rade. Oba decka su zaustavljena, a Wi-Fi treba ostati uključen
@@ -52,6 +52,11 @@ je prihvaćen nakon popravka direct-FLX4 puta: prvi PLAY samo budi UI, drugi
 PLAY izvršava naredbu, a touch ne aktivira kontrolu ispod. Corner/edge i
 two-finger safety gate također su prihvaćeni bez ghost akcije ili stuck pressa;
 LVGL put ostaje namjerno single-pointer i ne tvrdi dva neovisna kursora.
+Početni D1/D2 target selektori sada imaju eksplicitno stanje i prije prvog
+dodira. Lokalni Hot Cue overlay ima prednost nad Rekordbox ANLZ cueovima i
+osvježava se nakon fizičkog set/clear događaja. D1 cue A fizički je prošao set,
+shifted clear, nenulti recall i ponovni prikaz nakon reboota/reloada iste trake;
+vidi `docs/validation/2026-09-01-hot-cue-ui.md`.
 Waveform scanout kandidat prihvaćen je 2026-09-01: update je vezan uz panel
 refresh, a kad oba decka sviraju direct-PPA blit uvijek ide odozgo prema dolje.
 Korisnik je prvo potvrdio oštar i fluidan solo D1, zatim oba oštra i fluidna
@@ -67,7 +72,7 @@ service-log drop delte ostale su 0. Pet izoliranih output-late događaja,
 maksimum 12522 us, nije imalo čujnu ni vizualnu posljedicu i ostaje monitoring
 nalaz, pa ovo nije zero-late tvrdnja. Vidi
 `docs/validation/2026-09-01-integration-soak.md`. Produženi/cold-power/reconnect
-soak i preostali potpuni UI eyes-on gate ostaju otvoreni.
+soak, preostali Settings eyes-on gate i screenshot baseline ostaju otvoreni.
 
 MT test otkrio je da correlation offseti mogu akumulirati pomak zvuka unatoč
 ispravnom brojilu položaja. Nominalni grain sada se sidri na integrirani source

@@ -81,7 +81,12 @@ idf.py -p COM6 flash monitor
 - [x] Screensaver se budi bez propuštanja prvog lokalnog PLAY događaja;
   sljedeći PLAY radi, a dismissing touch ne aktivira kontrolu ispod. Vidi
   [validation zapis](validation/2026-09-01-screensaver-wake.md).
-- [ ] Dovršiti preostale Settings slidere i Hot Cues rubni eyes-on/touch gate.
+- [x] D1/D2 target selektori vidljivi su prije prvog dodira; D1 Hot Cue A
+  odmah prikazuje fizički set/shifted-clear, recall skače na spremljeno vrijeme,
+  a cue se vraća nakon reboota i ponovnog učitavanja iste trake. Vidi
+  [validation zapis](validation/2026-09-01-hot-cue-ui.md).
+- [ ] Dovršiti preostali Settings slider eyes-on/touch gate i obnoviti
+  provjereni 800×480 screenshot baseline.
 - [ ] Dugi display/touch/PSRAM soak nema tearing, artefakte, I2C poplavu loga,
   reset ni audio/USB posljedicu.
 

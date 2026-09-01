@@ -13,6 +13,7 @@ static int s_toggle_library_view_calls;
 static bool s_ui_library_active;
 static bool s_ui_overview_active;
 static int s_overview_zoom_delta;
+static int s_hot_cue_refresh_calls;
 int audio_engine_stub_channel_volume[DECK_CORE_DECK_COUNT];
 int audio_engine_stub_pregain[DECK_CORE_DECK_COUNT];
 int audio_engine_stub_master_volume;
@@ -176,6 +177,11 @@ esp_err_t ui_toggle_library_view(void)
 {
     s_toggle_library_view_calls++;
     return ESP_OK;
+}
+
+void ui_performance_tabs_update_hot_cues(void)
+{
+    s_hot_cue_refresh_calls++;
 }
 
 static ctrl_event_t deck_button(uint8_t id)
@@ -2450,6 +2456,26 @@ static void test_hot_cue_pad_stores_empty_slot_at_requested_deck_position(void)
     assert(blob.slots[2].end_ms == 0);
     assert(blob.slots[2].type == HOT_CUE_STORE_TYPE_SINGLE);
     assert(audio_engine_stub_deck_seek_count[CTRL_DECK_1] == 0);
+    uint8_t mask = 0u;
+    assert(deck_core_get_hot_cue_mask(CTRL_DECK_1, &mask));
+    assert(mask == (1u << 2));
+}
+
+static void test_hot_cue_mask_distinguishes_missing_and_empty_local_overlay(void)
+{
+    deck_core_test_reset();
+    clear_test_hot_cues();
+    publish_loaded_track(CTRL_DECK_1, 4040u, 120u, NULL);
+
+    uint8_t mask = 0xFFu;
+    assert(!deck_core_get_hot_cue_mask(CTRL_DECK_1, &mask));
+    assert(mask == 0u);
+
+    hot_cue_store_blob_t empty = {0};
+    assert(hot_cue_store_save(4040u, &empty) == ESP_OK);
+    mask = 0xFFu;
+    assert(deck_core_get_hot_cue_mask(CTRL_DECK_1, &mask));
+    assert(mask == 0u);
 }
 
 static void test_hot_cue_during_track_replace_cannot_use_previous_key(void)
@@ -2479,16 +2505,23 @@ static void test_hot_cue_pad_set_and_clear_updates_pad_led(void)
     control_link_stub_reset_leds();
     publish_loaded_track(CTRL_DECK_1, 1001u, 120u, NULL);
     audio_engine_stub_deck_position_ms[CTRL_DECK_1] = 12345;
+    s_hot_cue_refresh_calls = 0;
 
     ctrl_event_t set_pad = deck_button(CTRL_ID_DECK1_PAD_ACTION);
     set_pad.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_HOT_CUE, 2, false, true);
     deck_core_test_apply_event(&set_pad);
     assert(control_link_stub_last_led_state(LED_HOT_CUE_PAD_3, CTRL_DECK_1) == 1);
+    assert(s_hot_cue_refresh_calls == 0);
+    deck_core_test_flush_ui_commands();
+    assert(s_hot_cue_refresh_calls == 1);
 
     ctrl_event_t clear_pad = deck_button(CTRL_ID_DECK1_PAD_ACTION);
     clear_pad.value = CTRL_PAD_ACTION_VALUE(CTRL_PAD_MODE_HOT_CUE, 2, true, true);
     deck_core_test_apply_event(&clear_pad);
     assert(control_link_stub_last_led_state(LED_HOT_CUE_PAD_3, CTRL_DECK_1) == 0);
+    assert(s_hot_cue_refresh_calls == 1);
+    deck_core_test_flush_ui_commands();
+    assert(s_hot_cue_refresh_calls == 2);
 }
 
 static void test_hot_cue_pad_recalls_existing_slot_on_requested_deck(void)
@@ -2885,6 +2918,7 @@ int main(void)
     test_pad_fx2_pad_action_routes_to_audio_engine();
     test_pad_fx_pad_action_updates_momentary_pad_led();
     test_hot_cue_pad_stores_empty_slot_at_requested_deck_position();
+    test_hot_cue_mask_distinguishes_missing_and_empty_local_overlay();
     test_hot_cue_during_track_replace_cannot_use_previous_key();
     test_hot_cue_pad_set_and_clear_updates_pad_led();
     test_hot_cue_pad_recalls_existing_slot_on_requested_deck();

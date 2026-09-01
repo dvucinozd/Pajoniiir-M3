@@ -41,8 +41,8 @@ In/Out/UAC, USB3 knjižnicu od 191 trake i SoftAP `Pajoniiir-M3`. Oba decka su
 nakon završnog smokea zaustavljena, service log nema dropova, a Wi-Fi i Windows
 profil ostavljeni su uključeni.
 
-Aktualni app-only bench image je `M3-47-g3f23bd2-dirty` u `factory`, SHA-256
-`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`.
+Aktualni app-only bench image je `M3-48-g435bcfe-dirty` u `factory`, SHA-256
+`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`.
 On zadržava produkcijski `bsp_p4_m3`, koristi jednu DSI lane na
 800 Mbps, RGB888 i hardware-prihvaćenu burst packetizaciju. GUI se podiže
 izravno, bez dijagnostičkih traka, a USB3 ponovno učitava 191 traku.
@@ -69,9 +69,14 @@ service-log drop delte bile su 0. Pet izoliranih output-late događaja do
 
 Nastavak je sada:
 
-1. dovršiti preostali Settings/Hot Cues eyes-on gate i obnoviti provjereni
-   800×480 UI screenshot baseline;
+1. dovršiti preostali Settings eyes-on gate i obnoviti provjereni 800×480 UI
+   screenshot baseline;
 2. odraditi produženi cold-power/reconnect integration soak.
+
+Hot Cues UI/NVS gate zatvoren je 2026-09-01. D1/D2 target selektori vidljivi
+su odmah nakon prvog otvaranja, lokalni set/clear osvježava kartice bez promjene
+tabova, a D1 cue A prošao je set, shifted clear, nenulti recall i reload nakon
+reboota. Vidi [validation zapis](validation/2026-09-01-hot-cue-ui.md).
 
 Fokusirani waveform-sync preduvjet zatvoren je 2026-09-01. DSI timing sada
 koristi VFP `109` (50,0146 Hz), a dual-deck direct-PPA update ide gornji pa
@@ -428,6 +433,10 @@ Acceptance: nema audio artefakata, deadlocka ni reset loopa u dugom soaku.
   D1/D2 routing; eyes-on i API provjera prošle su 2026-09-01 bez audio counter
   delte, vidi
   [validation zapis](validation/2026-09-01-shift-browse-load.md);
+- [x] povezati lokalni `hot_cue_store` s Hot Cues karticama, osvježiti ih nakon
+  fizičkog set/clear događaja i hardware-verify D1 cue A set, clear, recall te
+  NVS reload; vidi
+  [validation zapis](validation/2026-09-01-hot-cue-ui.md);
 - proći preostale redove u `DDJ_FLX4_MIDI_MAP.md` izravno iz XML reference;
 - za svaku kontrolu dodati input behavior i LED reconnect test;
 - ukloniti zastarjele numeričke semantičke ID-jeve tek nakon pokrivanja.

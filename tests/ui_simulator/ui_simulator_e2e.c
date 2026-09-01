@@ -5,7 +5,10 @@
 #include <string.h>
 
 #include "lvgl.h"
+#include "deck_core.h"
+#include "hot_cue_store.h"
 #include "ui.h"
+#include "ui_performance_tabs.h"
 #include "splash_screen.h"
 
 #define DISPLAY_WIDTH 800
@@ -86,6 +89,27 @@ static bool click_label(const char *text)
     return true;
 }
 
+static bool target_selector_is_styled(const char *text)
+{
+    lv_obj_t *label = find_visible_label(lv_screen_active(), text);
+    if (!label) {
+        fprintf(stderr, "Missing visible target label: %s\n", text);
+        return false;
+    }
+
+    lv_obj_t *target = label;
+    while (target && !lv_obj_has_flag(target, LV_OBJ_FLAG_CLICKABLE)) {
+        target = lv_obj_get_parent(target);
+    }
+    if (!target) {
+        fprintf(stderr, "Target label has no clickable ancestor: %s\n", text);
+        return false;
+    }
+
+    return lv_obj_get_style_bg_opa(target, LV_PART_MAIN) != LV_OPA_TRANSP &&
+           lv_obj_get_style_border_width(target, LV_PART_MAIN) >= 1;
+}
+
 static uint64_t framebuffer_hash(void)
 {
     uint64_t hash = UINT64_C(14695981039346656037);
@@ -161,6 +185,19 @@ int main(int argc, char **argv)
     save_ppm(argv[1], "overview_deck1");
     uint64_t deck1_hash = framebuffer_hash();
 
+    /* Exercise the physical first-open sequence. Previously the Hot Cues
+     * selector was registered after the one-time target style update, leaving
+     * both buttons transparent until the operator touched one of them. */
+    if (!click_label("HOT CUES")) {
+        fail("Hot Cues first-open navigation failed");
+    }
+    if (!target_selector_is_styled("D1") || !target_selector_is_styled("D2")) {
+        fail("Hot Cues target selector is unstyled before its first click");
+    }
+    if (!click_label("OVERVIEW") || !ui_is_overview_active()) {
+        fail("Overview return after Hot Cues first-open check failed");
+    }
+
     if (!click_label("D2")) {
         fail("could not select Deck 2");
     }
@@ -179,6 +216,30 @@ int main(int argc, char **argv)
         fail("Hot Cues navigation failed");
     }
     save_ppm(argv[1], "hot_cues");
+
+    /* A controller-created cue is stored locally rather than in Rekordbox
+     * ANLZ. Verify that the live Hot Cues screen gives that local overlay
+     * precedence and renders it without a tab change. */
+    const uint32_t local_track_key = 0xE2E20002u;
+    hot_cue_store_blob_t local_cues = {0};
+    local_cues.valid_mask = 1u;
+    local_cues.slots[0].pos_ms = 32100u;
+    local_cues.slots[0].type = HOT_CUE_STORE_TYPE_SINGLE;
+    if (deck_core_publish_loaded_track(CTRL_DECK_2,
+                                       1000u,
+                                       local_track_key,
+                                       120u,
+                                       180000u,
+                                       NULL) != ESP_OK ||
+        hot_cue_store_save(local_track_key, &local_cues) != ESP_OK) {
+        fail("could not prepare local Hot Cue overlay fixture");
+    } else {
+        ui_performance_tabs_update_hot_cues();
+        pump(64);
+        if (!find_visible_label(lv_screen_active(), "00:00:32")) {
+            fail("controller-created local Hot Cue was not rendered live");
+        }
+    }
 
     if (!click_label("SETTINGS")) {
         fail("Settings navigation failed");

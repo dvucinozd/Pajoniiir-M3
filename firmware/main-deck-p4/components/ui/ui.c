@@ -912,6 +912,11 @@ esp_err_t ui_init(void) {
     s_screens[UI_TAB_HOT_CUES] = ui_performance_tabs_create_hot_cues(s_root_container);
     s_screens[UI_TAB_SETTINGS] = ui_settings_create(s_root_container);
 
+    /* Hot Cues registers a second D1/D2 target selector after the Overview
+     * selector was initially styled. Apply the current target once all screen
+     * widgets exist so a selector is never transparent until its first click. */
+    ui_controls_update_performance_target_visuals(&s_controls);
+
     // Switch initially to overview (index 0) and hide others
     for (int i = 1; i < UI_TAB_COUNT; i++) {
         lv_obj_add_flag(s_screens[i], LV_OBJ_FLAG_HIDDEN);

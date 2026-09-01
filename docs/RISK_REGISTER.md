@@ -1,6 +1,6 @@
 # Risk Register
 
-Status: aktivni rizici single-chip P4 izvedbe, 2026-08-31.
+Status: aktivni rizici single-chip P4 izvedbe, 2026-09-01.
 
 | ID | Rizik | Posljedica | Mitigacija / gate |
 |---|---|---|---|
@@ -8,7 +8,7 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-08-31.
 | R2 | FLX4 UAC1 descriptor/alternate-setting ili ring tlak odstupa od pretpostavke | nema slušalica, krivi format ili drop | descriptor testovi, hardware enumeration smoke, fail-closed endpoint izbor te active-playback 1/4–3/4 ring alarm; `M3-39` 48/44,1-kHz smoke potvrdio je priming-baseline suppression bez idle/start lažnih incidenata |
 | R3 | Audio output task probije blok deadline | čujni klik/underrun | single-precision DSP, bounded I/O, bez real-time success logiranja, rano spuštanje USB prioriteta, phase telemetry i alarm na dva output bloka; 600-s soak imao je četiri izolirana 10,732–11,659-ms događaja bez PCM/UAC posljedice, a hot-plug delta bila je 0 |
 | R4 | USB storage read blokira decode/output | dropout pri library/load aktivnostima | compressed cache i SD/USB I/O gate; 600-s soak s 64 library čitanja, 13 reload/seek ciklusa i fizički 191→0→191 media replacement prošli su bez PCM/UAC gubitka |
-| R5 | MIDI mapping ili shift state nije potpun | pogrešna kontrola ili LED | autoritativni Mixxx XML, službeni MIDI popis i map acceptance ledger; shifted Beat Jump/Call, Loop Adjust `0x4C/0x4E`, D1/D2 Quantize, Censor, Sync Master, Reloop Stop/Forget, Beat FX i inertni Smart helperi hardverski potvrđeni 2026-08-24; zaslon je sada dostupan pa su Shift + Browse/Load sljedeći eyes-on gate |
+| R5 | MIDI mapping ili shift state nije potpun | pogrešna kontrola ili LED | autoritativni Mixxx XML, službeni MIDI popis i map acceptance ledger; shifted Beat Jump/Call, Loop Adjust `0x4C/0x4E`, D1/D2 Quantize, Censor, Sync Master, Reloop Stop/Forget, Beat FX i inertni Smart helperi potvrđeni 2026-08-24; Shift + Browse/Load i D1 Hot Cue UI/NVS set-clear-recall-reload gate prihvaćeni su 2026-09-01; preostale stavke ostaju eksplicitno u acceptance ledgeru |
 | R6 | Reconnect ostavi stale FLX4 state/LED | UI i fizički kontroler se ne slažu | generation gate, connection event i puni LED snapshot nakon reconnecta |
 | R7 | C6 SDIO i microSD dijele resurse na neočekivan način | mreža ili SD ne rade | slot-aware BSP, IDF6 hardware smoke, APSTA servisni posjet koji čuva Hosted i montirani microSD te zabrana Hosted teardowna dok kartica koristi drugi slot istog SDMMC kontrolera |
 | R8 | PCM5102A pinovi kolidiraju s aktivnom periferijom ili fizički modul odstupa od pretpostavke | nema master zvuka, šum ili krivi L/R | zatvoreno 2026-08-26: GPIO1/2/3, SCK=GND i H1=L/H2=L/H3=H/H4=L dali su čisti stereo, tihi idle, 44,1/48-kHz switching i prihvatljivu limiter marginu; otvoreni H1-H4 reproducirali su glasni modulirani šum pa konfiguracija ostaje obvezni startup check |
@@ -29,8 +29,10 @@ pokušaja reprodukcije s coredumpom. Desetominutni dual-USB/audio/Wi-Fi soak,
 FLX4 reconnect pod playbackom i USB3 media remove/reinsert su zatvoreni.
 PCM5102A headroom/limiter/noise gate zatvoren je 2026-08-26. DSI image i
 fokusirani touch gate za EYOYO `DSI506 / DYL0023` zatvoreni su 2026-08-31;
-otvoreni su corner/multitouch, screensaver, eyes-on UI funkcije i zajednički
-display/master/headphones/dual-deck/Wi-Fi soak. Jednokratni simultani
+corner/multitouch, screensaver, Hot Cue UI/NVS i desetominutni zajednički
+display/master/headphones/dual-deck/Wi-Fi gateovi zatvoreni su 2026-09-01.
+Preostaju Settings eyes-on, screenshot baseline i produženi cold-power/reconnect
+soak. Jednokratni simultani
 start/seek PCM D1=202 događaj nije se
 ponovio u ukupno 25 kontroliranih startova i ostaje telemetrijska stavka, a ne
 potvrđeni reproducibilni kvar. Povijesni Censor MVP radio je dva playing seeka;

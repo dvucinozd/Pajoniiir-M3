@@ -24,9 +24,9 @@ LED callback prema izravnom FLX4 USB hostu.
 
 ## Trenutni bench status
 
-Na benchu je app-only Master Tempo response kandidat `M3-47-g3f23bd2-dirty` u
-`factory` particiji, SHA-256
-`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`.
+Na benchu je app-only UI/Hot Cue kandidat `M3-48-g435bcfe-dirty` u `factory`
+particiji, SHA-256
+`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`.
 Posljednji potpisani rollback/release baseline ostaje `M3-41-g133f399` u
 `ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, SoftAP
 `Pajoniiir-M3`, web kontrola i potpisani OTA rade; Wi-Fi ostaje uključen.
@@ -43,6 +43,10 @@ normalnog boota. FT5426 touch je stabiliziran na 100 kHz; `swap_xy=0`,
 `mirror_x=1`, `mirror_y=1`. Korisnik je potvrdio sve četiri kartice, Backlight
 drag te kontrole na obje strane Overviewa. Shift+Browse force-open i ubrzano
 pomicanje te Shift+Load routing na oba decka fizički su prihvaćeni 2026-09-01.
+Početni D1/D2 target selektori sada su čitljivi prije prvog dodira, a lokalni
+Hot Cue set/clear odmah osvježava zaslon. D1 cue A prošao je set, shifted clear,
+nenulti recall i NVS reload nakon reboota; vidi
+[Hot Cue UI zapis](docs/validation/2026-09-01-hot-cue-ui.md).
 Screensaver wake gate sada je također prihvaćen: prvi lokalni PLAY samo budi
 UI, sljedeći radi normalno, a touch ne aktivira kontrolu ispod screensavera.
 Corner/edge i two-finger safety gate prošli su bez ghost akcije ili stuck pressa.
@@ -56,8 +60,8 @@ service-log loss delte te fizički čist zvuk, fluidni waveformi, responzivan
 touch i stabilan zaslon. Pet izoliranih output-late događaja do 12522 us nije
 imalo posljedicu i ostaje za monitoring. Vidi
 [integration soak zapis](docs/validation/2026-09-01-integration-soak.md).
-Produženi/cold-power/reconnect soak i preostali potpuni UI eyes-on gate ostaju
-otvoreni.
+Produženi/cold-power/reconnect soak, preostali Settings eyes-on gate i obnova
+provjerenog screenshot baselinea ostaju otvoreni.
 
 Master Tempo test otkrio je da zvuk može zaostajati za ispravno prikazanim
 tempom. Ispravljeno je vremensko sidrenje audio-isječaka; novi PCM onset test

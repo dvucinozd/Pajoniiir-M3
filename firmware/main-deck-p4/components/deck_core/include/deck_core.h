@@ -162,6 +162,11 @@ esp_err_t deck_core_clear_loaded_tracks(uint32_t media_generation);
 bool deck_core_get_loaded_track(uint8_t deck,
                                 deck_loaded_track_summary_t *out);
 
+/* Read the controller-owned local Hot Cue overlay for the currently loaded
+ * track. `true` distinguishes a deliberately empty local overlay from a track
+ * that has no local Hot Cue record yet. */
+bool deck_core_get_hot_cue_mask(uint8_t deck, uint8_t *out_mask);
+
 /*
  * Drain controller-originated UI commands. ui_update() is the sole firmware
  * caller so all LVGL/library work executes in the LVGL task context.

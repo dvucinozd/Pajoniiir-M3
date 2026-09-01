@@ -50,6 +50,7 @@ extern esp_err_t ui_library_select_delta(int delta) __attribute__((weak));
 extern esp_err_t ui_overview_zoom_delta(int delta) __attribute__((weak));
 extern esp_err_t ui_library_load_selected(void) __attribute__((weak));
 extern esp_err_t ui_library_load_selected_for_deck(uint8_t deck) __attribute__((weak));
+extern void ui_performance_tabs_update_hot_cues(void) __attribute__((weak));
 
 static QueueHandle_t    s_queue;
 static QueueHandle_t    s_ui_command_queue;
@@ -93,6 +94,7 @@ typedef enum {
     DECK_UI_CMD_BROWSE_DELTA,
     DECK_UI_CMD_TOGGLE_LIBRARY_VIEW,
     DECK_UI_CMD_SHOW_LIBRARY,
+    DECK_UI_CMD_REFRESH_HOT_CUES,
 } deck_ui_command_kind_t;
 
 typedef struct {
@@ -101,6 +103,8 @@ typedef struct {
     uint8_t id;
     int16_t value;
 } deck_ui_command_t;
+
+static bool enqueue_ui_command(const deck_ui_command_t *cmd);
 
 #if defined(DECK_CORE_PC_TEST)
 static deck_ui_command_t s_test_ui_commands[DECK_CORE_TEST_UI_COMMAND_QUEUE_LEN];
@@ -700,6 +704,23 @@ static uint8_t hot_cue_exists_mask_for_deck(uint8_t deck)
     return mask;
 }
 
+bool deck_core_get_hot_cue_mask(uint8_t deck, uint8_t *out_mask)
+{
+    if (deck >= DECK_CORE_DECK_COUNT || !out_mask) {
+        return false;
+    }
+
+    uint32_t track_key = loaded_track_key_for_deck(deck);
+    hot_cue_store_blob_t blob = {0};
+    if (track_key == 0u || hot_cue_store_load(track_key, &blob) != ESP_OK) {
+        *out_mask = 0u;
+        return false;
+    }
+
+    *out_mask = (uint8_t)(blob.valid_mask & 0xFFu);
+    return true;
+}
+
 static void handle_hot_cue_pad_action(uint8_t deck, uint8_t pad, bool shifted, deck_state_t *state)
 {
     if (deck >= DECK_CORE_DECK_COUNT || pad >= HOT_CUE_STORE_SLOT_COUNT || !state) {
@@ -742,6 +763,9 @@ static void handle_hot_cue_pad_action(uint8_t deck, uint8_t pad, bool shifted, d
                      (unsigned)deck + 1,
                      (unsigned)pad + 1);
             publish_flx4_led_snapshot(false);
+            (void)enqueue_ui_command(&(deck_ui_command_t) {
+                .kind = DECK_UI_CMD_REFRESH_HOT_CUES,
+            });
         } else {
             ESP_LOGW(TAG, "deck %u hot cue %u clear failed: %s",
                      (unsigned)deck + 1,
@@ -784,6 +808,9 @@ static void handle_hot_cue_pad_action(uint8_t deck, uint8_t pad, bool shifted, d
                  (unsigned)pad + 1,
                  (unsigned long)pos_ms);
         publish_flx4_led_snapshot(false);
+        (void)enqueue_ui_command(&(deck_ui_command_t) {
+            .kind = DECK_UI_CMD_REFRESH_HOT_CUES,
+        });
     } else {
         ESP_LOGW(TAG, "deck %u hot cue %u set failed: %s",
                  (unsigned)deck + 1,
@@ -1676,6 +1703,12 @@ static void execute_ui_command(const deck_ui_command_t *cmd)
             ESP_LOGD(TAG, "browse shift press fallback -> toggle: %s", esp_err_to_name(rc));
         } else {
             ESP_LOGW(TAG, "browse shift press unsupported: UI API unavailable");
+        }
+        break;
+
+    case DECK_UI_CMD_REFRESH_HOT_CUES:
+        if (ui_performance_tabs_update_hot_cues) {
+            ui_performance_tabs_update_hot_cues();
         }
         break;
     }
