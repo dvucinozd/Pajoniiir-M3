@@ -112,6 +112,14 @@ istim suprotnim pitch vrijednostima također je prihvaćen: nije bilo novih
 output-late događaja ni PCM/UAC gubitka, a operator je potvrdio zvuk, waveform
 i zaslon. Ne pripisuj raniji bljesak heap overflowu bez dokaza.
 
+Rezidualni reliability rad namjerno je odgođen. Ne mijenjaj firmware samo zbog
+početne FLX4/MSC enumeracijske kolizije koja se automatski oporavlja ili
+izoliranog output-late događaja bez fizičke/data-loss posljedice. Buduća
+kampanja mora slijediti `docs/RELIABILITY_MONITORING_PLAN.md`: read-only host
+monitor, 30 USB boot/reconnect ciklusa i 60–120-minutni worst-case timing soak
+s unaprijed zadanim PASS/FAIL granicama. `README.md` je korisnički i developerski
+ulaz u projekt te mora ostati u cijelosti na engleskom jeziku.
+
 ## Najvažnije putanje
 
 ```text
@@ -126,6 +134,7 @@ i zaslon. Ne pripisuj raniji bljesak heap overflowu bez dokaza.
   docs\DEVELOPMENT_PLAN.md
   docs\STARTUP_CHECKLIST.md
   docs\RISK_REGISTER.md
+  docs\RELIABILITY_MONITORING_PLAN.md
   docs\DOCUMENTATION_STATUS.md
   docs\OTA-UPDATE.md
   docs\reference\Pioneer-DDJ-FLX4.midi.xml

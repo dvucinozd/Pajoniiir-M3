@@ -80,7 +80,9 @@ Status: 2026-09-01.
   touch/backlight, dual-deck master/slušalice i svih pet zoom razina; vidi
   [M3-51 clean release zapis](validation/2026-09-01-m3-51-clean-release.md);
 - nastavak: pratiti izolirane output-late događaje i početnu istodobnu USB
-  enumeracijsku koliziju koja se automatski oporavlja.
+  enumeracijsku koliziju koja se automatski oporavlja. Reliability kampanja je
+  odgođena; matrica, telemetrija i PASS/FAIL granice spremljene su u
+  [Reliability Monitoring Planu](RELIABILITY_MONITORING_PLAN.md).
 
 ## Aktivni dokumenti
 
@@ -95,6 +97,7 @@ Status: 2026-09-01.
 - `docs/DEVELOPMENT_PLAN.md` — prioriteti nastavka
 - `docs/STARTUP_CHECKLIST.md` — bench acceptance
 - `docs/RISK_REGISTER.md` — otvoreni rizici
+- `docs/RELIABILITY_MONITORING_PLAN.md` — odgođena USB/output timing kampanja
 - `docs/OTA-UPDATE.md` — P4-only OTA
 - `firmware/main-deck-p4/PINOUT_P4.md` — sažetak aktivnih pinova
 

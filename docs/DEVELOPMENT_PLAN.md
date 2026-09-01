@@ -1,8 +1,7 @@
 # Development Plan
 
-Status: plan nakon mixed-rate, FLX4 headphone, disconnect/EOF, signed P4 OTA,
-Beat Jump, Loop Adjust/Quantize, shifted transport/sync, Beat FX, UAC health,
-gapless Censor, PCM5102A master i DSI image acceptance blokova, 2026-08-31.
+Status: M3-51 clean release prihvaćen; USB recovery i output timing reliability
+kampanja dokumentirana je i odgođena, 2026-09-01.
 
 ## Trenutna baza
 
@@ -535,6 +534,30 @@ underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
 
 ### 7. Release hardening
 
-- P4-only reproducibilni clean build i OTA package gate;
-- završni artifact identity i release/startup dokumentacijski pregled;
-- ažurirani startup smoke, risk register i release validation zapis.
+- [x] P4-only reproducibilni clean build i OTA package gate;
+- [x] završni artifact identity i release/startup dokumentacijski pregled;
+- [x] ažurirani startup smoke i release validation zapis.
+
+Clean `M3-51-gafb2099` iz commita `afb2099` izgrađen je s ESP-IDF 6.0.2,
+potpisan ključem `rel-001`, full-flashan preko COM6 i instaliran lokalnim
+signed OTA tokom u `ota_0`. Health gate, FLX4, 191-track USB3 library, GUI,
+touch/backlight, master/headphones i svih pet waveform zoomova prošli su.
+
+### 8. Odgođeni reliability monitoring
+
+Ovaj blok je namjerno ostavljen za kasnije i ne blokira prihvaćeni M3-51
+release:
+
+- [ ] izraditi read-only host monitor za firmware/status/library i diagnostic
+  log, s CSV/JSON artefaktima i counter deltama;
+- [ ] provesti 30-ciklusnu USB enumeracijsku/recovery matricu;
+- [ ] provesti 60–120-minutni mixed-rate dual-deck worst-case timing soak;
+- [ ] klasificirati output-late događaje prema učestalosti, maksimumu i
+  fizičkoj posljedici, bez automatskog proglašavanja izoliranog događaja
+  kvarom;
+- [ ] ažurirati risk register samo izmjerenim rezultatima.
+
+Točan workload, telemetrija i PASS/FAIL granice zapisani su u
+[Reliability Monitoring Planu](RELIABILITY_MONITORING_PLAN.md). Do tada ne
+mijenjati firmware zbog početne USB kolizije ili izoliranog output-latea bez
+ponovljivog dokaza problema.
