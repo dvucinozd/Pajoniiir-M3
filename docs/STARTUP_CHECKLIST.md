@@ -2,12 +2,13 @@
 
 Status: važeći bench postupak, 2026-09-01.
 
-Aktualni bench image je all-zoom kandidat `M3-50-gc4897b7-dirty / factory`,
-SHA-256 `C5F018558BA91729A7F16DA4D3056E34E44FA7BBE2E07AA13E1558C4272E30F1`;
-potpisani `M3-50-gc4897b7 / ota_0` ostaje rollback baseline. FLX4, USB3,
-PCM5102A, Wi-Fi, DSI slika, fokusirani touch, screensaver wake te corner/edge i
-two-finger safety gate rade. Desetominutni zajednički i produženi
-cold-power/reconnect integration gateovi prihvaćeni su.
+Aktualni bench i rollback/release image je clean, potpisani
+`M3-51-gafb2099 / ota_0`, SHA-256
+`7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`.
+FLX4, USB3, PCM5102A, Wi-Fi, DSI slika, fokusirani touch, screensaver wake te
+corner/edge i two-finger safety gate rade. Desetominutni zajednički, produženi
+cold-power/reconnect i završni M3-51 dual-deck/all-zoom release smoke su
+prihvaćeni.
 
 - [x] MT 0% -> +5% -> -5% -> 0% potvrđen je na oba decka, a kratki simultani
   48/48-kHz gate s D1 +5 % i D2 -5 % prošao je uz čist zvuk, fluidan waveform,

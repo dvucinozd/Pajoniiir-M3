@@ -34,18 +34,22 @@ M porodicu kao monotono noviju od RC porodice te ima migracijske OTA testove za
 
 ## Handoff za sljedeću sesiju
 
-Posljednji potpisani produkcijski rollback baseline je `M3-41-g133f399` u
-`ota_0` na P4 ploči. Potpisani lokalni web OTA prihvatio je bundle od
-2.369.552 B, podigao novi image, vratio OTA API u `idle` te obnovio FLX4 MIDI
-In/Out/UAC, USB3 knjižnicu od 191 trake i SoftAP `Pajoniiir-M3`. Oba decka su
-nakon završnog smokea zaustavljena, service log nema dropova, a Wi-Fi i Windows
-profil ostavljeni su uključeni.
+Aktualni produkcijski rollback/release baseline je clean `M3-51-gafb2099` u
+`ota_0` na P4 ploči. Image ima 2.371.008 B i SHA-256
+`7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`;
+potpisani `rel-001` bundle ima 2.371.196 B i SHA-256
+`C2658E3C55647745DB8142D691E8A9EBF5A27FA584DED9469B6AA36335BEEBC7`.
+Lokalni web OTA podigao je `ota_0`, startup health gate označio je image
+valjanim, OTA API vratio se u `idle`, a FLX4 MIDI In/Out/UAC, USB3 knjižnica od
+191 trake i SoftAP `Pajoniiir-M3` obnovljeni su. Tri naknadna API polla bila su
+stabilna uz nulte PCM underrun, output-late i service-log drop brojače.
 
-Aktualni app-only bench image je `M3-48-g435bcfe-dirty` u `factory`, SHA-256
-`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`.
-On zadržava produkcijski `bsp_p4_m3`, koristi jednu DSI lane na
-800 Mbps, RGB888 i hardware-prihvaćenu burst packetizaciju. GUI se podiže
-izravno, bez dijagnostičkih traka, a USB3 ponovno učitava 191 traku.
+Završni fizički smoke na tom releaseu potvrdio je GUI, touch i Backlight,
+dual-deck playback, PCM5102A master, FLX4 slušalice te oštre i fluidne glavne
+waveforme na svih pet zoom razina (4, 8, 12, 16 i 24 vidljiva beata). Release
+zadržava produkcijski `bsp_p4_m3`, jednu DSI lane na 800 Mbps, RGB888 i
+hardverski prihvaćenu burst packetizaciju. Wi-Fi i Windows SoftAP profil
+ostavljeni su uključeni.
 
 D1 48-kHz i D2 44,1-kHz gapless Censor acceptance potvrdio je reverse,
 napredovalu slip poziciju, gladak release i nulte kontrolirane

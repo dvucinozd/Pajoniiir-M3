@@ -4,9 +4,11 @@ Status: 2026-09-01.
 
 ## Trenutni handoff
 
-- aktualni bench image: all-zoom kandidat `M3-50-gc4897b7-dirty`, `factory`,
-  SHA-256 `C5F018558BA91729A7F16DA4D3056E34E44FA7BBE2E07AA13E1558C4272E30F1`;
-- posljednji potpisani rollback/release baseline: `M3-50-gc4897b7`, `ota_0`;
+- aktualni bench i potpisani rollback/release image: clean
+  `M3-51-gafb2099`, `ota_0`, 2.371.008 B, SHA-256
+  `7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`;
+- `rel-001` `.ddjota` bundle: 2.371.196 B, SHA-256
+  `C2658E3C55647745DB8142D691E8A9EBF5A27FA584DED9469B6AA36335BEEBC7`;
 - potvrđeno: FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi
   SoftAP/web kontrola, signed OTA i gapless Censor na D1/D2;
 - Wi-Fi ostaje uključen tijekom nastavka razvoja;
@@ -72,8 +74,13 @@ Status: 2026-09-01.
   reconnecta pod playbackom, sigurnog USB3 reconnecta i završnog dual-deck/PFL
   opterećenja; vidi
   [validation zapis](validation/2026-09-01-cold-power-reconnect.md);
-- nastavak: release hardening, reproducibilni clean build i finalni artifact
-  identity.
+- clean ESP-IDF 6.0.2 build, lokalno potpisivanje/verifikacija, full flash i
+  `POST /api/ota/p4` završeni su; uređaj je podigao `ota_0`, označio image
+  valjanim i vratio API u `idle`. Završni fizički smoke potvrdio je GUI,
+  touch/backlight, dual-deck master/slušalice i svih pet zoom razina; vidi
+  [M3-51 clean release zapis](validation/2026-09-01-m3-51-clean-release.md);
+- nastavak: pratiti izolirane output-late događaje i početnu istodobnu USB
+  enumeracijsku koliziju koja se automatski oporavlja.
 
 ## Aktivni dokumenti
 

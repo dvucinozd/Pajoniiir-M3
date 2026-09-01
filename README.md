@@ -24,12 +24,15 @@ LED callback prema izravnom FLX4 USB hostu.
 
 ## Trenutni bench status
 
-Na benchu je app-only UI/Hot Cue kandidat `M3-48-g435bcfe-dirty` u `factory`
-particiji, SHA-256
-`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`.
-Posljednji potpisani rollback/release baseline ostaje `M3-41-g133f399` u
-`ota_0`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, SoftAP
-`Pajoniiir-M3`, web kontrola i potpisani OTA rade; Wi-Fi ostaje uključen.
+Na benchu je clean, potpisani i OTA-prihvaćeni release `M3-51-gafb2099` u
+`ota_0`. Unutarnji image ima 2.371.008 B i SHA-256
+`7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`,
+a `.ddjota` bundle 2.371.196 B i SHA-256
+`C2658E3C55647745DB8142D691E8A9EBF5A27FA584DED9469B6AA36335BEEBC7`.
+FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, SoftAP `Pajoniiir-M3`, web
+kontrola i potpisani OTA rade; Wi-Fi ostaje uključen. Završni release smoke
+potvrdio je GUI, touch/backlight, oba decka, master i slušalice te fluidne
+waveforme na svih pet zoom razina.
 
 PCM5102A je 2026-08-26 fizički spojen na GPIO1/2/3 i hardverski prihvaćen s
 44,1-kHz i 48-kHz izvorima, mixed-rate dual-deck miksom, tihim idle izlazom te

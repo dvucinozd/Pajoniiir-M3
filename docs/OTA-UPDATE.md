@@ -6,13 +6,12 @@ Projekt proizvodi samo jedan OTA target: `main-deck-p4` za chip ID `0x0012`.
 Bundle mora biti `.ddjota`, potpisan pouzdanim ECDSA P-256 ključem, s ispravnim
 projektom, chip ID-em, verzijom, veličinom i SHA-256 sažetkom.
 
-Posljednji potpisani i OTA-prihvaćeni release image je `M3-41-g133f399` u
-`ota_0`. Na benchu se trenutačno podiže app-only kandidat
-`M3-48-g435bcfe-dirty` iz `factory` particije; nije pakiran ni instaliran kao
-potpisani release bundle. FLX4, USB3, PCM5102A, Wi-Fi i DSI slika dostupni su.
-Display acceptance zato ne proširuje niti zamjenjuje postojeći OTA gate; nakon
-commita treba zasebno proizvesti i potpisati budući release ako se želi OTA
-instalacija ove funkcionalnosti.
+Posljednji potpisani i OTA-prihvaćeni release image je clean
+`M3-51-gafb2099` u `ota_0`. Image ima 2.371.008 B i SHA-256
+`7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`,
+a `.ddjota` bundle 2.371.196 B i SHA-256
+`C2658E3C55647745DB8142D691E8A9EBF5A27FA584DED9469B6AA36335BEEBC7`.
+FLX4, USB3, PCM5102A, Wi-Fi, DSI slika i FT5426 touch dostupni su.
 
 ## Pakiranje
 
@@ -53,6 +52,35 @@ release ključem. Privatni ključ ne učitava se na uređaj ni u repozitorij.
 - nakon restarta uvijek provjeri USB2 FLX4, USB3 storage, Wi-Fi i FLX4
   headphone izlaz; DSI/touch i PCM5102A master provjeri samo kada su fizički
   spojeni.
+
+## Hardware acceptance M3-51, 2026-09-01
+
+Clean ESP-IDF 6.0.2 build `M3-51-gafb2099` proizveden je iz commita
+`afb20993381ad5e9a245d83de79692a04e7a9db9`. `dependencies.lock` i tracked
+worktree ostali su nepromijenjeni. App zauzima 2.371.008 B od 4-MiB particije
+(43 % slobodno) i ima SHA-256
+`7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`.
+
+`package_ota_release.ps1` potpisao ga je ECDSA-P256-SHA256 ključem `rel-001` i
+lokalno verificirao manifest, potpis i sadržaj. Bundle
+`main-deck-p4.ddjota` ima 2.371.196 B i SHA-256
+`C2658E3C55647745DB8142D691E8A9EBF5A27FA584DED9469B6AA36335BEEBC7`.
+Clean image prvo je full-flashan preko COM6 u `factory`; zatim je isti
+potpisani bundle poslan na `POST /api/ota/p4`, koji je vratio HTTP 200 i
+`{"ok":true,"rebooting":true}`.
+
+Uređaj je podigao `ota_0`, startup health gate označio je image valjanim, a
+`/api/firmware` vratio se u `idle`. USB3 knjižnica obnovila je 191 traku.
+Poznata početna FLX4/MSC enumeracijska kolizija automatski se oporavila
+ponovnim preuzimanjem FLX4-a na adresi 3; nakon toga MIDI In/Out i UAC bili su
+aktivni. Tri naknadna API polla ostala su stabilna uz nulte PCM underrun,
+output-late i service-log drop brojače.
+
+Završni operatorov smoke potvrdio je GUI, touch/Backlight, oba decka,
+PCM5102A master, FLX4 slušalice te fluidne waveforme na svih pet zoom razina
+(4, 8, 12, 16 i 24 vidljiva beata). Rezultat: **M3-51 clean release i lokalni
+signed-OTA acceptance PASS**. Potpuni zapis je u
+[M3-51 clean release acceptanceu](validation/2026-09-01-m3-51-clean-release.md).
 
 ## Hardware acceptance M3-39, 2026-08-24
 

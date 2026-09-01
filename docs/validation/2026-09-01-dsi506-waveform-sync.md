@@ -92,8 +92,27 @@ The all-zoom correction was verified separately:
 - boot restored the 191-track USB3 library and automatically recovered the
   known initial FLX4/MSC enumeration collision by reclaiming FLX4 at address 3.
 
-The PC was not connected to the product SoftAP after the final physical run,
-so no post-run HTTP counter snapshot is claimed for this focused visual gate.
+The first focused all-zoom run ended without a post-run HTTP snapshot. The
+subsequent clean release run below added the independent API and OTA evidence.
+
+## Clean M3-51 release confirmation
+
+The accepted source was committed as `afb20993381ad5e9a245d83de79692a04e7a9db9`
+and rebuilt from an empty `build_release` directory with ESP-IDF 6.0.2:
+
+- version: `M3-51-gafb2099`;
+- image: 2,371,008 bytes, SHA-256
+  `7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`;
+- signed bundle: 2,371,196 bytes, SHA-256
+  `C2658E3C55647745DB8142D691E8A9EBF5A27FA584DED9469B6AA36335BEEBC7`;
+- full flash: COM6 / `factory`, write hash verified;
+- signed local OTA: HTTP 200, booted `ota_0`, health gate marked valid and API
+  returned to `idle`;
+- post-boot: 191 tracks, FLX4 MIDI In/Out/UAC active and three stable API
+  snapshots with zero PCM underrun, output-late and service-log drop counters.
+
+The operator then repeated GUI, touch/Backlight, dual-deck master/headphones
+and all five zoom levels on the clean release and confirmed all items correct.
 
 ## Physical acceptance
 

@@ -24,13 +24,16 @@ Cilj je standalone dual-deck DJ sustav bez računala (single-chip ESP32-P4):
 
 ## Trenutni handoff
 
-Na benchu je app-only UI/Hot Cue kandidat `M3-48-g435bcfe-dirty` u `factory`
-particiji, SHA-256
-`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`.
-Posljednji potpisani rollback/release baseline je `M3-41-g133f399` u `ota_0`.
-FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191 trake, Wi-Fi SoftAP/web kontrola i
-potpisani OTA rade. Oba decka su zaustavljena, a Wi-Fi treba ostati uključen
-dok se ne završe touch/UI i integration provjere.
+Na benchu je clean i potpisani release `M3-51-gafb2099` u `ota_0`. Unutarnji
+image ima 2.371.008 B i SHA-256
+`7FB9C78E4918117E60848B1BF4D34277412B722341DACD41DEAEAF2E94C815B7`;
+potpisani `.ddjota` bundle ima 2.371.196 B i SHA-256
+`C2658E3C55647745DB8142D691E8A9EBF5A27FA584DED9469B6AA36335BEEBC7`.
+Lokalni `POST /api/ota/p4` završio je HTTP 200, image je prošao startup health
+gate, a API se vratio u `idle`. FLX4 MIDI In/Out/UAC, USB3 knjižnica od 191
+trake, Wi-Fi SoftAP/web kontrola i potpisani OTA rade. Završni fizički smoke
+potvrdio je GUI, touch/backlight, dual-deck master i slušalice te fluidne
+waveforme na svih pet zoom razina. Wi-Fi treba ostati uključen.
 
 PCM5102A je 2026-08-26 hardverski prihvaćen na `M3-41` baselineu. Wiring je
 `BCK=GPIO1`, `LCK=GPIO2`, `DIN=GPIO3`, `SCK=GND`, `VIN=5V`, zajednički GND;
