@@ -60,8 +60,14 @@ service-log loss delte te fizički čist zvuk, fluidni waveformi, responzivan
 touch i stabilan zaslon. Pet izoliranih output-late događaja do 12522 us nije
 imalo posljedicu i ostaje za monitoring. Vidi
 [integration soak zapis](docs/validation/2026-09-01-integration-soak.md).
-Produženi/cold-power/reconnect soak, preostali Settings eyes-on gate i obnova
-provjerenog screenshot baselinea ostaju otvoreni.
+Settings eyes-on/touch i pregledani 800×480 screenshot gate sada su zatvoreni;
+oba Settings capturea imaju isti očekivani hash i potvrđuju točnu obnovu nakon
+screensavera. Vidi
+[Settings UI zapis](docs/validation/2026-09-01-settings-ui.md). Produženi
+cold-power/reconnect gate također je zatvoren: tri cold boota, FLX4 reconnect
+pod playbackom, sigurni USB3 `191→0→191` reconnect, 300-s dual-deck load i
+završni PFL smoke prošli su bez PCM/UAC/service-log gubitka. Vidi
+[cold-power/reconnect zapis](docs/validation/2026-09-01-cold-power-reconnect.md).
 
 Master Tempo test otkrio je da zvuk može zaostajati za ispravno prikazanim
 tempom. Ispravljeno je vremensko sidrenje audio-isječaka; novi PCM onset test
@@ -80,8 +86,8 @@ D2 -5 % prihvaćen je uz čist zvuk, fluidan waveform, stabilan zaslon i nulte
 PCM/UAC drop/overflow delte. Jedan završni output-late od 11024 us nije imao
 čujnu ili vizualnu posljedicu. Naknadni 44,1/48-kHz mixed-rate MT test također
 je prihvaćen bez novih output-late, PCM ili UAC gubitaka; operator je potvrdio
-zvuk, waveform i zaslon. Desetominutni kombinirani soak sada prolazi; duži
-cold-power/reconnect acceptance ostaje otvoren.
+zvuk, waveform i zaslon. Desetominutni kombinirani soak i produženi
+cold-power/reconnect acceptance sada prolaze.
 
 Aktualni baseline potvrđuje FLX4 MIDI,
 LED/UAC, USB3 biblioteka, modalni jog Loop Adjust, deck-local Quantize, prvi

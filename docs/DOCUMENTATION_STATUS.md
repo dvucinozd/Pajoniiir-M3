@@ -64,8 +64,15 @@ Status: 2026-09-01.
   stabilan zaslon i FLX4. Pet output-late događaja do 12522 us nije imalo
   posljedicu i ostaje monitoring nalaz; vidi
   [validation zapis](validation/2026-09-01-integration-soak.md);
-- nastavak: preostali Settings eyes-on gate, screenshot baseline te produženi
-  cold-power/reconnect soak.
+- Settings eyes-on/touch i pregledani 800×480 screenshot gate zatvoreni su;
+  `settings` i `settings_restored` ponovno daju isti očekivani hash, vidi
+  [validation zapis](validation/2026-09-01-settings-ui.md);
+- produženi cold-power/reconnect gate zatvoren je nakon tri cold boota, FLX4
+  reconnecta pod playbackom, sigurnog USB3 reconnecta i završnog dual-deck/PFL
+  opterećenja; vidi
+  [validation zapis](validation/2026-09-01-cold-power-reconnect.md);
+- nastavak: release hardening, reproducibilni clean build i finalni artifact
+  identity.
 
 ## Aktivni dokumenti
 

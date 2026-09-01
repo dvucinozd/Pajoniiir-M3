@@ -67,11 +67,16 @@ provjera prošli su bez greške. PCM underrun, UAC drop/overflow/underflow i
 service-log drop delte bile su 0. Pet izoliranih output-late događaja do
 12522 us nije imalo fizičku posljedicu i ostaje za monitoring.
 
-Nastavak je sada:
-
-1. dovršiti preostali Settings eyes-on gate i obnoviti provjereni 800×480 UI
-   screenshot baseline;
-2. odraditi produženi cold-power/reconnect integration soak.
+Settings eyes-on/touch i pregledani 800×480 screenshot gate zatvoreni su
+2026-09-01; `settings` i `settings_restored` ponovno daju isti očekivani hash,
+pa manifest nije trebalo regenerirati. Vidi
+[validation zapis](validation/2026-09-01-settings-ui.md).
+Produženi cold-power/reconnect integration gate također je zatvoren nakon tri
+cold boota, FLX4 reconnecta pod playbackom, sigurnog USB3 reconnecta, 300-s
+dual-deck post-reconnect opterećenja i završnog PFL smokea. Vidi
+[validation zapis](validation/2026-09-01-cold-power-reconnect.md). Nastavak je
+release hardening: reproducibilni clean build, završni artifact identity i
+release/startup dokumentacijski pregled.
 
 Hot Cues UI/NVS gate zatvoren je 2026-09-01. D1/D2 target selektori vidljivi
 su odmah nakon prvog otvaranja, lokalni set/clear osvježava kartice bez promjene
@@ -372,10 +377,10 @@ promet ne uzrokuje audio dropove, USB reset ni curenje vjerodajnica.
 - [ ] dovršiti mjerenje svjetline i potrošnje ako je potrebno za enclosure;
 - [x] prihvatiti screensaver wake: prvi lokalni FLX4 događaj samo budi UI,
   sljedeći se izvršava, a touch ne aktivira kontrolu ispod screensavera;
-- [ ] vizualno pregledati sve ekrane te tek nakon toga obnoviti 800×480 UI
-  screenshot baseline i odraditi produženi cold-power/reconnect
-  display/touch/PSRAM soak. Fokusirani desetominutni kombinirani soak je
-  prihvaćen 2026-09-01.
+- [x] vizualno pregledati Settings i potvrditi pregledani 800×480 UI screenshot
+  baseline, uključujući točnu obnovu Settings ekrana nakon screensavera;
+- [x] odraditi produženi cold-power/reconnect display/touch/PSRAM soak;
+  tri cold boota i završni post-reconnect load prihvaćeni su 2026-09-01.
 
 Status: display-image i fokusirani touch dio prihvaćeni su 2026-08-31. Non-burst način odbačen je
 nakon mjerene faze `70123456`; burst sync pulses uklonio je wrap uz nepromijenjen
@@ -386,7 +391,8 @@ Corner/edge i two-finger safety također su prihvaćeni; vidi
 [validation zapis](validation/2026-09-01-touch-edge-multitouch.md).
 Desetominutni zajednički soak je prihvaćen; vidi
 [integration soak zapis](validation/2026-09-01-integration-soak.md).
-Produženi cold-power/reconnect soak ostaje otvoren.
+Produženi cold-power/reconnect gate također je prihvaćen; vidi
+[validation zapis](validation/2026-09-01-cold-power-reconnect.md).
 
 Acceptance: puni kadar i touch koordinate rade u nativnom landscapeu na cijeloj
 površini, svi postojeći UI tokovi su čitljivi i nema display/audio regresija.
@@ -523,6 +529,5 @@ underruna, service-log dropped i novi UAC incidenti imali su nultu deltu.
 ### 7. Release hardening
 
 - P4-only reproducibilni clean build i OTA package gate;
-- UI screenshot baseline nakon vizualne provjere Settings promjene i novog
-  800×480 zaslona;
+- završni artifact identity i release/startup dokumentacijski pregled;
 - ažurirani startup smoke, risk register i release validation zapis.

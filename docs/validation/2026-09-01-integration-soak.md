@@ -73,5 +73,5 @@ fluid waveforms, responsive touch, stable display and a functioning FLX4.
 **PASS — ten-minute combined functional integration gate.**
 
 The output-late count is retained as a monitoring finding, not reclassified as
-zero-late. Extended cold-power/reconnect testing and the remaining complete UI
-eyes-on/screenshot gate stay open.
+zero-late. The Settings eyes-on/screenshot and extended cold-power/reconnect
+gates were subsequently closed.

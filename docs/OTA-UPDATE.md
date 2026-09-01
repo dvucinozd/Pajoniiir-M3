@@ -1,14 +1,14 @@
 # P4 OTA Update
 
-Status: važeći P4-only postupak, hardverski potvrđen 2026-08-31.
+Status: važeći P4-only postupak, hardverski potvrđen 2026-09-01.
 
 Projekt proizvodi samo jedan OTA target: `main-deck-p4` za chip ID `0x0012`.
 Bundle mora biti `.ddjota`, potpisan pouzdanim ECDSA P-256 ključem, s ispravnim
 projektom, chip ID-em, verzijom, veličinom i SHA-256 sažetkom.
 
 Posljednji potpisani i OTA-prihvaćeni release image je `M3-41-g133f399` u
-`ota_0`. Na benchu se trenutačno podiže app-only Master Tempo response kandidat
-`M3-47-g3f23bd2-dirty` iz `factory` particije; nije pakiran ni instaliran kao
+`ota_0`. Na benchu se trenutačno podiže app-only kandidat
+`M3-48-g435bcfe-dirty` iz `factory` particije; nije pakiran ni instaliran kao
 potpisani release bundle. FLX4, USB3, PCM5102A, Wi-Fi i DSI slika dostupni su.
 Display acceptance zato ne proširuje niti zamjenjuje postojeći OTA gate; nakon
 commita treba zasebno proizvesti i potpisati budući release ako se želi OTA

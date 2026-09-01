@@ -18,7 +18,7 @@ Status: aktivni rizici single-chip P4 izvedbe, 2026-09-01.
 | R12 | I2S master output radi na 48 kHz dok je FLX4 UAC fiksiran na 44,1 kHz | kriva brzina/visina tona ili headphone ring overflow na 48-kHz trakama | implementiran stateful 48→44,1-kHz headphone resampler; host omjer/kontinuitet, 60-s 48-kHz gate, 600-s mixed-rate soak i FLX4 slušni acceptance prošli; PCM5102A 44,1/48-kHz i mixed-rate hardware gate zatvoren 2026-08-26 bez krive brzine/visine tona ili UAC gubitka |
 | R13 | Same-version channel check neposredno nakon OTA boota jednom je izazvao PANIC reset | neočekivani restart u maintenance toku | tri svježa post-OTA equality ciklusa uz test-only 64-KiB flash coredump vratila su `already running this build` bez PANIC-a; dump particija ostala je prazna, produkcijski image vraćen je i rizik ostaje samo pod monitoringom |
 | R14 | DSI bridge identitet nije poznat i prihvaćeni parametri potječu iz kontroliranog hardware bring-upa, ne vendor datasheeta | buduća revizija modula može ostati bijela, imati krive boje ili wrap | za isporučeni EYOYO `DSI506 / DYL0023` zatvoreni su FFC, backlight, RGB888, 1-lane/800-Mbps, timing, burst packetizacija, boje i poravnanje; ne slati nagađane vendor upise, zadržati točan model/reviziju u wiring dokumentu i ponovno otvoriti gate za drugi modul |
-| R15 | FT5426 na `0x38` je osjetljiv na I2C brzinu i tvornička orijentacija zrcali obje osi | nema dodira, zamijenjene osi ili nestabilan LVGL input | read greške uklonjene vraćanjem na 100 kHz; prihvaćeno mapiranje je `swap_xy=0`, `mirror_x=1`, `mirror_y=1`; kartice, Backlight drag i obje strane prošli su 2026-08-31, a corner/multitouch, screensaver i desetominutni zajednički soak prošli su 2026-09-01; produženi cold-power/reconnect soak ostaje pod monitoringom |
+| R15 | FT5426 na `0x38` je osjetljiv na I2C brzinu i tvornička orijentacija zrcali obje osi | nema dodira, zamijenjene osi ili nestabilan LVGL input | read greške uklonjene vraćanjem na 100 kHz; prihvaćeno mapiranje je `swap_xy=0`, `mirror_x=1`, `mirror_y=1`; kartice, Backlight drag i obje strane prošli su 2026-08-31, a corner/multitouch, screensaver, desetominutni zajednički soak i tri cold-power ciklusa prošli su 2026-09-01 |
 
 Potpisani noviji signed-bundle install prošao je i lokalnim web uploadom i
 produkcijskim HTTPS pull tokom, a missing-bundle download fault završio je bez
@@ -31,8 +31,8 @@ PCM5102A headroom/limiter/noise gate zatvoren je 2026-08-26. DSI image i
 fokusirani touch gate za EYOYO `DSI506 / DYL0023` zatvoreni su 2026-08-31;
 corner/multitouch, screensaver, Hot Cue UI/NVS i desetominutni zajednički
 display/master/headphones/dual-deck/Wi-Fi gateovi zatvoreni su 2026-09-01.
-Preostaju Settings eyes-on, screenshot baseline i produženi cold-power/reconnect
-soak. Jednokratni simultani
+Settings eyes-on/touch, pregledani 800×480 screenshot i produženi
+cold-power/reconnect gate zatvoreni su 2026-09-01. Jednokratni simultani
 start/seek PCM D1=202 događaj nije se
 ponovio u ukupno 25 kontroliranih startova i ostaje telemetrijska stavka, a ne
 potvrđeni reproducibilni kvar. Povijesni Censor MVP radio je dva playing seeka;

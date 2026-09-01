@@ -1,9 +1,9 @@
 # DSI506 / DYL0023 Display Bring-up and Acceptance
 
 Status: display-image i fokusirani touch gate prihvaćeni su 2026-08-31, a
-screensaver wake, corner/edge, two-finger safety, waveform sync i desetominutni
-zajednički integration soak 2026-09-01. Produženi cold-power/reconnect soak
-ostaje otvoren. Aktualni zapis ima prednost nad pripremom od
+screensaver wake, corner/edge, two-finger safety, waveform sync, desetominutni
+zajednički integration soak i produženi cold-power/reconnect gate 2026-09-01.
+Aktualni zapis ima prednost nad pripremom od
 2026-08-26 koja je
 sačuvana ispod njega kao povijesna polazna točka.
 

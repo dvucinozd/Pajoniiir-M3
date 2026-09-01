@@ -2,12 +2,12 @@
 
 Status: važeći bench postupak, 2026-09-01.
 
-Aktualni bench image je app-only `M3-47-g3f23bd2-dirty / factory`, SHA-256
-`EFDEFAF4269F635D4A44B5590D54D3DE6A4CD53F34906080B1780F0867571EBD`;
+Aktualni bench image je app-only `M3-48-g435bcfe-dirty / factory`, SHA-256
+`2CDAB5D7C859F28F26E2BB02CDC5B711DA4A25480EA081B18A2C3EF963DF3455`;
 `M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline. FLX4, USB3,
 PCM5102A, Wi-Fi, DSI slika, fokusirani touch, screensaver wake te corner/edge i
-two-finger safety gate rade. Desetominutni zajednički integration soak je
-prihvaćen; produženi cold-power/reconnect soak još nije.
+two-finger safety gate rade. Desetominutni zajednički i produženi
+cold-power/reconnect integration gateovi prihvaćeni su.
 
 - [x] MT 0% -> +5% -> -5% -> 0% potvrđen je na oba decka, a kratki simultani
   48/48-kHz gate s D1 +5 % i D2 -5 % prošao je uz čist zvuk, fluidan waveform,
@@ -85,17 +85,20 @@ idf.py -p COM6 flash monitor
   odmah prikazuje fizički set/shifted-clear, recall skače na spremljeno vrijeme,
   a cue se vraća nakon reboota i ponovnog učitavanja iste trake. Vidi
   [validation zapis](validation/2026-09-01-hot-cue-ui.md).
-- [ ] Dovršiti preostali Settings slider eyes-on/touch gate i obnoviti
-  provjereni 800×480 screenshot baseline.
-- [ ] Dugi display/touch/PSRAM soak nema tearing, artefakte, I2C poplavu loga,
-  reset ni audio/USB posljedicu.
+- [x] Settings sadržaj i Backlight slider prošli su eyes-on/touch gate; svih
+  sedam 800×480 screenshot hashova prolazi, a `settings` i
+  `settings_restored` identični su. Vidi
+  [validation zapis](validation/2026-09-01-settings-ui.md).
+- [x] Dugi display/touch/PSRAM i cold-power/reconnect gate nema tearing,
+  artefakte, I2C poplavu loga, neželjeni reset ni audio/USB posljedicu. Vidi
+  [validation zapis](validation/2026-09-01-cold-power-reconnect.md).
 
 Display/touch acceptance 2026-08-31 koristio je COM6 i završni app-only image
 od 2.369.840 B. Puni host suite i ESP-IDF 6.0.2 build prošli su; boot je učitao
 191 traku za približno 4 s i odmah prešao u pravilno poravnati GUI. Fokusirani
 touch gate je zatvoren. Screensaver wake i corner/two-finger safety prihvaćeni
-su na kasnijem app-only imageu iz zaglavlja. Desetominutni zajednički gate je
-zatvoren; produženi cold-power/reconnect gate ostaje otvoren.
+su na kasnijem app-only imageu iz zaglavlja. Desetominutni zajednički i
+produženi cold-power/reconnect gateovi su zatvoreni.
 
 ## USB i kontrola
 

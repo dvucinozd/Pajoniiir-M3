@@ -60,8 +60,7 @@ vidi `docs/validation/2026-09-01-hot-cue-ui.md`.
 Waveform scanout kandidat prihvaćen je 2026-09-01: update je vezan uz panel
 refresh, a kad oba decka sviraju direct-PPA blit uvijek ide odozgo prema dolje.
 Korisnik je prvo potvrdio oštar i fluidan solo D1, zatim oba oštra i fluidna
-waveforma bez bljeskanja ili audio posljedice. Puni dugi integration soak time
-nije zamijenjen i ostaje otvoren. Vidi
+waveforma bez bljeskanja ili audio posljedice. Vidi
 `docs/validation/2026-09-01-dsi506-waveform-sync.md`.
 Naknadni desetominutni zajednički integration soak prihvaćen je 2026-09-01:
 oba 44,1-kHz decka s aktivnim loopovima svirala su svih 600 s uz PCM5102A
@@ -71,8 +70,13 @@ bez API/library/firmware greške; PCM underrun, UAC drop/overflow/underflow i
 service-log drop delte ostale su 0. Pet izoliranih output-late događaja,
 maksimum 12522 us, nije imalo čujnu ni vizualnu posljedicu i ostaje monitoring
 nalaz, pa ovo nije zero-late tvrdnja. Vidi
-`docs/validation/2026-09-01-integration-soak.md`. Produženi/cold-power/reconnect
-soak, preostali Settings eyes-on gate i screenshot baseline ostaju otvoreni.
+`docs/validation/2026-09-01-integration-soak.md`. Settings eyes-on/touch i
+pregledani 800×480 screenshot gate zatvoreni su 2026-09-01; `settings` i
+`settings_restored` daju isti očekivani hash. Produženi cold-power/reconnect
+gate također je zatvoren nakon tri cold boota, FLX4 reconnecta pod playbackom,
+sigurnog USB3 reconnecta, 300-s dual-deck load testa i završnog PFL smokea.
+Vidi `docs/validation/2026-09-01-settings-ui.md` i
+`docs/validation/2026-09-01-cold-power-reconnect.md`.
 
 MT test otkrio je da correlation offseti mogu akumulirati pomak zvuka unatoč
 ispravnom brojilu položaja. Nominalni grain sada se sidri na integrirani source

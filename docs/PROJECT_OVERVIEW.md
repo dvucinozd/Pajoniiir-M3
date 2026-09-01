@@ -1,6 +1,6 @@
 # Project Overview
 
-Status: važeći opis projekta i bench topologije, 2026-08-31.
+Status: važeći opis projekta i bench topologije, 2026-09-01.
 
 Pajoniiir-M3 je standalone dual-deck DJ uređaj bez računala. Jedan ESP32-P4
 obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
@@ -20,7 +20,7 @@ obavlja USB host, playback, DSP, library, UI i kontrolnu logiku.
 
 `M3-41-g133f399 / ota_0` ostaje potpisani rollback baseline za FLX4 MIDI/UAC,
 USB3 library/decode, Wi-Fi remote/OTA i dual-deck DSP, uključujući gapless
-Censor. App-only `M3-47-g3f23bd2-dirty / factory` zadržava aktivni
+Censor. App-only `M3-48-g435bcfe-dirty / factory` zadržava aktivni
 `bsp_p4_m3` i fizički prihvaćenu DSI sliku na EYOYO `DSI506 / DYL0023`:
 800×480 RGB888, ispravne boje, nativni landscape i poravnanje bez cyclic wrapa.
 Panel radi na 50,0146 Hz s VFP `109`; dual-deck direct-PPA update prati scanout
@@ -37,8 +37,9 @@ Shift + Browse/Load UI, screensaver wake te corner/edge i two-finger safety
 gateovi također su prihvaćeni. Desetominutni zajednički display/touch/master/
 headphones/dual-deck/USB3/Wi-Fi soak prošao je bez fizičkog artefakta i bez
 PCM/UAC/service-log loss delte. Pet bezposljedičnih output-late događaja do
-12522 us ostaje za monitoring. Produženi cold-power/reconnect soak ostaje
-otvoren.
+12522 us ostaje za monitoring. Tri cold boota, FLX4 reconnect pod playbackom,
+sigurni USB3 reconnect i završni load/PFL smoke također su prihvaćeni bez
+PCM/UAC/service-log gubitka.
 Novi MT kandidat sidri analysis grainove na source clock kako korelacijski
 offseti ne bi usporavali reakciju stvarnog zvuka, koristi consumer-owned PCM
 mapiranje i bounded hijerarhijsku correlation pretragu. Host regresije i build
