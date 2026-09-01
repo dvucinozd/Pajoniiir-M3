@@ -561,3 +561,152 @@ Točan workload, telemetrija i PASS/FAIL granice zapisani su u
 [Reliability Monitoring Planu](RELIABILITY_MONITORING_PLAN.md). Do tada ne
 mijenjati firmware zbog početne USB kolizije ili izoliranog output-latea bez
 ponovljivog dokaza problema.
+
+### 9. Selektivno preuzeti korisne DDJ-FFL4 mehanizme
+
+Referentni projekt DDJ-FFL4 (`dvucinozd/Pajoniiir`) dijeli velik dio P4
+playback/DSP/UI/OTA jezgre s M3, ali sadrži nekoliko dodatnih mehanizama koji
+su korisni za daljnji razvoj. Autoritativni snapshot za ovu fazu je commit
+[`adb63148e2a0e4ee94141537b27682ba9004d0d3`](https://github.com/dvucinozd/Pajoniiir/tree/adb63148e2a0e4ee94141537b27682ba9004d0d3)
+na grani `feat/p4-dual-usb-host`. Svi linkovi ispod namjerno su commit-pinnani;
+ne zamjenjivati ih linkovima na pomični branch.
+
+Prije prijenosa vrijede ove granice:
+
+- ne kopirati DDJ-FFL4 BSP, pinout, USB0/USB1 topologiju ili power-control
+  pretpostavke; M3 ostaje na USB2/FLX4, USB3/MSC, DSI506 i ESP32-C6 hardveru;
+- ne vraćati povijesni ESP32-S3 firmware, UART control link ili monitor PCM
+  bridge;
+- ne zamjenjivati dokazano stabilan M3 `p4_flx4_host` velikim jednokratnim
+  portom; promjene uvoditi po izoliranim paketima i iza host testova;
+- Hercules i generički profili ostaju software/fixture dokaz dok fizički
+  MIDI, LED, reconnect i USB-audio gateovi ne prođu na stvarnom kontroleru.
+
+#### 9.1. Persistentna post-mortem dijagnostika
+
+Ovo je prvi i najmanje rizičan paket jer ne mijenja operator behavior ni audio
+algoritme:
+
+- [ ] prenijeti persistentni audio WDT journal koji u `.noinit` memoriji čuva
+  prethodnu i aktualnu fazu output bloka, deck masku, block/mix-group i TWDT
+  oznaku;
+- [ ] izložiti audio WDT `previous/current` zapis kroz `/api/status` i
+  `service_log`, bez dinamičke alokacije u real-time putu;
+- [ ] prenijeti persistentni library-load journal za resolve, USB DAT/EXT,
+  cache, publish-lock, done i failed faze;
+- [ ] dodati oba upstream host testa u M3 runner i zadržati njihove
+  power-cycle/reboot simulacije;
+- [ ] dodati verzioniranje zapisa i fail-closed validaciju magic/inverse polja
+  kako slučajan sadržaj RTC/noinit memorije ne bi postao lažna dijagnoza.
+
+Acceptance:
+
+- puni M3 host suite i ESP-IDF 6.0.2 build prolaze;
+- normalni dual-deck workload ne mijenja PCM/UAC/output-late brojače;
+- kontrolirani testni reboot prikazuje posljednju valjanu audio ili library
+  fazu, a clean boot bez prethodnog incidenta ne prijavljuje lažni zapis;
+- API polja su dokumentirana i kompatibilna s budućim read-only reliability
+  monitorom iz faze 8.
+
+Reference:
+
+- [audio WDT implementation](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/audio_engine/audio_wdt_trace.c)
+  i [public contract](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/audio_engine/include/audio_wdt_trace.h);
+- [audio WDT host test](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/tests/audio_wdt_trace/test_audio_wdt_trace.c);
+- [library-load implementation](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/library/library_load_trace.c)
+  i [public contract](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/library/include/library_load_trace.h);
+- [library-load host test](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/tests/library_load_trace/test_library_load_trace.c);
+- [status/API integration](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/web_server/web_server.c).
+
+#### 9.2. Selektivni USB/MSC reliability hardening
+
+M3 već ima fizički prihvaćen USB2 FLX4 i USB3 media reconnect, pa cilj nije
+zamijeniti njegovu topologiju. Cilj je preuzeti samo dokazivo korisne ownership,
+bounded-transfer i observability dijelove:
+
+- [ ] usporediti M3 `usb_storage` teardown s DDJ-FFL4 sole-owner modelom u
+  kojem callback objavljuje samo željeno stanje, a storage task jedini uništava
+  mount, MSC handle, transfer i callback resurse;
+- [ ] eksperimentalno uvesti jedan fiksni 8 KiB DMA-capable MSC transfer za
+  životni vijek uređaja i dijeliti veće FatFs operacije u bounded 8 KiB SCSI
+  transakcije, ali samo ako aktualni USB3 driver contract to dopušta;
+- [ ] dodati USB topology/recovery telemetriju: request, coalesced, suppressed
+  while active, success, failure i queue-drop brojače;
+- [ ] prije bilo kakvog portanja root-power logike mapirati DDJ-FFL4 USB0/USB1
+  indeksiranje na stvarnu M3 USB2/USB3 implementaciju; pogrešan root ne smije
+  biti power-cycled;
+- [ ] povezati nove brojače s 30-ciklusnom matricom iz faze 8 i zadržati
+  postojeće M3 FLX4/UAC/data-loss brojače kao autoritativne.
+
+Acceptance:
+
+- statički ownership testovi dokazuju da transfer/semafor/callback resurs ne
+  može biti oslobođen dok ga callback još koristi;
+- veći read/write zahtjevi nikad ne stvaraju transfer veći od dogovorenog
+  bounda;
+- 30 ciklusa USB3 remove/reinsert uz aktivan USB2 FLX4 završava bez reboota,
+  pogrešnog root recoveryja, library gubitka ili audio counter delte;
+- zasebno se mjeri napajanje/VBUS; software recovery ne smije prikrivati
+  brownout ili električni problem.
+
+Reference:
+
+- [DDJ-FFL4 hotplug acceptance i otvorene granice](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/docs/validation/P4_DUAL_USB_HOTPLUG_OTA_SMOKE_20260829.md);
+- [shared USB host manager](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/usb_host_manager/usb_host_manager.c)
+  i [recovery arbiter](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/usb_host_manager/usb_host_recovery_arbiter.c);
+- [USB storage/topology adapter](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/usb_storage/usb_storage_shared.c);
+- [bounded 8 KiB media transfer](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/usb_storage/usb_media_mount.c);
+- [recovery-arbiter host test](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/tests/controller_runtime/test_usb_host_recovery_arbiter.c).
+
+#### 9.3. Data-driven multi-controller platforma
+
+Ovo je veći feature paket i radi se tek nakon što 9.1 prođe, a USB/controller
+reconnect baseline ostane stabilan:
+
+- [ ] uvesti `controllers/<id>/profile.json` i kompajlirani `profile.s3bin`
+  format s magic/version/length/CRC provjerom i točnim VID/PID matchingom;
+- [ ] prenijeti transport-neutralni table runtime za button, extended action,
+  pad bank, relativne enkodere, 7/14-bit absolute kontrole i state-pair ulaze;
+- [ ] prenijeti controller-profile manager koji skenira SD karticu, atomarno
+  aktivira profil prema connection epochu i zadržava ugrađeni FLX4 C mapping
+  kao fallback samo za `2B73:0045`;
+- [ ] prenijeti tablični MIDI/LED runtime i durable held-state reconciler tako
+  da queue saturation ne može izgubiti konačni press/release state;
+- [ ] dodati reconnect replay apsolutnih kontrola i potpuni autoritativni LED
+  snapshot bez slanja zastarjelih generation paketa;
+- [ ] dodati web `GET /api/controller-profiles` i
+  `POST /api/controller-profile` s ID allow-listom, bounded bodyjem, CRC
+  validacijom, fsync/backup/atomic rename tokom i eksplicitnim overwrite
+  odobrenjem;
+- [ ] prenijeti `generic_midi_ci` kao host-only fixture i zadržati Hercules
+  Inpulse 500 profil kao software-only kandidat do stvarnog hardware gatea;
+- [ ] izložiti `profile_state`, `active_profile`, connected VID/PID/capabilities
+  i reconnect/reconciliation brojače kroz `/api/status`.
+
+Acceptance:
+
+- postojeći FLX4 input, LED, UAC i reconnect hardware smoke ostaje bez regresije;
+- profil i ugrađeni FLX4 mapping daju semantički identične rezultate;
+- corrupt, truncated, pogrešan VID/PID i interrupted profile update failaju
+  zatvoreno te prethodni profil ostaje bootabilan;
+- generički CI fixture prolazi host testove, ali se ne oglašava kao podržani
+  fizički kontroler;
+- novi kontroler dobiva status "supported" tek nakon MIDI IN/OUT, svih LED
+  grupa, disconnect/reconnect, dvije deck state obnove i USB audio acceptancea.
+
+Reference:
+
+- [controller profile schema](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/docs/CONTROLLER_PROFILE_SCHEMA.md)
+  i [siguran web update postupak](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/docs/CONTROLLER_PROFILE_UPDATE.md);
+- [profile compiler](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/tools/controller_profile/compile_profile.py);
+- [profile parser](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/controller_profile/controller_profile.c),
+  [manager](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/controller_profile_manager/controller_profile_manager.c)
+  i [runtime](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/controller_profile_runtime/controller_profile_runtime.c);
+- [controller event runtime](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/controller_runtime/controller_runtime.c),
+  [LED runtime](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/controller_led_runtime/controller_led_runtime.c)
+  i [held-state reconciler contract](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/common/control_state_reconciler/include/control_state_reconciler.h);
+- [web API integration](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/firmware/main-deck-p4/components/web_server/web_server.c);
+- [generic MIDI CI fixture](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/controllers/generic_midi_ci/profile.json);
+- [Hercules software-only profil](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/controllers/hercules_djcontrol_inpulse_500/profile.json)
+  i [njegove hardware granice](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/docs/HERCULES_INPULSE_500_MIDI_MAP.md);
+- [profile-manager host test](https://github.com/dvucinozd/Pajoniiir/blob/adb63148e2a0e4ee94141537b27682ba9004d0d3/tests/controller_profile_manager/test_controller_profile_manager.c).
